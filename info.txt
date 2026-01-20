@@ -1,0 +1,2 @@
+'npm start' open dev environment
+'npm run build' push to prod

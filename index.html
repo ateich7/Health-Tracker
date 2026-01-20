@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" >
+  <title>Health Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+
+<body>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading your data...</div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container content" id="mainContent">
+    <div class="container">
+      <div class="stretcher">
+        <h5 id="dateToday"></h5>
+        <div id="weather">
+          <p id="temp"></p>
+          <p id="desc"></p>
+          <p id="location"></p>
+        </div>
+      </div>
+      <div class="mini-display">
+        <div id="codesChip" class="chip">
+          <span class="chip-label">Codes</span>
+          <button class="chip-btn" onclick="openTaskLink(this)">Open</button>
+          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleCodes(this)">✓</span>
+        </div>
+        <div id="weightChip" class="chip">
+          <span class="chip-label">Weight</span>
+          <button class="chip-btn" onclick="toggleOnClick(this)"></button>
+          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleTask(this)">✓</span>
+        </div>
+        <div id="workoutChip" class="chip">
+          <span class="chip-label">Workout</span>
+          <button class="chip-btn" onclick="toggleOnClick(this)"></button>
+          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleTask(this)">✓</span>
+        </div>
+      </div>
+      <div class="split-screen">
+        <div class="card-layout">
+
+          <!-- Daily Quote -->
+          <div class="card" id="quoteCard">
+            <h2>Quote</h2>
+            <h5 id="quote"></h5>
+            <div class="spacer"></div>
+            <div id="author"></div>
+          </div>
+
+          <!-- Weight Tracker -->
+          <div class="card">
+            <h2>Weight</h2>
+            <div class="input-group">
+              <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
+              <button class="btn-primary" onclick="logWeight()">Log</button>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-box blue">
+                <div class="stat-label">Current Weight (weighted average)</div>
+                <div class="stat-value blue" id="avgWeight">--</div>
+              </div>
+              <div class="stat-box blue">
+                <div class="stat-label">Change Since Beginning</div>
+                <div class="stat-value blue" id="weightChange">--</div>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="weightChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Workout Tracker -->
+          <div class="card" id="workoutCard">
+            <h2>Workout</h2>
+            <div id="workout"></div>
+          </div>
+
+          <!-- Exercise Progress Chart -->
+          <div class="card">
+            <h2 id="exName">Exercise Progress</h2>
+            <div class="input-group" style="margin-bottom: 1rem;">
+              <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
+                <option value="pushups">Pushups</option>
+                <option value="pullups">Pullup & Chinup</option>
+                <option value="situps">Situps</option>
+                <option value="handstand pushups">Handstand Pushups</option>
+                <option value="wall angels">Wall Angels</option>
+                <option value="run">Run</option>
+                <option value="hip abductors">Hip Abductors</option>
+                <option value="goblet squats">Goblet Squats</option>
+                <option value="back extensions">Back Extensions</option>
+                <option value="shoulder press">Shoulder Press</option>
+                <option value="shoulde raise">Shoulder Raise</option>
+                <option value="chest press">Chest Press</option>
+                <option value="dumbbell row">Dumbbell Row</option>
+                <option value="dead bugs & starfish">Dead Bug & Starfish</option>
+                <option value="rowing machine">Rowing Machine</option>
+              </select>
+            </div>
+            <div class="chart-container">
+              <canvas id="exerciseChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="renderer.js"></script>
+</body>
+
+</html>
