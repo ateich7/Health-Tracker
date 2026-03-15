@@ -99,6 +99,10 @@
             <div class="spacer"></div>
             <div id="author"></div>
           </div>
+          <div class="mobile-only" style="gap:10px;">
+            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
+            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
+          </div>
         </div>
 
         <!-- Weight -->
@@ -160,6 +164,42 @@
 
       </div>
     </div>
+
+    <!-- Bottom nav (mobile only) -->
+    <nav class="bottom-nav">
+      <div class="bottom-nav-item" data-page="home" onclick="showPage('home')">
+        <span class="material-icons">home</span>
+        <span>Home</span>
+      </div>
+      <div class="bottom-nav-item" data-page="weight" onclick="showPage('weight')">
+        <div class="bn-icon-wrap">
+          <span class="material-icons">monitor_weight</span>
+          <span class="bottom-done-dot"></span>
+        </div>
+        <span>Weight</span>
+      </div>
+      <div class="bottom-nav-item" data-page="sleep" onclick="showPage('sleep')">
+        <div class="bn-icon-wrap">
+          <span class="material-icons">bedtime</span>
+          <span class="bottom-done-dot"></span>
+        </div>
+        <span>Sleep</span>
+      </div>
+      <div class="bottom-nav-item" data-page="workout" onclick="showPage('workout')">
+        <div class="bn-icon-wrap">
+          <span class="material-icons">fitness_center</span>
+          <span class="bottom-done-dot"></span>
+        </div>
+        <span>Workout</span>
+      </div>
+      <div class="bottom-nav-item" data-chip="codesChip" onclick="openTaskLink(document.getElementById('codesChip'))">
+        <div class="bn-icon-wrap">
+          <span class="material-icons">notes</span>
+          <span class="bottom-done-dot"></span>
+        </div>
+        <span>Codes</span>
+      </div>
+    </nav>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

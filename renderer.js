@@ -69,10 +69,10 @@ function showPage(name) {
 // DOM-only page switch (no chart refresh, no storage write)
 function activatePage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  const navItem = document.querySelector(`.nav-item[data-page="${name}"]`);
-  if (navItem) navItem.classList.add('active');
+  document.querySelectorAll(`.nav-item[data-page="${name}"], .bottom-nav-item[data-page="${name}"]`)
+    .forEach(n => n.classList.add('active'));
 }
 
 // Load all data from Supabase
@@ -545,14 +545,17 @@ function updateSleepChart() {
 // Toggle task completion
 function toggleTask(chip) {
   const check = chip.querySelector('.chip-check');
-
   chip.classList.toggle('completed');
+  const isCompleted = chip.classList.contains('completed');
+  if (check) check.style.display = isCompleted ? 'inline' : 'none';
 
-  if (chip.classList.contains('completed')) {
-    check.style.display = 'inline';
-  } else {
-    check.style.display = 'none';
-  }
+  // Sync completion dot to the matching bottom nav item
+  const page   = chip.dataset.page;
+  const id     = chip.id;
+  const bnItem = page
+    ? document.querySelector(`.bottom-nav-item[data-page="${page}"]`)
+    : id ? document.querySelector(`.bottom-nav-item[data-chip="${id}"]`) : null;
+  if (bnItem) bnItem.classList.toggle('completed', isCompleted);
 }
 
 // Toggle chip on button click
@@ -612,35 +615,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 function createSet(exercise, setIndex) {
+  const label = `<span class="set-label">Set ${setIndex + 1}</span>`;
+
   if (exercise.isRun) {
     return `
       <div class="set">
-        <input type="number" placeholder="Distance">
-        <input type="number" placeholder="Minutes" min="0">
-        <input type="number" placeholder="Seconds" min="0" max="59">
+        ${label}
+        <input type="number" inputmode="decimal" placeholder="Miles">
+        <input type="number" inputmode="numeric" placeholder="Min" min="0">
+        <input type="number" inputmode="numeric" placeholder="Sec" min="0" max="59">
       </div>
     `;
   }
 
   if (exercise.isLift) {
     return `
-     <div class="set">
-        <input type="number" placeholder="Reps">
-        <input type="number" placeholder="Weight">
+      <div class="set">
+        ${label}
+        <input type="number" inputmode="numeric" placeholder="Reps">
+        <input type="number" inputmode="decimal" placeholder="Lbs">
       </div>
     `;
   }
 
   return `
     <div class="set">
-      <input type="number" step="0.1" placeholder="Reps">
+      ${label}
+      <input type="number" inputmode="numeric" step="0.1" placeholder="Reps">
     </div>
   `;
 }
 
 function createExercise(exercise) {
-  let html = `<div class="exercise input-group">`
-  html += `<div id="exNameForm"><p>${exercise.name}</p></div>`;
+  let html = `<div class="exercise input-group">`;
+  html += `<div class="exNameForm"><p>${exercise.name}</p></div>`;
 
   for (let i = 0; i < exercise.sets; i++) {
     html += createSet(exercise, i);
@@ -761,7 +769,7 @@ function renderWorkoutForm(exercises, savedData) {
       <button class="btn-primary" onclick="addExercise()">Add</button>
     </div>
   `;
-  container.innerHTML += `<button class="btn-primary" onclick="logWorkout()">Log</button>`;
+  container.innerHTML += `<button class="btn-primary" id="logWorkoutBtn" onclick="logWorkout()">Log Workout</button>`;
 
   if (savedData) {
     prefillWorkout(savedData);

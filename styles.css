@@ -480,8 +480,79 @@ canvas {
   color: var(--b);
 }
 
-#exNameForm {
+.exNameForm {
   width: 140px;
+}
+
+/* ── Set label (shown on mobile) ── */
+.set-label {
+  display: none;
+  font-size: 11px;
+  color: var(--bb);
+  margin-bottom: 2px;
+}
+
+/* ── Mobile-only elements (hidden on desktop) ── */
+.mobile-only {
+  display: none;
+}
+
+/* ── Bottom nav (hidden on desktop) ── */
+.bottom-nav {
+  display: none;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px 10px;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--bb);
+  font-size: 10px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item .material-icons {
+  font-size: 23px;
+}
+
+.bottom-nav-item.active {
+  color: var(--p300);
+}
+
+.bottom-nav-item.completed {
+  color: var(--s600);
+}
+
+.bottom-nav-item.active.completed {
+  color: var(--p300);
+}
+
+.bn-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-done-dot {
+  display: none;
+  width: 7px;
+  height: 7px;
+  background: var(--s600);
+  border-radius: 50%;
+  position: absolute;
+  top: -1px;
+  right: -5px;
+}
+
+.bottom-nav-item.completed .bottom-done-dot {
+  display: block;
 }
 
 #weather {
@@ -664,4 +735,162 @@ div {
   flex: 0 1 auto;
   max-width: 620px;
   width: 100%;
+}
+/* ══════════════════════════════════════════
+   MOBILE  (≤ 768px)
+   ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  body {
+    padding: 0;
+    height: 100dvh;
+  }
+
+  .app {
+    gap: 0;
+    height: 100%;
+  }
+
+  /* ── Header ── */
+  .app-header {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  #desc, #location {
+    display: none;
+  }
+
+  /* ── Body ── */
+  .app-body {
+    gap: 0;
+    min-height: 0;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: flex;
+    flex-direction: row;
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ── Page content ── */
+  .page-content {
+    padding: 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page.active {
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+  }
+
+  /* Cards: auto height on mobile, no flex stretch */
+  .page .card {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: unset;
+  }
+
+  /* Charts: fixed height */
+  .page .chart-container {
+    flex: none;
+    height: 220px;
+  }
+
+  /* Workout page stacks vertically */
+  #page-workout.active {
+    flex-direction: column;
+  }
+
+  /* Home page: top-aligned */
+  #page-home.active {
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  #page-home .card {
+    max-width: 100%;
+  }
+
+  /* Mobile-only elements */
+  .mobile-only {
+    display: flex !important;
+  }
+
+  /* ── Workout form ── */
+  .exercise {
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0 !important;
+  }
+
+  .exNameForm {
+    width: 100% !important;
+    margin-bottom: 4px;
+  }
+
+  .exNameForm p {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--b);
+  }
+
+  .set {
+    flex: none;
+    min-width: unset;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .set-label {
+    display: block;
+  }
+
+  .set input {
+    min-height: 52px;
+    font-size: 20px;
+    text-align: center;
+    padding: 8px;
+  }
+
+  /* Add-exercise form: stack fields */
+  #addExerciseForm {
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 4px;
+  }
+
+  #addExerciseForm > * {
+    flex: none !important;
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  /* Log workout button: full-width, large */
+  #logWorkoutBtn {
+    width: 100%;
+    min-height: 54px;
+    font-size: 18px;
+    margin-top: 14px;
+    background: var(--p900);
+    color: var(--p300);
+  }
+
+  /* Auth card */
+  .auth-card {
+    margin: 16px;
+  }
 }
