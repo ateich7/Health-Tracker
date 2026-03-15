@@ -1,6 +1,9 @@
 let weightData = [];
+let sleepData = [];
 let weightChart = null;
 let exerciseChart = null;
+let sleepChart = null;
+let currentUser = null;
 
 const monWorkout = [
   { name: "Pushups", sets: 4, isLift: false, isRun: false },
@@ -35,24 +38,91 @@ function formatDate() {
   document.getElementById('dateToday').textContent = `${month} ${day}${suffix}`;
 }
 
-// Initialize on load
-function init() {
+// Called by supabase-client.js once a valid session exists
+async function initApp() {
+  const { data: { user } } = await db.auth.getUser();
+  currentUser = user;
+
   formatDate();
-  loadData();
+  renderWorkoutForDay();
+
+  const savedPage = localStorage.getItem('activePage') || 'home';
+  activatePage(savedPage);
+
+  await loadData();
   document.getElementById('weightInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') logWeight();
   });
 }
 
-// Load data on startup
-function loadData() {
-  const savedWeight = localStorage.getItem('weightData');
-  if (savedWeight) weightData = JSON.parse(savedWeight);
+// Switch visible page
+function showPage(name) {
+  activatePage(name);
+  localStorage.setItem('activePage', name);
 
-  checkChipState('weightChip', 'weightLoggedDate');
+  // Refresh the chart(s) that just became visible
+  if (name === 'weight') updateWeightChart();
+  else if (name === 'sleep') updateSleepChart();
+  else if (name === 'workout') updateExerciseChart();
+}
+
+// DOM-only page switch (no chart refresh, no storage write)
+function activatePage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const navItem = document.querySelector(`.nav-item[data-page="${name}"]`);
+  if (navItem) navItem.classList.add('active');
+}
+
+// Load all data from Supabase
+async function loadData() {
+  const [weightsRes, sleepsRes, workoutsRes, customExRes] = await Promise.all([
+    db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
+    db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
+    db.from('workout_logs').select('*').eq('user_id', currentUser.id),
+    db.from('custom_exercises').select('*').eq('user_id', currentUser.id)
+  ]);
+
+  weightData = weightsRes.data || [];
+  sleepData  = sleepsRes.data  || [];
+
+  // Rebuild workouts object in localStorage so chart functions can read it
+  const workoutsObj = {};
+  (workoutsRes.data || []).forEach(row => { workoutsObj[row.date] = row.exercises; });
+  localStorage.setItem('workouts', JSON.stringify(workoutsObj));
+
+  // Cache custom exercises locally
+  const customList = (customExRes.data || []).map(e => ({
+    name: e.name, isLift: e.is_lift, isRun: e.is_run
+  }));
+  localStorage.setItem('customExercises', JSON.stringify(customList));
+
+  // Derive chip completion states from fetched data
+  const today     = getToday();
+  const yesterday = getYesterday();
+
+  if (weightData.some(e => e.date === today)) {
+    const chip = document.getElementById('weightChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
+  if (sleepData.some(e => e.date === today)) {
+    const chip = document.getElementById('sleepChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
   checkChipState('codesChip', 'codesLoggedDate');
-  checkChipState('workoutChip', 'workoutLoggedDate');
+
+  // Derive workoutLoggedDate for checkWorkoutLogState
+  const sortedDates   = Object.keys(workoutsObj).sort();
+  const lastWorkout   = sortedDates[sortedDates.length - 1];
+  if (lastWorkout === today || lastWorkout === yesterday) {
+    localStorage.setItem('workoutLoggedDate', lastWorkout);
+  } else {
+    localStorage.removeItem('workoutLoggedDate');
+  }
+
   checkWorkoutLogState();
+  populateExerciseSelect();
   getQuote();
   updateUI();
 
@@ -63,28 +133,53 @@ function loadData() {
 }
 
 // Log weight
-function logWeight() {
-  const input = document.getElementById('weightInput');
+async function logWeight() {
+  const input  = document.getElementById('weightInput');
   const weight = parseFloat(input.value);
-
   if (!weight || weight <= 100 || weight >= 250) return;
 
   const today = getToday();
+  const entry = { date: today, weight, timestamp: Date.now() };
 
-  // Remove today's entry if exists and add new one
+  await db.from('weight_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+
   weightData = weightData.filter(e => e.date !== today);
-  weightData.push({
-    date: today,
-    weight: weight,
-    timestamp: Date.now()
-  });
+  weightData.push(entry);
   weightData.sort((a, b) => a.timestamp - b.timestamp);
 
   input.value = '';
-  localStorage.setItem('weightLoggedDate', today);
-  localStorage.setItem('weightData', JSON.stringify(weightData));
+  const chip = document.getElementById('weightChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
+  updateUI();
+}
 
-  toggleTask(document.getElementById('weightChip'));
+// Log sleep
+async function logSleep() {
+  const hoursInput  = document.getElementById('sleepHoursInput');
+  const restedInput = document.getElementById('sleepRestedInput');
+  const hours  = parseFloat(hoursInput.value);
+  const rested = parseFloat(restedInput.value);
+  if (!hours || hours < 0 || hours > 24) return;
+
+  const today = getToday();
+  const entry = { date: today, hours, rested, timestamp: Date.now() };
+
+  await db.from('sleep_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+
+  sleepData = sleepData.filter(e => e.date !== today);
+  sleepData.push(entry);
+  sleepData.sort((a, b) => a.timestamp - b.timestamp);
+
+  hoursInput.value  = '';
+  restedInput.value = '';
+  const chip = document.getElementById('sleepChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
   updateUI();
 }
 
@@ -103,8 +198,8 @@ function getToday() {
 // Get the day
 function getDay() {
   return new Date().toLocaleDateString('en-US', { weekday: 'short' });
-
 }
+
 
 // Get last 30 days
 function getLast30Days() {
@@ -115,11 +210,13 @@ function getLast30Days() {
   });
 }
 
-// Update all UI elements
+// Update all UI elements (only refreshes the chart for the active page)
 function updateUI() {
   updateStats();
-  updateWeightChart();
-  updateExerciseChart()
+  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+  if (activePage === 'weight') updateWeightChart();
+  else if (activePage === 'sleep') updateSleepChart();
+  else if (activePage === 'workout') updateExerciseChart();
 }
 
 // Update stats
@@ -143,10 +240,15 @@ function updateStats() {
 function updateWeightChart() {
   if (weightChart) weightChart.destroy();
 
-  const chartData = weightData.slice(-30).map(e => ({
-    date: e.date.split('/').slice(0, 2).join('/'),
-    weight: e.weight
-  }));
+  const chartData = weightData.slice(-30).map(e => {
+    const dateObj = new Date(e.date);
+
+    return {
+      x: e.date.split('/').slice(0, 2).join('/'),
+      day: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+      y: e.weight
+    };
+  });
 
   if (chartData.length === 0) return;
 
@@ -154,10 +256,10 @@ function updateWeightChart() {
   weightChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartData.map(d => d.date),
+      //labels: chartData.map(d => d.date),
       datasets: [{
         label: 'Weight (lbs)',
-        data: chartData.map(d => d.weight),
+        data: chartData,
         borderColor: '#0088FF',
         backgroundColor: 'rgba(59, 130, 246, 0.25)',
         tension: 0.3,
@@ -168,7 +270,16 @@ function updateWeightChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (e) => {
+              const d = e[0].raw;
+              return ` ${d.day} ${d.x}`;
+            },
+            label: (context) => { return ` ${context.raw.y} lbs`; }
+          }
+        }
       },
       scales: {
         y: {
@@ -193,7 +304,7 @@ function updateExerciseChart() {
   const selectedExercise = document.getElementById('exerciseSelect')?.value || 'pushups';
 
   // Find the exercise type
-  const allExercises = [...monWorkout, ...wedWorkout, ...friWorkout];
+  const allExercises = getAllExercises();
   const exerciseInfo = allExercises.find(ex => ex.name.toLowerCase() === selectedExercise.toLowerCase());
 
   const chartData = Object.entries(workouts)
@@ -209,7 +320,7 @@ function updateExerciseChart() {
       if (exerciseInfo?.isRun) {
         // For runs: distance and time
         const totalDistance = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
-        const totalTime = exercise.sets.reduce((sum, set) => sum + (set[1] + (set[2]/100) || 0), 0);
+        const totalTime = exercise.sets.reduce((sum, set) => sum + (set[1] + (set[2] / 100) || 0), 0);
         return { date: `${month}/${day}`, value1: totalDistance, value2: totalTime };
       } else if (exerciseInfo?.isLift) {
         // For lifts: reps and weight
@@ -233,7 +344,7 @@ function updateExerciseChart() {
   const ctx = document.getElementById('exerciseChart').getContext('2d');
   const exerciseName = selectedExercise.charAt(0).toUpperCase() + selectedExercise.slice(1);
   document.getElementById('exName').innerText = exerciseName;
- 
+
   const datasets = [];
   const scales = {
     x: {
@@ -353,18 +464,93 @@ function updateExerciseChart() {
   });
 }
 
+// Update sleep chart
+function updateSleepChart() {
+  if (sleepChart) sleepChart.destroy();
+
+  const chartData = sleepData.slice(-30).map(e => {
+    const dateObj = new Date(e.date);
+
+    return {
+      x: e.date.split('/').slice(0, 2).join('/'),
+      day: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+      y: e.hours,
+      z: e.rested
+    };
+  });
+
+  if (chartData.length === 0) return;
+
+  const ctx = document.getElementById('sleepChart').getContext('2d');
+  const datasets = [];
+  const scales = {
+    x: {
+      ticks: { color: '#FFFFFF' },
+      grid: { color: 'rgba(250,250,250,0.4)' }
+    }
+  };
+  datasets.push({
+    label: 'Hours Slept',
+    data: chartData.map(d => d.y),
+    borderColor: '#0088FF',
+    backgroundColor: 'rgba(0, 136, 255, 0.2)',
+    tension: 0.3,
+    fill: true,
+    yAxisID: 'y1'
+  });
+  datasets.push({
+    label: 'Restedness Score',
+    data: chartData.map(d => d.z),
+    borderColor: '#34C759',
+    backgroundColor: 'rgba(52, 199, 89, 0.2)',
+    tension: 0.3,
+    fill: true,
+    yAxisID: 'y2'
+  });
+  scales.y1 = {
+    type: 'linear',
+    position: 'left',
+    beginAtZero: true,
+    ticks: { color: '#0088FF' },
+    grid: { color: 'rgba(250,250,250,0.4)' },
+    title: { display: true, text: 'Hours Slept', color: '#0088FF' }
+  };
+  scales.y2 = {
+    type: 'linear',
+    position: 'right',
+    ticks: { color: '#34C759' },
+    grid: { display: false },
+    title: { display: true, text: 'Restedness Score', color: '#34C759' }
+  };
+
+  sleepChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.map(d => d.x),
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#c4cad4' },
+        }
+      },
+      scales: scales
+    }
+  });
+}
+
 // Toggle task completion
 function toggleTask(chip) {
-  const button = chip.querySelector('.chip-btn');
   const check = chip.querySelector('.chip-check');
 
   chip.classList.toggle('completed');
 
   if (chip.classList.contains('completed')) {
-    button.style.display = 'none';
     check.style.display = 'inline';
   } else {
-    button.style.display = 'inline';
     check.style.display = 'none';
   }
 }
@@ -394,11 +580,11 @@ function openTaskLink(element) {
     '_blank',
     `width=${screen.availWidth},height=${screen.availHeight},left=0,top=0`
   );
-  toggleCodes(element.parentElement);
+  toggleCodes(element);
 }
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// App is initialized by supabase-client.js via onAuthStateChange → initApp()
 
 
 function createSet(exercise, setIndex) {
@@ -440,61 +626,40 @@ function createExercise(exercise) {
   return html;
 }
 
-const container = document.getElementById("workout");
-
-let day = getDay();
-
-if (day === "Mon" || day === "Tue") {
-  monWorkout.forEach(exercise => {
-    container.innerHTML += createExercise(exercise);
-  });
-} else if (day === "Wed" || day === "Thu") {
-  wedWorkout.forEach(exercise => {
-    container.innerHTML += createExercise(exercise)
-  });
-} else {
-  friWorkout.forEach(exercise => {
-    container.innerHTML += createExercise(exercise)
-  });
-}
-
-container.innerHTML += `<button class="btn-primary" onclick="logWorkout()">Log</button>`;
 
 
-function logWorkout() {
-  const today = getToday();
+async function logWorkout() {
+  const today     = getToday();
   const exercises = document.querySelectorAll('.exercise');
   const workoutData = [];
 
   exercises.forEach(ex => {
     const name = ex.querySelector('p').textContent;
     const sets = [];
-
     ex.querySelectorAll('.set').forEach(setDiv => {
-      const inputs = setDiv.querySelectorAll('input');
+      const inputs   = setDiv.querySelectorAll('input');
       const setEntry = Array.from(inputs).map(input => parseFloat(input.value) || 0);
       sets.push(setEntry);
     });
-
-    workoutData.push({
-      name,
-      sets
-    });
+    workoutData.push({ name, sets });
   });
 
-  // Save all exercises for today
+  await db.from('workout_logs').upsert(
+    { user_id: currentUser.id, date: today, exercises: workoutData },
+    { onConflict: 'user_id,date' }
+  );
+
+  // Keep localStorage cache in sync for chart functions
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   allWorkouts[today] = workoutData;
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
-
-  // Clear inputs
-  exercises.forEach(ex => ex.querySelectorAll('input').forEach(input => input.value = ''));
-
   localStorage.setItem('workoutLoggedDate', today);
-  toggleTask(document.getElementById('workoutChip'));
 
-  document.getElementById('workoutCard').style.display = 'none';
+  const chip = document.getElementById('workoutChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
 
+  showWorkoutComplete();
+  populateExerciseSelect();
   updateUI();
 }
 
@@ -503,18 +668,166 @@ function checkWorkoutLogState() {
   const today = getToday();
   const yesterday = getYesterday();
   const loggedDate = localStorage.getItem('workoutLoggedDate');
-  if(day === 'Mon' || day === 'Wed' || day === 'Fri' ) {
+
+  if (day === 'Mon' || day === 'Wed' || day === 'Fri') {
     if (loggedDate === today) {
-      document.getElementById('workoutCard').style.display = 'none';
+      showWorkoutComplete();
     }
-  } else if(day === 'Tue' || day === 'Thu' || day === 'Sat') {
-    document.getElementById('workoutChip').style.display = 'none';
-    if (loggedDate === today || loggedDate === yesterday ) {
+  } else if (day === 'Tue' || day === 'Thu' || day === 'Sat') {
+    if (loggedDate === today || loggedDate === yesterday) {
+      showWorkoutComplete();
+    } else {
       document.getElementById('workoutCard').style.display = 'none';
     }
   } else {
-    document.getElementById('workoutChip').style.display = 'none';
     document.getElementById('workoutCard').style.display = 'none';
+  }
+}
+
+// Show workout as logged with an Edit button
+function showWorkoutComplete() {
+  document.getElementById('workoutCard').style.display = '';
+  document.getElementById('workout').innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 0;">
+      <span style="color: var(--s600); font-weight:600;">&#10003; Workout logged</span>
+      <button class="btn-primary" onclick="editWorkout()">Edit</button>
+    </div>
+  `;
+}
+
+// Re-open today's workout pre-filled for editing
+function editWorkout() {
+  const today = getToday();
+  const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const todayWorkout = allWorkouts[today];
+
+  if (todayWorkout) {
+    const allEx = getAllExercises();
+    const exercises = todayWorkout.map(saved => {
+      const info = allEx.find(e => e.name.toLowerCase() === saved.name.toLowerCase());
+      return {
+        name: saved.name,
+        sets: saved.sets.length,
+        isLift: info?.isLift || false,
+        isRun: info?.isRun || false
+      };
+    });
+    renderWorkoutForm(exercises, todayWorkout);
+  }
+}
+
+// Render the workout entry form, optionally pre-filled with savedData
+function renderWorkoutForm(exercises, savedData) {
+  const container = document.getElementById('workout');
+  container.innerHTML = '';
+
+  exercises.forEach(exercise => {
+    container.innerHTML += createExercise(exercise);
+  });
+
+  container.innerHTML += `
+    <div class="input-group" id="addExerciseForm" style="margin-top: 4px;">
+      <input type="text" id="newExName" placeholder="New exercise">
+      <select id="newExType" class="exercise-select" style="flex: 0.7; min-width: 110px;">
+        <option value="bodyweight">Bodyweight</option>
+        <option value="lift">Lift</option>
+        <option value="run">Run</option>
+      </select>
+      <input type="number" id="newExSets" placeholder="Sets" min="1" max="20" value="4" style="flex: 0.3; min-width: 60px;">
+      <button class="btn-primary" onclick="addExercise()">Add</button>
+    </div>
+  `;
+  container.innerHTML += `<button class="btn-primary" onclick="logWorkout()">Log</button>`;
+
+  if (savedData) {
+    prefillWorkout(savedData);
+  }
+}
+
+// Pre-fill workout inputs from saved exercise data
+function prefillWorkout(savedExercises) {
+  const exerciseEls = document.querySelectorAll('.exercise');
+  savedExercises.forEach((savedEx, i) => {
+    if (i >= exerciseEls.length) return;
+    const sets = exerciseEls[i].querySelectorAll('.set');
+    savedEx.sets.forEach((setData, j) => {
+      if (j >= sets.length) return;
+      const inputs = sets[j].querySelectorAll('input');
+      setData.forEach((val, k) => {
+        if (inputs[k] && val) inputs[k].value = val;
+      });
+    });
+  });
+}
+
+// Add a custom exercise to the current workout form
+async function addExercise() {
+  const nameInput = document.getElementById('newExName');
+  const name = nameInput.value.trim();
+  const type = document.getElementById('newExType').value;
+  const sets = parseInt(document.getElementById('newExSets').value) || 4;
+
+  if (!name) return;
+
+  const exercise = { name, sets, isLift: type === 'lift', isRun: type === 'run' };
+
+  // Persist new custom exercise type to Supabase + local cache
+  const allEx = getAllExercises();
+  if (!allEx.find(e => e.name.toLowerCase() === name.toLowerCase())) {
+    await db.from('custom_exercises').upsert(
+      { user_id: currentUser.id, name, is_lift: exercise.isLift, is_run: exercise.isRun },
+      { onConflict: 'user_id,name' }
+    );
+    const custom = JSON.parse(localStorage.getItem('customExercises') || '[]');
+    custom.push({ name, isLift: exercise.isLift, isRun: exercise.isRun });
+    localStorage.setItem('customExercises', JSON.stringify(custom));
+  }
+
+  document.getElementById('addExerciseForm').insertAdjacentHTML('beforebegin', createExercise(exercise));
+  nameInput.value = '';
+}
+
+// Render today's scheduled workout into the form
+function renderWorkoutForDay() {
+  const day = getDay();
+  let exercises;
+  if (day === 'Mon' || day === 'Tue') {
+    exercises = monWorkout;
+  } else if (day === 'Wed' || day === 'Thu') {
+    exercises = wedWorkout;
+  } else if (day === 'Fri' || day === 'Sat') {
+    exercises = friWorkout;
+  } else {
+    return;
+  }
+  renderWorkoutForm(exercises);
+}
+
+// Returns all known exercises (predefined + custom)
+function getAllExercises() {
+  const custom = JSON.parse(localStorage.getItem('customExercises') || '[]');
+  return [...monWorkout, ...wedWorkout, ...friWorkout, ...custom];
+}
+
+// Populate the exercise chart dropdown from all logged + predefined exercises
+function populateExerciseSelect() {
+  const select = document.getElementById('exerciseSelect');
+  if (!select) return;
+
+  const currentValue = select.value;
+  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const nameSet = new Set();
+
+  getAllExercises().forEach(ex => nameSet.add(ex.name));
+  Object.values(workouts).forEach(workout => workout.forEach(ex => nameSet.add(ex.name)));
+
+  const names = [...nameSet].sort((a, b) => a.localeCompare(b));
+  select.innerHTML = names.map(name =>
+    `<option value="${name.toLowerCase()}">${name}</option>`
+  ).join('');
+
+  if (currentValue && names.some(n => n.toLowerCase() === currentValue)) {
+    select.value = currentValue;
   }
 }
 
@@ -536,8 +849,6 @@ function getLocation() {
     );
   });
 }
-
-console.log("poop");
 
 const API_KEY = "1856f6602a8285d123677bb2359f0e65";
 
@@ -562,7 +873,7 @@ async function loadWeather() {
   const data = await fetchWeather(lat, lon);
 
   document.getElementById("location").textContent =
-  data.timezone;
+    data.timezone;
 
   document.getElementById("temp").textContent =
     `${Math.round(data.current.temp)}°F`;
@@ -578,9 +889,9 @@ function randomInt(min, max) {
 }
 
 function getQuote() {
-  let qNum = randomInt(1,quotes.length);
-  document.getElementById("quote").textContent = quotes[qNum-1].quote;
-  document.getElementById("author").textContent = "- " + quotes[qNum-1].author;
+  let qNum = randomInt(1, quotes.length);
+  document.getElementById("quote").textContent = quotes[qNum - 1].quote;
+  document.getElementById("author").textContent = "- " + quotes[qNum - 1].author;
 
 }
 
@@ -640,5 +951,11 @@ const quotes = [
   { id: 53, quote: "Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.", author: "Thomas Edison" },
   { id: 54, quote: "You can feel sore tomorrow or you can feel sorry tomorrow. You choose.", author: "Unknown" },
   { id: 55, quote: "Nothing diminishes anxiety faster than action.", author: "Walter Anderson" },
-  { id: 56, quote: "Pain is temporary, quitting lasts forever.", author: "Lance Armstrong" }  
+  { id: 56, quote: "Pain is temporary, quitting lasts forever.", author: "Lance Armstrong" },
+  { id: 57, quote: "What gets measured gets managed.", author: "Peter Drucker" },
+  { id: 58, quote: "Too many of us are not living our dreams because we are living our fears.", author: "Les Brown" },
+  { id: 59, quote: "In a world where information is abundant and easy to access, the real advantage is knowing where to focus.", author: "James Clear" },
+  { id: 60, quote: "The greatest discovery of all time is that a person can change their future by merely changing their attitude.", author: "Oprah Winfrey" },
+  { id: 61, quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" }
 ];
+

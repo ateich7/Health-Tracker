@@ -2,13 +2,27 @@
 <html>
 
 <head>
-  <meta charset="UTF-8" >
+  <meta charset="UTF-8">
   <title>Health Tracker</title>
   <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 
 
 <body>
+  <!-- Auth Screen -->
+  <div id="authScreen" class="auth-screen" style="display:none;">
+    <div class="card auth-card">
+      <h2>Health Tracker</h2>
+      <p style="color:var(--bb); margin-bottom:1.5rem;">Enter your email to sign in</p>
+      <div class="input-group">
+        <input type="email" id="authEmail" placeholder="your@email.com">
+        <button class="btn-primary" onclick="sendMagicLink()">Sign In</button>
+      </div>
+      <p id="authMessage" style="margin-top:0.5rem; font-size:14px;"></p>
+    </div>
+  </div>
+
   <!-- Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
@@ -16,8 +30,10 @@
   </div>
 
   <!-- Main Content -->
-  <div class="container content" id="mainContent">
-    <div class="container">
+  <div class="app content" id="mainContent">
+
+    <!-- Header -->
+    <div class="app-header">
       <div class="stretcher">
         <h5 id="dateToday"></h5>
         <div id="weather">
@@ -26,35 +42,58 @@
           <p id="location"></p>
         </div>
       </div>
-      <div class="mini-display">
-        <div id="codesChip" class="chip">
-          <span class="chip-label">Codes</span>
-          <button class="chip-btn" onclick="openTaskLink(this)">Open</button>
-          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleCodes(this)">✓</span>
-        </div>
-        <div id="weightChip" class="chip">
-          <span class="chip-label">Weight</span>
-          <button class="chip-btn" onclick="toggleOnClick(this)"></button>
-          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleTask(this)">✓</span>
-        </div>
-        <div id="workoutChip" class="chip">
-          <span class="chip-label">Workout</span>
-          <button class="chip-btn" onclick="toggleOnClick(this)"></button>
-          <span class="chip-check" style="display:none; cursor:pointer;" onclick="toggleTask(this)">✓</span>
-        </div>
-      </div>
-      <div class="split-screen">
-        <div class="card-layout">
+    </div>
 
-          <!-- Daily Quote -->
+    <!-- Body -->
+    <div class="app-body">
+
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="nav-item" data-page="home" onclick="showPage('home')">
+          <span class="material-icons">home</span>
+          <span>Home</span>
+        </div>
+        <div class="nav-item" id="weightChip" data-page="weight" onclick="showPage('weight')">
+          <span class="material-icons">monitor_weight</span>
+          <span>Weight</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item" id="sleepChip" data-page="sleep" onclick="showPage('sleep')">
+          <span class="material-icons">bedtime</span>
+          <span>Sleep</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item" id="workoutChip" data-page="workout" onclick="showPage('workout')">
+          <span class="material-icons">fitness_center</span>
+          <span>Workout</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item" id="codesChip" onclick="openTaskLink(this)">
+          <span class="material-icons">notes</span>
+          <span>Codes</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item nav-signout" onclick="signOut()">
+          <span class="material-icons">logout</span>
+          <span>Sign Out</span>
+        </div>
+      </nav>
+
+      <!-- Pages -->
+      <div class="page-content">
+
+        <!-- Home -->
+        <div id="page-home" class="page">
           <div class="card" id="quoteCard">
             <h2>Quote</h2>
             <h5 id="quote"></h5>
             <div class="spacer"></div>
             <div id="author"></div>
           </div>
+        </div>
 
-          <!-- Weight Tracker -->
+        <!-- Weight -->
+        <div id="page-weight" class="page">
           <div class="card">
             <h2>Weight</h2>
             <div class="input-group">
@@ -75,33 +114,33 @@
               <canvas id="weightChart"></canvas>
             </div>
           </div>
+        </div>
 
-          <!-- Workout Tracker -->
+        <!-- Sleep -->
+        <div id="page-sleep" class="page">
+          <div class="card">
+            <h2>Sleep</h2>
+            <div class="input-group">
+              <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept">
+              <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)">
+              <button class="btn-primary" onclick="logSleep()">Log</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="sleepChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workout -->
+        <div id="page-workout" class="page">
           <div class="card" id="workoutCard">
             <h2>Workout</h2>
             <div id="workout"></div>
           </div>
-
-          <!-- Exercise Progress Chart -->
           <div class="card">
             <h2 id="exName">Exercise Progress</h2>
             <div class="input-group" style="margin-bottom: 1rem;">
               <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
-                <option value="pushups">Pushups</option>
-                <option value="pullups">Pullup & Chinup</option>
-                <option value="situps">Situps</option>
-                <option value="handstand pushups">Handstand Pushups</option>
-                <option value="wall angels">Wall Angels</option>
-                <option value="run">Run</option>
-                <option value="hip abductors">Hip Abductors</option>
-                <option value="goblet squats">Goblet Squats</option>
-                <option value="back extensions">Back Extensions</option>
-                <option value="shoulder press">Shoulder Press</option>
-                <option value="shoulde raise">Shoulder Raise</option>
-                <option value="chest press">Chest Press</option>
-                <option value="dumbbell row">Dumbbell Row</option>
-                <option value="dead bugs & starfish">Dead Bug & Starfish</option>
-                <option value="rowing machine">Rowing Machine</option>
               </select>
             </div>
             <div class="chart-container">
@@ -109,9 +148,13 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script src="renderer.js"></script>
 </body>
