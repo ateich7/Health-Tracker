@@ -584,7 +584,31 @@ function openTaskLink(element) {
 }
 
 // Initialize when DOM is ready
-// App is initialized by supabase-client.js via onAuthStateChange → initApp()
+// Bootstrap: runs after all scripts are loaded and DOM is ready
+let appInitialized = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Listen for sign-in (magic link / password) and sign-out after initial load
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && !appInitialized) {
+      appInitialized = true;
+      document.getElementById('authScreen').style.display = 'none';
+      initApp();
+    } else if (event === 'SIGNED_OUT') {
+      window.location.reload();
+    }
+  });
+
+  // Check for an existing session immediately
+  const { data: { session } } = await db.auth.getSession();
+  if (session && !appInitialized) {
+    appInitialized = true;
+    initApp();
+  } else if (!session) {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+});
 
 
 function createSet(exercise, setIndex) {

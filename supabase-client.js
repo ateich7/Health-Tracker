@@ -3,21 +3,6 @@ const SUPABASE_ANON_KEY = 'sb_publishable_qox_jEnHQF7ZIHenHqlHeg_YmkjlCy5';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let appInitialized = false;
-
-db.auth.onAuthStateChange((event, session) => {
-  if (session && !appInitialized) {
-    appInitialized = true;
-    document.getElementById('authScreen').style.display = 'none';
-    initApp();
-  } else if (!session && !appInitialized) {
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('authScreen').style.display = 'flex';
-  } else if (!session && appInitialized) {
-    window.location.reload();
-  }
-});
-
 async function signIn() {
   const email    = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
