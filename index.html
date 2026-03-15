@@ -14,12 +14,17 @@
   <div id="authScreen" class="auth-screen" style="display:none;">
     <div class="card auth-card">
       <h2>Health Tracker</h2>
-      <p style="color:var(--bb); margin-bottom:1.5rem;">Enter your email to sign in</p>
-      <div class="input-group">
-        <input type="email" id="authEmail" placeholder="your@email.com">
-        <button class="btn-primary" onclick="sendMagicLink()">Sign In</button>
+      <p style="color:var(--bb); margin-bottom:1.5rem;">Sign in to your account</p>
+      <div class="input-group" style="flex-direction:column;">
+        <input type="email" id="authEmail" placeholder="Email" style="width:100%;">
+        <input type="password" id="authPassword" placeholder="Password" style="width:100%;"
+               onkeydown="if(event.key==='Enter') signIn()">
       </div>
-      <p id="authMessage" style="margin-top:0.5rem; font-size:14px;"></p>
+      <div class="input-group" style="margin-top:0.5rem;">
+        <button class="btn-primary" style="flex:1;" onclick="signIn()">Sign In</button>
+        <button class="btn-primary" style="flex:1;" onclick="signUp()">Create Account</button>
+      </div>
+      <p id="authMessage" style="margin-top:0.75rem; font-size:14px;"></p>
     </div>
   </div>
 
@@ -72,6 +77,10 @@
           <span class="material-icons">notes</span>
           <span>Codes</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item nav-migrate" onclick="migrateLocalData()">
+          <span class="material-icons">upload</span>
+          <span>Migrate Data</span>
         </div>
         <div class="nav-item nav-signout" onclick="signOut()">
           <span class="material-icons">logout</span>
