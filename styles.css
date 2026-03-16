@@ -494,6 +494,18 @@ canvas {
   justify-content: space-between;
 }
 
+.ex-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ex-prev {
+  font-size: 12px;
+  color: var(--bb);
+  font-weight: 400;
+}
+
 .btn-remove-ex {
   background: none;
   border: none;

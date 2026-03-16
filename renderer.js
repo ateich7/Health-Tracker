@@ -646,10 +646,59 @@ function createSet(exercise, setIndex) {
   `;
 }
 
-function createExercise(exercise) {
+function formatPrevSets(sets, isLift, isRun) {
+  if (!sets || sets.length === 0) return '';
+  if (isRun) {
+    return sets.map(s => {
+      const miles = s[0] || 0;
+      const min = s[1] || 0;
+      const sec = String(s[2] || 0).padStart(2, '0');
+      return `${miles}mi ${min}:${sec}`;
+    }).join(', ');
+  }
+  if (isLift) return sets.map(s => `${s[0] || 0}×${s[1] || 0}`).join(', ');
+  return sets.map(s => s[0] || 0).join(', ');
+}
+
+// Find most recent past workout that shares exercises with the given list
+function getPreviousWorkout(exercises) {
+  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const today = getToday();
+  const nameSet = new Set(exercises.map(e => e.name.toLowerCase()));
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  for (const date of sorted) {
+    if (workouts[date].some(ex => nameSet.has(ex.name.toLowerCase()))) {
+      return { date, exercises: workouts[date] };
+    }
+  }
+  return null;
+}
+
+// Look up previous sets for a single exercise name across all history
+function getPrevSetsForExercise(name) {
+  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const today = getToday();
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  for (const date of sorted) {
+    const found = workouts[date].find(e => e.name.toLowerCase() === name.toLowerCase());
+    if (found) return found.sets;
+  }
+  return null;
+}
+
+function createExercise(exercise, prevSets) {
+  const prev = prevSets ?? null;
+  const prevText = prev ? formatPrevSets(prev, exercise.isLift, exercise.isRun) : '';
+  const prevHtml = prevText
+    ? `<span class="ex-prev">Last: ${prevText}</span>`
+    : '';
+
   let html = `<div class="exercise input-group">`;
   html += `<div class="exNameForm">
-    <p>${exercise.name}</p>
+    <div class="ex-name-col">
+      <p>${exercise.name}</p>
+      ${prevHtml}
+    </div>
     <button class="btn-remove-ex" onclick="this.closest('.exercise').remove()" title="Remove exercise">
       <span class="material-icons">close</span>
     </button>
@@ -758,8 +807,12 @@ function renderWorkoutForm(exercises, savedData) {
   const container = document.getElementById('workout');
   container.innerHTML = '';
 
+  const prevWorkout = getPreviousWorkout(exercises);
   exercises.forEach(exercise => {
-    container.innerHTML += createExercise(exercise);
+    const prevSets = prevWorkout?.exercises.find(
+      e => e.name.toLowerCase() === exercise.name.toLowerCase()
+    )?.sets ?? null;
+    container.innerHTML += createExercise(exercise, prevSets);
   });
 
   container.innerHTML += `
@@ -820,7 +873,8 @@ async function addExercise() {
     localStorage.setItem('customExercises', JSON.stringify(custom));
   }
 
-  document.getElementById('addExerciseForm').insertAdjacentHTML('beforebegin', createExercise(exercise));
+  const prevSets = getPrevSetsForExercise(name);
+  document.getElementById('addExerciseForm').insertAdjacentHTML('beforebegin', createExercise(exercise, prevSets));
   nameInput.value = '';
 }
 
