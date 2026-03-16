@@ -159,7 +159,10 @@ a {
 }
 
 input[type="number"],
-input[type="time"] {
+input[type="time"],
+input[type="text"],
+input[type="email"],
+input[type="password"] {
   flex: 1;
   min-width: 80px;
   padding: 12px 16px;
@@ -171,7 +174,10 @@ input[type="time"] {
 }
 
 input[type="number"]:focus,
-input[type="time"]:focus {
+input[type="time"]:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
   outline: none;
   border-color: var(--p600);
   color: var(--b);
@@ -481,7 +487,26 @@ canvas {
 }
 
 .exNameForm {
-  width: 140px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+/* Workout card: scroll exercises, keep log button always visible */
+#workoutCard {
+  overflow: hidden;
+}
+
+#workout {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+#logWorkoutBtn {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  margin-top: 14px;
 }
 
 /* ── Set label (shown on mobile) ── */
@@ -819,8 +844,7 @@ div {
 
   /* ── Workout form ── */
   .exercise {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 6px;
     padding: 14px 0;
     border-bottom: 1px solid var(--border);
@@ -838,35 +862,40 @@ div {
     color: var(--b);
   }
 
-  /* Sets sit side-by-side; inputs stack within each set */
   .set {
-    flex: 1 1 0;
-    flex-direction: column;
-    min-width: 55px;
-    width: auto;
-    gap: 4px;
+    flex: none;
+    min-width: unset;
+    width: 100%;
+    gap: 8px;
   }
 
   .set-label {
     display: block;
-    font-size: 12px;
-    color: var(--bb);
-    text-align: center;
   }
 
   .set input {
+    min-height: 52px;
+    font-size: 20px;
     text-align: center;
+    padding: 8px;
   }
 
-  /* Add-exercise form: inline row (matches other input-groups) */
+  /* Add-exercise form: stack fields */
   #addExerciseForm {
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
     border-top: 1px solid var(--border);
     padding-top: 14px;
     margin-top: 4px;
   }
 
-  /* Log workout button: full-width, sticky at bottom */
+  #addExerciseForm > * {
+    flex: none !important;
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  /* Log workout button: full-width, large */
   #logWorkoutBtn {
     width: 100%;
     min-height: 54px;
@@ -874,8 +903,6 @@ div {
     margin-top: 14px;
     background: var(--p900);
     color: var(--p300);
-    position: sticky;
-    bottom: 0;
   }
 
   /* Auth card */
