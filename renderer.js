@@ -648,7 +648,12 @@ function createSet(exercise, setIndex) {
 
 function createExercise(exercise) {
   let html = `<div class="exercise input-group">`;
-  html += `<div class="exNameForm"><p>${exercise.name}</p></div>`;
+  html += `<div class="exNameForm">
+    <p>${exercise.name}</p>
+    <button class="btn-remove-ex" onclick="this.closest('.exercise').remove()" title="Remove exercise">
+      <span class="material-icons">close</span>
+    </button>
+  </div>`;
 
   for (let i = 0; i < exercise.sets; i++) {
     html += createSet(exercise, i);

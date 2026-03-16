@@ -489,6 +489,31 @@ canvas {
 .exNameForm {
   width: 100%;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-remove-ex {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--bb);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  border-radius: var(--br);
+}
+
+.btn-remove-ex:hover {
+  color: var(--b);
+}
+
+.btn-remove-ex .material-icons {
+  font-size: 18px;
 }
 
 /* Workout card: scroll exercises, keep log button always visible */
