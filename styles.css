@@ -657,15 +657,6 @@ div {
   color: var(--p300);
 }
 
-.nav-item.completed {
-  background: var(--s900);
-  color: var(--s600);
-}
-
-.nav-item.completed:hover {
-  background: var(--s800);
-}
-
 .nav-item.active.completed {
   background: var(--p900);
   color: var(--p300);
@@ -828,7 +819,8 @@ div {
 
   /* ── Workout form ── */
   .exercise {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 14px 0;
     border-bottom: 1px solid var(--border);
@@ -846,40 +838,35 @@ div {
     color: var(--b);
   }
 
+  /* Sets sit side-by-side; inputs stack within each set */
   .set {
-    flex: none;
-    min-width: unset;
-    width: 100%;
-    gap: 8px;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 55px;
+    width: auto;
+    gap: 4px;
   }
 
   .set-label {
     display: block;
+    font-size: 12px;
+    color: var(--bb);
+    text-align: center;
   }
 
   .set input {
-    min-height: 52px;
-    font-size: 20px;
     text-align: center;
-    padding: 8px;
   }
 
-  /* Add-exercise form: stack fields */
+  /* Add-exercise form: inline row (matches other input-groups) */
   #addExerciseForm {
-    flex-direction: column;
-    gap: 8px;
+    flex-wrap: wrap;
     border-top: 1px solid var(--border);
     padding-top: 14px;
     margin-top: 4px;
   }
 
-  #addExerciseForm > * {
-    flex: none !important;
-    width: 100% !important;
-    min-width: unset !important;
-  }
-
-  /* Log workout button: full-width, large */
+  /* Log workout button: full-width, sticky at bottom */
   #logWorkoutBtn {
     width: 100%;
     min-height: 54px;
@@ -887,6 +874,8 @@ div {
     margin-top: 14px;
     background: var(--p900);
     color: var(--p300);
+    position: sticky;
+    bottom: 0;
   }
 
   /* Auth card */
