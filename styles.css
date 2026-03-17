@@ -778,6 +778,13 @@ div {
   flex-direction: row;
 }
 
+/* When workout is already logged, shrink the left card to its content */
+#page-workout.active.workout-logged #workoutCard {
+  flex: 0 0 auto;
+  min-width: 180px;
+  max-width: 260px;
+}
+
 /* Home page: center the quote card */
 #page-home.active {
   align-items: center;

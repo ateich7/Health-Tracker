@@ -714,6 +714,41 @@ function createExercise(exercise, prevSets) {
 
 
 
+// Save in-progress workout form to localStorage so it survives accidental navigation
+function saveWorkoutDraft() {
+  const exercises = document.querySelectorAll('.exercise');
+  if (!exercises.length) return;
+
+  const allEx = getAllExercises();
+  const exerciseDefs = [];
+  const values = [];
+
+  exercises.forEach(ex => {
+    const name = ex.querySelector('p').textContent;
+    const info = allEx.find(e => e.name.toLowerCase() === name.toLowerCase());
+    const setEls = ex.querySelectorAll('.set');
+
+    exerciseDefs.push({ name, isLift: info?.isLift || false, isRun: info?.isRun || false, sets: setEls.length });
+
+    const setValues = [];
+    setEls.forEach(setDiv => {
+      setValues.push(Array.from(setDiv.querySelectorAll('input')).map(i => i.value));
+    });
+    values.push({ name, sets: setValues });
+  });
+
+  localStorage.setItem('workoutDraft', JSON.stringify({ date: getToday(), exerciseDefs, values }));
+}
+
+// Return today's draft if one exists, otherwise null
+function getWorkoutDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem('workoutDraft') || 'null');
+    if (draft && draft.date === getToday()) return draft;
+  } catch {}
+  return null;
+}
+
 async function logWorkout() {
   const today     = getToday();
   const exercises = document.querySelectorAll('.exercise');
@@ -740,6 +775,7 @@ async function logWorkout() {
   allWorkouts[today] = workoutData;
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
   localStorage.setItem('workoutLoggedDate', today);
+  localStorage.removeItem('workoutDraft');
 
   const chip = document.getElementById('workoutChip');
   if (!chip.classList.contains('completed')) toggleTask(chip);
@@ -773,6 +809,7 @@ function checkWorkoutLogState() {
 // Show workout as logged with an Edit button
 function showWorkoutComplete() {
   document.getElementById('workoutCard').style.display = '';
+  document.getElementById('page-workout').classList.add('workout-logged');
   document.getElementById('workout').innerHTML = `
     <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 0;">
       <span style="color: var(--s600); font-weight:600;">&#10003; Workout logged</span>
@@ -781,15 +818,15 @@ function showWorkoutComplete() {
   `;
 }
 
-// Re-open today's workout pre-filled for editing
+// Re-open the most recently logged workout pre-filled for editing
 function editWorkout() {
-  const today = getToday();
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const todayWorkout = allWorkouts[today];
+  const loggedDate = localStorage.getItem('workoutLoggedDate');
+  const savedWorkout = loggedDate ? allWorkouts[loggedDate] : null;
 
-  if (todayWorkout) {
+  if (savedWorkout) {
     const allEx = getAllExercises();
-    const exercises = todayWorkout.map(saved => {
+    const exercises = savedWorkout.map(saved => {
       const info = allEx.find(e => e.name.toLowerCase() === saved.name.toLowerCase());
       return {
         name: saved.name,
@@ -798,14 +835,17 @@ function editWorkout() {
         isRun: info?.isRun || false
       };
     });
-    renderWorkoutForm(exercises, todayWorkout);
+    renderWorkoutForm(exercises, savedWorkout);
   }
 }
 
 // Render the workout entry form, optionally pre-filled with savedData
 function renderWorkoutForm(exercises, savedData) {
+  document.getElementById('page-workout').classList.remove('workout-logged');
   const container = document.getElementById('workout');
   container.innerHTML = '';
+  container.removeEventListener('input', saveWorkoutDraft);
+  container.addEventListener('input', saveWorkoutDraft);
 
   const prevWorkout = getPreviousWorkout(exercises);
   exercises.forEach(exercise => {
@@ -815,9 +855,12 @@ function renderWorkoutForm(exercises, savedData) {
     container.innerHTML += createExercise(exercise, prevSets);
   });
 
+  const allExNames = getAllExercises().map(e => e.name);
+  const exListOptions = allExNames.map(n => `<option value="${n}">`).join('');
   container.innerHTML += `
+    <datalist id="exerciseOptions">${exListOptions}</datalist>
     <div class="input-group" id="addExerciseForm" style="margin-top: 4px;">
-      <input type="text" id="newExName" placeholder="New exercise">
+      <input type="text" id="newExName" placeholder="Choose or type exercise" list="exerciseOptions" autocomplete="off" oninput="onExerciseNameInput()">
       <select id="newExType" class="exercise-select" style="flex: 0.7; min-width: 110px;">
         <option value="bodyweight">Bodyweight</option>
         <option value="lift">Lift</option>
@@ -850,6 +893,15 @@ function prefillWorkout(savedExercises) {
   });
 }
 
+// Auto-fill type/sets when user picks an existing exercise from the datalist
+function onExerciseNameInput() {
+  const name = document.getElementById('newExName').value.trim();
+  const match = getAllExercises().find(e => e.name.toLowerCase() === name.toLowerCase());
+  if (!match) return;
+  document.getElementById('newExType').value = match.isRun ? 'run' : match.isLift ? 'lift' : 'bodyweight';
+  if (match.sets) document.getElementById('newExSets').value = match.sets;
+}
+
 // Add a custom exercise to the current workout form
 async function addExercise() {
   const nameInput = document.getElementById('newExName');
@@ -876,11 +928,19 @@ async function addExercise() {
   const prevSets = getPrevSetsForExercise(name);
   document.getElementById('addExerciseForm').insertAdjacentHTML('beforebegin', createExercise(exercise, prevSets));
   nameInput.value = '';
+  saveWorkoutDraft();
 }
 
 // Render today's scheduled workout into the form
 function renderWorkoutForDay() {
   const day = getDay();
+
+  const draft = getWorkoutDraft();
+  if (draft) {
+    renderWorkoutForm(draft.exerciseDefs, draft.values);
+    return;
+  }
+
   let exercises;
   if (day === 'Mon' || day === 'Tue') {
     exercises = monWorkout;
@@ -909,7 +969,6 @@ function populateExerciseSelect() {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const nameSet = new Set();
 
-  getAllExercises().forEach(ex => nameSet.add(ex.name));
   Object.values(workouts).forEach(workout => workout.forEach(ex => nameSet.add(ex.name)));
 
   const names = [...nameSet].sort((a, b) => a.localeCompare(b));
