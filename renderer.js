@@ -4,6 +4,7 @@ let weightChart = null;
 let exerciseChart = null;
 let sleepChart = null;
 let currentUser = null;
+let editingWorkoutDate = null; // set when editing an existing workout so logWorkout saves to the right date
 
 const monWorkout = [
   { name: "Pushups", sets: 4, isLift: false, isRun: false },
@@ -75,6 +76,14 @@ function activatePage(name) {
     .forEach(n => n.classList.add('active'));
 }
 
+// Delete a workout entry by date from Supabase and localStorage
+async function deleteWorkoutEntry(date) {
+  await db.from('workout_logs').delete().eq('user_id', currentUser.id).eq('date', date);
+  const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  delete allWorkouts[date];
+  localStorage.setItem('workouts', JSON.stringify(allWorkouts));
+}
+
 // Load all data from Supabase
 async function loadData() {
   const [weightsRes, sleepsRes, workoutsRes, customExRes] = await Promise.all([
@@ -91,6 +100,15 @@ async function loadData() {
   const workoutsObj = {};
   (workoutsRes.data || []).forEach(row => { workoutsObj[row.date] = row.exercises; });
   localStorage.setItem('workouts', JSON.stringify(workoutsObj));
+
+  // One-time cleanup: remove the duplicate today entry created by the edit-saves-wrong-date bug
+  const dupCleanupKey = 'dupCleanup_3/17/2026';
+  if (!localStorage.getItem(dupCleanupKey) && workoutsObj['3/17/2026']) {
+    await deleteWorkoutEntry('3/17/2026');
+    delete workoutsObj['3/17/2026'];
+    localStorage.setItem('workouts', JSON.stringify(workoutsObj));
+    localStorage.setItem(dupCleanupKey, '1');
+  }
 
   // Cache custom exercises locally
   const customList = (customExRes.data || []).map(e => ({
@@ -750,7 +768,9 @@ function getWorkoutDraft() {
 }
 
 async function logWorkout() {
-  const today     = getToday();
+  const date = editingWorkoutDate || getToday();
+  editingWorkoutDate = null;
+
   const exercises = document.querySelectorAll('.exercise');
   const workoutData = [];
 
@@ -766,15 +786,15 @@ async function logWorkout() {
   });
 
   await db.from('workout_logs').upsert(
-    { user_id: currentUser.id, date: today, exercises: workoutData },
+    { user_id: currentUser.id, date, exercises: workoutData },
     { onConflict: 'user_id,date' }
   );
 
   // Keep localStorage cache in sync for chart functions
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  allWorkouts[today] = workoutData;
+  allWorkouts[date] = workoutData;
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
-  localStorage.setItem('workoutLoggedDate', today);
+  localStorage.setItem('workoutLoggedDate', date);
   localStorage.removeItem('workoutDraft');
 
   const chip = document.getElementById('workoutChip');
@@ -825,6 +845,7 @@ function editWorkout() {
   const savedWorkout = loggedDate ? allWorkouts[loggedDate] : null;
 
   if (savedWorkout) {
+    editingWorkoutDate = loggedDate;
     const allEx = getAllExercises();
     const exercises = savedWorkout.map(saved => {
       const info = allEx.find(e => e.name.toLowerCase() === saved.name.toLowerCase());
