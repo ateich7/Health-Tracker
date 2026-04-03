@@ -1402,13 +1402,18 @@ function updateStreaks() {
     { label: 'Release',  count: calcStreak(releaseDates),       icon: 'local_fire_department' },
   ];
 
-  container.innerHTML = streaks.map(s => `
+  container.innerHTML = streaks.map(s => {
+    const weeks = Math.floor(s.count / 7);
+    const display = s.count >= 7 ? weeks : s.count;
+    const unit    = s.count >= 7 ? (weeks === 1 ? 'wk' : 'wks') : (s.count === 1 ? 'day' : 'days');
+    return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
-      <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
+      <div class="streak-count${s.count > 0 ? ' active' : ''}">${display}</div>
+      <div class="streak-unit">${unit}</div>
       <div class="streak-label">${s.label}</div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 //Gets location for weather display

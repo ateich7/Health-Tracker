@@ -955,12 +955,19 @@ div {
   color: var(--s600);
 }
 
+.streak-unit {
+  font-size: 11px;
+  color: var(--bb);
+  line-height: 1;
+  margin-top: -2px;
+}
+
 .streak-label {
   font-size: 10px;
   color: var(--bb);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 /* ══════════════════════════════════════════
    MOBILE  (≤ 768px)
