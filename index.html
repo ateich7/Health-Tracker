@@ -147,19 +147,25 @@
 
         <!-- Workout -->
         <div id="page-workout" class="page">
-          <div class="card" id="workoutCard">
-            <h2>Workout</h2>
-            <div id="workout"></div>
+          <div class="wh-top-row">
+            <div class="card" id="workoutCard">
+              <h2>Workout</h2>
+              <div id="workout"></div>
+            </div>
+            <div class="card">
+              <h2 id="exName">Exercise Progress</h2>
+              <div class="input-group" style="margin-bottom: 1rem;">
+                <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
+                </select>
+              </div>
+              <div class="chart-container">
+                <canvas id="exerciseChart"></canvas>
+              </div>
+            </div>
           </div>
-          <div class="card">
-            <h2 id="exName">Exercise Progress</h2>
-            <div class="input-group" style="margin-bottom: 1rem;">
-              <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
-              </select>
-            </div>
-            <div class="chart-container">
-              <canvas id="exerciseChart"></canvas>
-            </div>
+          <div class="card" id="workoutHistoryCard">
+            <h2>Workout History</h2>
+            <div id="workoutHistory"></div>
           </div>
         </div>
 

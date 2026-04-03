@@ -20,10 +20,11 @@ create table if not exists sleep_logs (
 );
 
 create table if not exists workout_logs (
-  id        uuid  default gen_random_uuid() primary key,
-  user_id   uuid  references auth.users not null,
-  date      text  not null,
-  exercises jsonb not null,
+  id               uuid    default gen_random_uuid() primary key,
+  user_id          uuid    references auth.users not null,
+  date             text    not null,
+  exercises        jsonb   not null,
+  duration_minutes integer,
   unique (user_id, date)
 );
 
@@ -46,3 +47,6 @@ create policy "Own weight logs"      on weight_logs      for all using (auth.uid
 create policy "Own sleep logs"       on sleep_logs       for all using (auth.uid() = user_id);
 create policy "Own workout logs"     on workout_logs     for all using (auth.uid() = user_id);
 create policy "Own custom exercises" on custom_exercises for all using (auth.uid() = user_id);
+
+-- Migration: add duration_minutes to existing workout_logs tables
+-- alter table workout_logs add column if not exists duration_minutes integer;

@@ -5,6 +5,8 @@ let exerciseChart = null;
 let sleepChart = null;
 let currentUser = null;
 let editingWorkoutDate = null; // set when editing an existing workout so logWorkout saves to the right date
+let workoutTimerStart = null;  // timestamp (ms) when the user first entered a value during the current session
+let workoutLogs = [];          // full rows from workout_logs including duration_minutes
 
 const monWorkout = [
   { name: "Pushups", sets: 4, isLift: false, isRun: false },
@@ -96,9 +98,11 @@ async function loadData() {
   weightData = weightsRes.data || [];
   sleepData  = sleepsRes.data  || [];
 
+  workoutLogs = workoutsRes.data || [];
+
   // Rebuild workouts object in localStorage so chart functions can read it
   const workoutsObj = {};
-  (workoutsRes.data || []).forEach(row => { workoutsObj[row.date] = row.exercises; });
+  workoutLogs.forEach(row => { workoutsObj[row.date] = row.exercises; });
   localStorage.setItem('workouts', JSON.stringify(workoutsObj));
 
   // One-time cleanup: remove the duplicate today entry created by the edit-saves-wrong-date bug
@@ -141,6 +145,7 @@ async function loadData() {
 
   checkWorkoutLogState();
   populateExerciseSelect();
+  renderWorkoutHistory();
   getQuote();
   updateUI();
 
@@ -711,11 +716,14 @@ function createExercise(exercise, prevSets) {
     ? `<span class="ex-prev">Last: ${prevText}</span>`
     : '';
 
-  let html = `<div class="exercise input-group">`;
+  let html = `<div class="exercise input-group" draggable="true">`;
   html += `<div class="exNameForm">
-    <div class="ex-name-col">
-      <p>${exercise.name}</p>
-      ${prevHtml}
+    <div class="ex-left-col">
+      <span class="btn-drag-ex material-icons" title="Drag to reorder">drag_indicator</span>
+      <div class="ex-name-col">
+        <p>${exercise.name}</p>
+        ${prevHtml}
+      </div>
     </div>
     <button class="btn-remove-ex" onclick="this.closest('.exercise').remove()" title="Remove exercise">
       <span class="material-icons">close</span>
@@ -755,7 +763,7 @@ function saveWorkoutDraft() {
     values.push({ name, sets: setValues });
   });
 
-  localStorage.setItem('workoutDraft', JSON.stringify({ date: getToday(), exerciseDefs, values }));
+  localStorage.setItem('workoutDraft', JSON.stringify({ date: getToday(), exerciseDefs, values, timerStart: workoutTimerStart }));
 }
 
 // Return today's draft if one exists, otherwise null
@@ -785,8 +793,13 @@ async function logWorkout() {
     workoutData.push({ name, sets });
   });
 
+  const durationMinutes = workoutTimerStart
+    ? Math.round((Date.now() - workoutTimerStart) / 60000) + 15
+    : 15;
+  workoutTimerStart = null;
+
   await db.from('workout_logs').upsert(
-    { user_id: currentUser.id, date, exercises: workoutData },
+    { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes },
     { onConflict: 'user_id,date' }
   );
 
@@ -796,6 +809,13 @@ async function logWorkout() {
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
   localStorage.setItem('workoutLoggedDate', date);
   localStorage.removeItem('workoutDraft');
+
+  // Keep workoutLogs in memory in sync
+  const logIdx = workoutLogs.findIndex(r => r.date === date);
+  const newRow = { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes };
+  if (logIdx >= 0) workoutLogs[logIdx] = newRow;
+  else workoutLogs.push(newRow);
+  renderWorkoutHistory();
 
   const chip = document.getElementById('workoutChip');
   if (!chip.classList.contains('completed')) toggleTask(chip);
@@ -860,6 +880,80 @@ function editWorkout() {
   }
 }
 
+// Set up drag-to-reorder on .exercise elements within container
+function setupExerciseDragDrop(container) {
+  let dragEl = null;
+
+  container.addEventListener('dragstart', e => {
+    const ex = e.target.closest('.exercise');
+    if (!ex) return;
+    dragEl = ex;
+    requestAnimationFrame(() => ex.classList.add('dragging'));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  container.addEventListener('dragend', () => {
+    if (dragEl) {
+      dragEl.classList.remove('dragging');
+      dragEl = null;
+    }
+    container.querySelectorAll('.exercise').forEach(el => el.classList.remove('drag-over'));
+    saveWorkoutDraft();
+  });
+
+  container.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!dragEl) return;
+    const ex = e.target.closest('.exercise');
+    if (!ex || ex === dragEl) return;
+    const rect = ex.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) {
+      container.insertBefore(dragEl, ex);
+    } else {
+      container.insertBefore(dragEl, ex.nextElementSibling);
+    }
+  });
+
+  container.addEventListener('drop', e => e.preventDefault());
+
+  // ── Touch / mobile drag ──
+  container.addEventListener('touchstart', e => {
+    const handle = e.target.closest('.btn-drag-ex');
+    if (!handle) return;
+    dragEl = handle.closest('.exercise');
+    if (!dragEl) return;
+    dragEl.classList.add('dragging');
+    e.preventDefault(); // block scroll while dragging
+  }, { passive: false });
+
+  container.addEventListener('touchmove', e => {
+    if (!dragEl) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    // Temporarily hide dragged element so elementFromPoint finds what's beneath it
+    dragEl.style.visibility = 'hidden';
+    const below = document.elementFromPoint(touch.clientX, touch.clientY);
+    dragEl.style.visibility = '';
+    if (!below) return;
+    const target = below.closest('.exercise');
+    if (!target || target === dragEl) return;
+    const rect = target.getBoundingClientRect();
+    if (touch.clientY < rect.top + rect.height / 2) {
+      container.insertBefore(dragEl, target);
+    } else {
+      container.insertBefore(dragEl, target.nextElementSibling);
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchend', () => {
+    if (!dragEl) return;
+    dragEl.classList.remove('dragging');
+    dragEl = null;
+    saveWorkoutDraft();
+  });
+}
+
 // Render the workout entry form, optionally pre-filled with savedData
 function renderWorkoutForm(exercises, savedData) {
   document.getElementById('page-workout').classList.remove('workout-logged');
@@ -867,6 +961,14 @@ function renderWorkoutForm(exercises, savedData) {
   container.innerHTML = '';
   container.removeEventListener('input', saveWorkoutDraft);
   container.addEventListener('input', saveWorkoutDraft);
+  setupExerciseDragDrop(container);
+  workoutTimerStart = null;
+  container.addEventListener('input', function startTimer(e) {
+    if (workoutTimerStart === null && e.target.closest('.exercise')) {
+      workoutTimerStart = Date.now();
+      container.removeEventListener('input', startTimer);
+    }
+  });
 
   const prevWorkout = getPreviousWorkout(exercises);
   exercises.forEach(exercise => {
@@ -952,6 +1054,81 @@ async function addExercise() {
   saveWorkoutDraft();
 }
 
+// Find the most recent logged workout for the same day-group (Mon/Tue, Wed/Thu, Fri/Sat)
+function getLastWeekDayGroupWorkout(day) {
+  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const today = getToday();
+  // JS Date.getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+  const dayPairs = {
+    'Mon': [1, 2], 'Tue': [1, 2],
+    'Wed': [3, 4], 'Thu': [3, 4],
+    'Fri': [5, 6], 'Sat': [5, 6]
+  };
+  const validDays = dayPairs[day];
+  if (!validDays) return null;
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  for (const date of sorted) {
+    const dow = new Date(date).getDay();
+    if (validDays.includes(dow)) return workouts[date];
+  }
+  return null;
+}
+
+// Convert history exercise format [{name, sets: [[...], ...]}] to def format [{name, sets: N, isLift, isRun}]
+function exerciseDefsFromHistory(historyExercises) {
+  const allKnown = getAllExercises();
+  return historyExercises.map(histEx => {
+    const known = allKnown.find(e => e.name.toLowerCase() === histEx.name.toLowerCase());
+    if (known) {
+      return { name: histEx.name, sets: histEx.sets.length, isLift: known.isLift, isRun: known.isRun };
+    }
+    // Infer type from set data: run=[miles,min,sec] (3), lift=[reps,lbs] (2), bodyweight=[reps] (1)
+    const setLen = histEx.sets?.[0]?.length ?? 1;
+    const isRun = setLen === 3;
+    const isLift = !isRun && setLen === 2;
+    return { name: histEx.name, sets: histEx.sets.length, isLift, isRun };
+  });
+}
+
+function formatHistoryDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderWorkoutHistory() {
+  const container = document.getElementById('workoutHistory');
+  if (!container) return;
+
+  const sorted = [...workoutLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!sorted.length) {
+    container.innerHTML = '<p class="empty-state">No workouts logged yet.</p>';
+    return;
+  }
+
+  const allEx = getAllExercises();
+
+  container.innerHTML = sorted.map(row => {
+    const dur = row.duration_minutes ? `${row.duration_minutes} min` : '—';
+    const dateLabel = formatHistoryDate(row.date);
+    const exerciseLines = (row.exercises || []).map(ex => {
+      const info = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
+      const summary = formatPrevSets(ex.sets, info?.isLift || false, info?.isRun || false);
+      return `<div class="wh-ex"><span class="wh-exname">${ex.name}</span><span class="wh-exsets">${summary}</span></div>`;
+    }).join('');
+
+    return `
+      <div class="wh-row" onclick="this.classList.toggle('wh-open')">
+        <div class="wh-header">
+          <span class="wh-date">${dateLabel}</span>
+          <span class="wh-dur">${dur}</span>
+          <span class="material-icons wh-arrow">expand_more</span>
+        </div>
+        <div class="wh-detail">${exerciseLines}</div>
+      </div>`;
+  }).join('');
+}
+
 // Render today's scheduled workout into the form
 function renderWorkoutForDay() {
   const day = getDay();
@@ -959,6 +1136,14 @@ function renderWorkoutForDay() {
   const draft = getWorkoutDraft();
   if (draft) {
     renderWorkoutForm(draft.exerciseDefs, draft.values);
+    if (draft.timerStart) workoutTimerStart = draft.timerStart;
+    return;
+  }
+
+  // Use last week's same day-group workout as defaults if available
+  const lastWorkout = getLastWeekDayGroupWorkout(day);
+  if (lastWorkout) {
+    renderWorkoutForm(exerciseDefsFromHistory(lastWorkout));
     return;
   }
 

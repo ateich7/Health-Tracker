@@ -528,6 +528,34 @@ canvas {
   font-size: 18px;
 }
 
+.ex-left-col {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-drag-ex {
+  color: var(--bb);
+  cursor: grab;
+  font-size: 20px;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.btn-drag-ex:active {
+  cursor: grabbing;
+}
+
+.exercise.dragging {
+  opacity: 0.4;
+}
+
+.exercise.drag-over {
+  outline: 2px solid var(--p600);
+  border-radius: var(--br);
+}
+
 /* Workout card: scroll exercises, keep log button always visible */
 #workoutCard {
   overflow: hidden;
@@ -773,9 +801,22 @@ div {
   min-height: 150px;
 }
 
-/* Workout page: two cards side by side */
+/* Workout page: history card below, top row has two cards side by side */
 #page-workout.active {
+  flex-direction: column;
+}
+
+.wh-top-row {
+  display: flex;
   flex-direction: row;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+
+.wh-top-row .card {
+  flex: 1;
+  min-height: 0;
 }
 
 /* When workout is already logged, shrink the left card to its content */
@@ -783,6 +824,90 @@ div {
   flex: 0 0 auto;
   min-width: 180px;
   max-width: 260px;
+}
+
+/* History card */
+#workoutHistoryCard {
+  flex: 0 0 auto !important;
+  min-height: unset !important;
+  max-height: 280px;
+}
+
+#workoutHistory {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.wh-row {
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  padding: 9px 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wh-row:last-child {
+  border-bottom: none;
+}
+
+.wh-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wh-date {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--b);
+}
+
+.wh-dur {
+  font-size: 13px;
+  color: var(--p300);
+  white-space: nowrap;
+}
+
+.wh-arrow {
+  font-size: 18px !important;
+  color: var(--bb);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.wh-row.wh-open .wh-arrow {
+  transform: rotate(180deg);
+}
+
+.wh-detail {
+  display: none;
+  padding-top: 6px;
+}
+
+.wh-row.wh-open .wh-detail {
+  display: block;
+}
+
+.wh-ex {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.wh-exname {
+  color: var(--bb);
+  flex-shrink: 0;
+}
+
+.wh-exsets {
+  color: var(--b);
+  text-align: right;
+  font-size: 12px;
 }
 
 /* Home page: center the quote card */
@@ -858,17 +983,34 @@ div {
     flex: 0 0 auto;
     height: auto;
     min-height: unset;
+    padding: 16px;
   }
 
-  /* Charts: fixed height */
+  /* Charts: fixed height, break out to card edges */
   .page .chart-container {
     flex: none;
     height: 220px;
+    margin-left: -16px;
+    margin-right: -16px;
   }
 
-  /* Workout page stacks vertically */
-  #page-workout.active {
+  /* Sleep & weight charts: full viewport width */
+  #page-sleep .chart-container,
+  #page-weight .chart-container {
+    height: 280px;
+    margin-left: -30px;
+    margin-right: -30px;
+    width: 100vw;
+  }
+
+  /* Workout top row stacks vertically on mobile */
+  .wh-top-row {
     flex-direction: column;
+    flex: none;
+  }
+
+  #workoutHistoryCard {
+    max-height: unset !important;
   }
 
   /* Home page: top-aligned */
