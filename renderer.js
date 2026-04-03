@@ -1394,7 +1394,7 @@ function updateStreaks() {
   const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
 
   const streaks = [
-    { label: 'Workout',  count: calcStreak(workoutDates, true), icon: 'fitness_center'   },
+    { label: 'Workout',  count: calcStreak(workoutDates, true), icon: 'fitness_center',       workouts: true },
     { label: 'Sleep',    count: calcStreak(sleepDates),         icon: 'bedtime'           },
     { label: 'Weight',   count: calcStreak(weightDates),        icon: 'monitor_weight'    },
     { label: 'Codes',    count: calcStreak(codesDates),         icon: 'notes'             },
@@ -1403,14 +1403,16 @@ function updateStreaks() {
   ];
 
   container.innerHTML = streaks.map(s => {
-    const weeks = Math.floor(s.count / 7);
-    const display = s.count >= 7 ? weeks : s.count;
-    const unit    = s.count >= 7 ? (weeks === 1 ? 'wk' : 'wks') : (s.count === 1 ? 'day' : 'days');
+    const unit = s.workouts
+      ? (s.count === 1 ? 'workout' : 'workouts')
+      : (s.count === 1 ? 'day' : 'days');
     return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
-      <div class="streak-count${s.count > 0 ? ' active' : ''}">${display}</div>
-      <div class="streak-unit">${unit}</div>
+      <div class="streak-count-row">
+        <span class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</span>
+        <span class="streak-unit">${unit}</span>
+      </div>
       <div class="streak-label">${s.label}</div>
     </div>`;
   }).join('');
