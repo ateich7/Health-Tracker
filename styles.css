@@ -921,6 +921,47 @@ div {
   max-width: 620px;
   width: 100%;
 }
+
+/* Streaks */
+.streak-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.streak-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(250,250,250,0.07);
+  border-radius: var(--br);
+  padding: 14px 8px 10px;
+  gap: 3px;
+}
+
+.streak-icon {
+  color: var(--p300);
+  font-size: 18px !important;
+}
+
+.streak-count {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--bb);
+  line-height: 1.1;
+}
+
+.streak-count.active {
+  color: var(--s600);
+}
+
+.streak-label {
+  font-size: 10px;
+  color: var(--bb);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
 /* ══════════════════════════════════════════
    MOBILE  (≤ 768px)
    ══════════════════════════════════════════ */

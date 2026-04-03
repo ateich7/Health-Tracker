@@ -246,6 +246,7 @@ function getLast30Days() {
 // Update all UI elements (only refreshes the chart for the active page)
 function updateUI() {
   updateStats();
+  updateStreaks();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
   if (activePage === 'weight') updateWeightChart();
   else if (activePage === 'sleep') updateSleepChart();
@@ -727,13 +728,20 @@ function toggleOnClick(element) {
 function toggleCodes(chip) {
   const today = getToday();
   const loggedToday = localStorage.getItem('codesLoggedDate') === today;
+  const codesLog = JSON.parse(localStorage.getItem('codesLog') || '[]');
 
   if (!loggedToday) {
     localStorage.setItem('codesLoggedDate', today);
+    if (!codesLog.includes(today)) {
+      codesLog.push(today);
+      localStorage.setItem('codesLog', JSON.stringify(codesLog));
+    }
   } else {
     localStorage.setItem('codesLoggedDate', null);
+    localStorage.setItem('codesLog', JSON.stringify(codesLog.filter(d => d !== today)));
   }
   toggleTask(chip);
+  updateStreaks();
 }
 
 // Open codes link
@@ -1328,6 +1336,79 @@ function getYesterday() {
   const date = new Date();
   date.setDate(date.getDate() - 1); // go back 1 day
   return date.toLocaleDateString();  // same format as getToday()
+}
+
+// Calculate streak of consecutive expected days where loggedDateStrings contains the date.
+// Saturdays are always excluded (not expected). workoutMode restricts expected days to Mon/Wed/Fri.
+// Today is not penalized if not yet logged (the day may not be over).
+function calcStreak(loggedDateStrings, workoutMode = false) {
+  const dateSet = new Set(loggedDateStrings);
+
+  const now = new Date();
+  now.setHours(12, 0, 0, 0);
+  const todayStr = now.toLocaleDateString();
+
+  let streak = 0;
+  let d = new Date(now);
+
+  for (let i = 0; i < 500; i++) {
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dateStr = d.toLocaleDateString();
+
+    const isExpected = dayName !== 'Sat' &&
+      (!workoutMode || dayName === 'Mon' || dayName === 'Wed' || dayName === 'Fri');
+
+    if (!isExpected) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+
+    const isLogged = dateSet.has(dateStr);
+
+    // Don't penalize for today not being logged yet
+    if (dateStr === todayStr && !isLogged) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+
+    if (isLogged) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+function updateStreaks() {
+  const container = document.getElementById('streaksGrid');
+  if (!container) return;
+
+  const workoutDates  = workoutLogs.map(r => r.date);
+  const sleepDates    = sleepData.map(e => e.date);
+  const weightDates   = weightData.map(e => e.date);
+  const signalsDates  = psychData.map(e => e.date);
+  const releaseDates  = psychData.filter(e => e.released).map(e => e.date);
+  const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
+
+  const streaks = [
+    { label: 'Workout',  count: calcStreak(workoutDates, true), icon: 'fitness_center'   },
+    { label: 'Sleep',    count: calcStreak(sleepDates),         icon: 'bedtime'           },
+    { label: 'Weight',   count: calcStreak(weightDates),        icon: 'monitor_weight'    },
+    { label: 'Codes',    count: calcStreak(codesDates),         icon: 'notes'             },
+    { label: 'Signals',  count: calcStreak(signalsDates),       icon: 'self_improvement'  },
+    { label: 'Release',  count: calcStreak(releaseDates),       icon: 'local_fire_department' },
+  ];
+
+  container.innerHTML = streaks.map(s => `
+    <div class="streak-item">
+      <span class="material-icons streak-icon">${s.icon}</span>
+      <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
+      <div class="streak-label">${s.label}</div>
+    </div>
+  `).join('');
 }
 
 //Gets location for weather display
