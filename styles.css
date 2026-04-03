@@ -1091,3 +1091,48 @@ div {
     margin: 16px;
   }
 }
+
+/* Signals page */
+.signals-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.signal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.signal-label {
+  color: var(--h);
+  font-size: 14px;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.signal-val {
+  color: var(--b);
+  font-size: 16px;
+  font-weight: 600;
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.signal-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--p600);
+  height: 4px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.signal-row .btn-toggle {
+  flex: 1;
+  margin-bottom: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+}

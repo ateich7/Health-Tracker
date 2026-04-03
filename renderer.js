@@ -1,8 +1,11 @@
 let weightData = [];
 let sleepData = [];
+let psychData = [];
 let weightChart = null;
 let exerciseChart = null;
 let sleepChart = null;
+let signalsChart = null;
+let signalsReleaseChart = null;
 let currentUser = null;
 let editingWorkoutDate = null; // set when editing an existing workout so logWorkout saves to the right date
 let workoutTimerStart = null;  // timestamp (ms) when the user first entered a value during the current session
@@ -67,6 +70,7 @@ function showPage(name) {
   if (name === 'weight') updateWeightChart();
   else if (name === 'sleep') updateSleepChart();
   else if (name === 'workout') updateExerciseChart();
+  else if (name === 'signals') updateSignalsChart();
 }
 
 // DOM-only page switch (no chart refresh, no storage write)
@@ -88,15 +92,17 @@ async function deleteWorkoutEntry(date) {
 
 // Load all data from Supabase
 async function loadData() {
-  const [weightsRes, sleepsRes, workoutsRes, customExRes] = await Promise.all([
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('workout_logs').select('*').eq('user_id', currentUser.id),
-    db.from('custom_exercises').select('*').eq('user_id', currentUser.id)
+    db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
+    db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp')
   ]);
 
   weightData = weightsRes.data || [];
   sleepData  = sleepsRes.data  || [];
+  psychData  = psychRes.data   || [];
 
   workoutLogs = workoutsRes.data || [];
 
@@ -130,6 +136,10 @@ async function loadData() {
   }
   if (sleepData.some(e => e.date === today)) {
     const chip = document.getElementById('sleepChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
+  if (psychData.some(e => e.date === today)) {
+    const chip = document.getElementById('signalsChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
   checkChipState('codesChip', 'codesLoggedDate');
@@ -240,6 +250,7 @@ function updateUI() {
   if (activePage === 'weight') updateWeightChart();
   else if (activePage === 'sleep') updateSleepChart();
   else if (activePage === 'workout') updateExerciseChart();
+  else if (activePage === 'signals') updateSignalsChart();
 }
 
 // Update stats
@@ -561,6 +572,132 @@ function updateSleepChart() {
         }
       },
       scales: scales
+    }
+  });
+}
+
+// Log psych / signals entry
+async function logPsych() {
+  const confidence = parseInt(document.getElementById('psychConfidence').value);
+  const stress     = parseInt(document.getElementById('psychStress').value);
+  const low        = parseInt(document.getElementById('psychLow').value);
+  const released   = document.getElementById('psychRelease').classList.contains('active');
+
+  const today = getToday();
+  const entry = { date: today, confidence, stress, low, released, timestamp: Date.now() };
+
+  await db.from('psych_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+
+  psychData = psychData.filter(e => e.date !== today);
+  psychData.push(entry);
+  psychData.sort((a, b) => a.timestamp - b.timestamp);
+
+  const chip = document.getElementById('signalsChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
+  updateSignalsChart();
+}
+
+function togglePsychRelease() {
+  const btn = document.getElementById('psychRelease');
+  const nowActive = !btn.classList.contains('active');
+  btn.classList.toggle('active', nowActive);
+  btn.classList.toggle('inactive', !nowActive);
+  btn.textContent = nowActive ? 'Yes' : 'No';
+}
+
+// Update signals charts
+function updateSignalsChart() {
+  if (signalsChart) signalsChart.destroy();
+  if (signalsReleaseChart) signalsReleaseChart.destroy();
+
+  const chartData = psychData.slice(-30).map(e => ({
+    x: e.date.split('/').slice(0, 2).join('/'),
+    confidence: e.confidence,
+    stress: e.stress,
+    low: e.low,
+    released: e.released ? 1 : 0
+  }));
+
+  if (chartData.length === 0) return;
+
+  const labels = chartData.map(d => d.x);
+  const scales = {
+    x: { ticks: { color: '#FFFFFF' }, grid: { color: 'rgba(250,250,250,0.4)' } },
+    y: {
+      min: 1, max: 10,
+      ticks: { color: '#c4cad4', stepSize: 1 },
+      grid: { color: 'rgba(250,250,250,0.4)' }
+    }
+  };
+
+  const ctx1 = document.getElementById('signalsChart').getContext('2d');
+  signalsChart = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Confidence',
+          data: chartData.map(d => d.confidence),
+          borderColor: '#0088FF',
+          backgroundColor: 'rgba(0,136,255,0.15)',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Stress',
+          data: chartData.map(d => d.stress),
+          borderColor: '#FF6B6B',
+          backgroundColor: 'rgba(255,107,107,0.15)',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Low',
+          data: chartData.map(d => d.low),
+          borderColor: '#A78BFA',
+          backgroundColor: 'rgba(167,139,250,0.15)',
+          tension: 0.3,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#c4cad4' } } },
+      scales
+    }
+  });
+
+  const ctx2 = document.getElementById('signalsReleaseChart').getContext('2d');
+  signalsReleaseChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Release',
+        data: chartData.map(d => d.released),
+        backgroundColor: chartData.map(d => d.released ? 'rgba(52,199,89,0.6)' : 'rgba(250,250,250,0.1)'),
+        borderColor: chartData.map(d => d.released ? '#34C759' : 'rgba(250,250,250,0.2)'),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#FFFFFF' }, grid: { color: 'rgba(250,250,250,0.4)' } },
+        y: {
+          min: 0, max: 1,
+          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'Yes' : 'No' },
+          grid: { color: 'rgba(250,250,250,0.4)' }
+        }
+      }
     }
   });
 }
