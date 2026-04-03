@@ -861,26 +861,43 @@ function createExercise(exercise, prevSets) {
     ? `<span class="ex-prev">Last: ${prevText}</span>`
     : '';
 
-  let html = `<div class="exercise input-group" draggable="true">`;
-  html += `<div class="exNameForm">
+  let html = `<div class="exercise" draggable="true">`;
+  html += `<div class="exNameForm" onclick="toggleExerciseCollapse(this.closest('.exercise'))">
     <div class="ex-left-col">
-      <span class="btn-drag-ex material-icons" title="Drag to reorder">drag_indicator</span>
+      <span class="btn-drag-ex material-icons" title="Drag to reorder" onclick="event.stopPropagation()">drag_indicator</span>
       <div class="ex-name-col">
         <p>${exercise.name}</p>
         ${prevHtml}
       </div>
     </div>
-    <button class="btn-remove-ex" onclick="this.closest('.exercise').remove()" title="Remove exercise">
-      <span class="material-icons">close</span>
-    </button>
+    <div class="ex-right-col">
+      <span class="material-icons ex-chevron">expand_more</span>
+      <button class="btn-remove-ex" onclick="event.stopPropagation(); this.closest('.exercise').remove()" title="Remove exercise">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
   </div>`;
 
+  html += `<div class="ex-sets-body">`;
   for (let i = 0; i < exercise.sets; i++) {
     html += createSet(exercise, i);
   }
+  html += `</div>`;
 
   html += `</div>`;
   return html;
+}
+
+function toggleExerciseCollapse(exEl) {
+  const container = exEl.closest('#workout');
+  if (exEl.classList.contains('ex-collapsed')) {
+    // Expanding: if 2 are already open, close the first open one
+    const openEls = [...container.querySelectorAll('.exercise:not(.ex-collapsed)')];
+    if (openEls.length >= 2) openEls[0].classList.add('ex-collapsed');
+    exEl.classList.remove('ex-collapsed');
+  } else {
+    exEl.classList.add('ex-collapsed');
+  }
 }
 
 
@@ -1121,6 +1138,11 @@ function renderWorkoutForm(exercises, savedData) {
       e => e.name.toLowerCase() === exercise.name.toLowerCase()
     )?.sets ?? null;
     container.innerHTML += createExercise(exercise, prevSets);
+  });
+
+  // Collapse all exercises beyond the first 2
+  container.querySelectorAll('.exercise').forEach((el, idx) => {
+    if (idx >= 2) el.classList.add('ex-collapsed');
   });
 
   const allExNames = getAllExercises().map(e => e.name);
@@ -1409,10 +1431,8 @@ function updateStreaks() {
     return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
-      <div class="streak-count-row">
-        <span class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</span>
-        <span class="streak-unit">${unit}</span>
-      </div>
+      <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
+      <div class="streak-unit">${unit}</div>
       <div class="streak-label">${s.label}</div>
     </div>`;
   }).join('');

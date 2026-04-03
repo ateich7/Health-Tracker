@@ -452,12 +452,45 @@ canvas {
 
 .exercise {
   display: flex;
-  flex-direction: row;       /* horizontal row of sets */
-  gap: var(--space9);                 /* space between sets */
-  flex-wrap: wrap;            /* wrap to next line if too many sets */
-  width: 100%;               /* fill card */
+  flex-direction: column;
+  width: 100%;
   box-sizing: border-box;
-     /* sets fill height */
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.exercise:last-of-type {
+  border-bottom: none;
+}
+
+.ex-sets-body {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space9);
+  width: 100%;
+  padding-top: 8px;
+}
+
+.exercise.ex-collapsed .ex-sets-body {
+  display: none;
+}
+
+.ex-chevron {
+  font-size: 18px !important;
+  color: var(--bb);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.exercise.ex-collapsed .ex-chevron {
+  transform: rotate(-90deg);
+}
+
+.ex-right-col {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .exercise-select {
@@ -488,10 +521,12 @@ canvas {
 
 .exNameForm {
   width: 100%;
-  margin-bottom: 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .ex-name-col {
@@ -944,12 +979,6 @@ div {
   font-size: 18px !important;
 }
 
-.streak-count-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
 .streak-count {
   font-size: 2rem;
   font-weight: 700;
@@ -1077,22 +1106,18 @@ div {
 
   /* ── Workout form ── */
   .exercise {
-    flex-direction: column;
-    gap: 6px;
     padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 0 !important;
-  }
-
-  .exNameForm {
-    width: 100% !important;
-    margin-bottom: 4px;
   }
 
   .exNameForm p {
     font-size: 16px;
     font-weight: 700;
     color: var(--b);
+  }
+
+  .ex-sets-body {
+    flex-direction: column;
+    gap: 6px;
   }
 
   .set {
