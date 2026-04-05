@@ -1198,6 +1198,13 @@ div {
   min-width: 0;
 }
 
+.signals-date-label {
+  color: var(--h);
+  font-size: 13px;
+  margin: -4px 0 8px;
+  opacity: 0.7;
+}
+
 .signals-chart-label {
   color: var(--h);
   font-size: 13px;

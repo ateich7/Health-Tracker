@@ -680,10 +680,10 @@ function updateSignalsChart() {
     data: {
       labels,
       datasets: [{
-        label: 'Release',
-        data: chartData.map(d => d.released),
-        backgroundColor: chartData.map(d => d.released ? 'rgba(52,199,89,0.6)' : 'rgba(250,250,250,0.1)'),
-        borderColor: chartData.map(d => d.released ? '#34C759' : 'rgba(250,250,250,0.2)'),
+        label: 'No Release',
+        data: chartData.map(d => d.released ? 0 : 1),
+        backgroundColor: chartData.map(d => d.released ? 'rgba(250,80,80,0.4)' : 'rgba(52,199,89,0.6)'),
+        borderColor: chartData.map(d => d.released ? 'rgba(250,80,80,0.6)' : '#34C759'),
         borderWidth: 1
       }]
     },
@@ -695,7 +695,7 @@ function updateSignalsChart() {
         x: { ticks: { color: '#FFFFFF' }, grid: { color: 'rgba(250,250,250,0.4)' } },
         y: {
           min: 0, max: 1,
-          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'Yes' : 'No' },
+          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'No' : 'Yes' },
           grid: { color: 'rgba(250,250,250,0.4)' }
         }
       }
@@ -1412,7 +1412,7 @@ function updateStreaks() {
   const sleepDates    = sleepData.map(e => e.date);
   const weightDates   = weightData.map(e => e.date);
   const signalsDates  = psychData.map(e => e.date);
-  const releaseDates  = psychData.filter(e => e.released).map(e => e.date);
+  const releaseDates  = psychData.filter(e => !e.released).map(e => e.date);
   const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
 
   const streaks = [
@@ -1421,7 +1421,7 @@ function updateStreaks() {
     { label: 'Weight',   count: calcStreak(weightDates),        icon: 'monitor_weight'    },
     { label: 'Codes',    count: calcStreak(codesDates),         icon: 'notes'             },
     { label: 'Signals',  count: calcStreak(signalsDates),       icon: 'self_improvement'  },
-    { label: 'Release',  count: calcStreak(releaseDates),       icon: 'local_fire_department' },
+    { label: 'No Release', count: calcStreak(releaseDates),     icon: 'local_fire_department' },
   ];
 
   container.innerHTML = streaks.map(s => {

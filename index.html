@@ -69,11 +69,6 @@
           <span>Sleep</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
         </div>
-        <div class="nav-item" id="workoutChip" data-page="workout" onclick="showPage('workout')">
-          <span class="material-icons">fitness_center</span>
-          <span>Workout</span>
-          <span class="chip-check material-icons" style="display:none;">check_circle</span>
-        </div>
         <div class="nav-item" id="signalsChip" data-page="signals" onclick="showPage('signals')">
           <span class="material-icons">self_improvement</span>
           <span>Signals</span>
@@ -82,6 +77,11 @@
         <div class="nav-item" id="codesChip" onclick="openTaskLink(this)">
           <span class="material-icons">notes</span>
           <span>Codes</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
+        <div class="nav-item" id="workoutChip" data-page="workout" onclick="showPage('workout')">
+          <span class="material-icons">fitness_center</span>
+          <span>Workout</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
         </div>
         <div class="nav-item nav-migrate" onclick="migrateLocalData()">
@@ -156,40 +156,65 @@
 
         <!-- Signals -->
         <div id="page-signals" class="page">
-          <div class="card">
-            <h2>Signals</h2>
-            <div class="signals-form">
-              <div class="signal-row">
-                <span class="signal-label">Confidence</span>
-                <input type="range" id="psychConfidence" min="1" max="10" value="5" oninput="document.getElementById('psychConfidenceVal').textContent=this.value">
-                <span class="signal-val" id="psychConfidenceVal">5</span>
+          <div class="signals-layout">
+            <div class="card signals-entry-card">
+              <h2>Signals</h2>
+              <p class="signals-date-label">How was yesterday?</p>
+              <div class="signals-form">
+                <div class="signal-row">
+                  <div class="signal-meta">
+                    <span class="signal-label">Confidence</span>
+                    <span class="signal-val" id="psychConfidenceVal">5</span>
+                  </div>
+                  <div class="signal-slider-wrap">
+                    <span class="signal-range-label">1</span>
+                    <input type="range" id="psychConfidence" min="1" max="10" value="5" oninput="document.getElementById('psychConfidenceVal').textContent=this.value">
+                    <span class="signal-range-label">10</span>
+                  </div>
+                </div>
+                <div class="signal-row">
+                  <div class="signal-meta">
+                    <span class="signal-label">Stress</span>
+                    <span class="signal-val" id="psychStressVal">5</span>
+                  </div>
+                  <div class="signal-slider-wrap">
+                    <span class="signal-range-label">1</span>
+                    <input type="range" id="psychStress" min="1" max="10" value="5" oninput="document.getElementById('psychStressVal').textContent=this.value">
+                    <span class="signal-range-label">10</span>
+                  </div>
+                </div>
+                <div class="signal-row">
+                  <div class="signal-meta">
+                    <span class="signal-label">Low</span>
+                    <span class="signal-val" id="psychLowVal">5</span>
+                  </div>
+                  <div class="signal-slider-wrap">
+                    <span class="signal-range-label">1</span>
+                    <input type="range" id="psychLow" min="1" max="10" value="5" oninput="document.getElementById('psychLowVal').textContent=this.value">
+                    <span class="signal-range-label">10</span>
+                  </div>
+                </div>
+                <div class="signal-row signal-row-toggle">
+                  <div class="signal-meta">
+                    <span class="signal-label">Released yesterday?</span>
+                  </div>
+                  <button id="psychRelease" class="btn-toggle inactive signal-toggle-btn" onclick="togglePsychRelease()">No</button>
+                </div>
               </div>
-              <div class="signal-row">
-                <span class="signal-label">Stress</span>
-                <input type="range" id="psychStress" min="1" max="10" value="5" oninput="document.getElementById('psychStressVal').textContent=this.value">
-                <span class="signal-val" id="psychStressVal">5</span>
-              </div>
-              <div class="signal-row">
-                <span class="signal-label">Low</span>
-                <input type="range" id="psychLow" min="1" max="10" value="5" oninput="document.getElementById('psychLowVal').textContent=this.value">
-                <span class="signal-val" id="psychLowVal">5</span>
-              </div>
-              <div class="signal-row">
-                <span class="signal-label">Release</span>
-                <button id="psychRelease" class="btn-toggle inactive" onclick="togglePsychRelease()">No</button>
-              </div>
+              <button class="btn-primary" style="width:100%; margin-top:16px;" onclick="logPsych()">Log</button>
             </div>
-            <button class="btn-primary" style="width:100%; margin-top:8px;" onclick="logPsych()">Log</button>
-            <div style="margin-top: 28px;">
-              <p style="color:var(--h); font-size:13px; margin-bottom:8px;">Scores (last 30 days)</p>
-              <div class="chart-container">
-                <canvas id="signalsChart"></canvas>
+            <div class="signals-charts-col">
+              <div class="card">
+                <p class="signals-chart-label">Scores (last 30 days)</p>
+                <div class="chart-container">
+                  <canvas id="signalsChart"></canvas>
+                </div>
               </div>
-            </div>
-            <div style="margin-top: 24px;">
-              <p style="color:var(--h); font-size:13px; margin-bottom:8px;">Release (last 30 days)</p>
-              <div class="chart-container" style="height:120px;">
-                <canvas id="signalsReleaseChart"></canvas>
+              <div class="card">
+                <p class="signals-chart-label">No-release days (last 30)</p>
+                <div class="chart-container" style="height:120px;">
+                  <canvas id="signalsReleaseChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
