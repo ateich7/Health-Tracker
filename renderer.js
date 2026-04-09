@@ -988,15 +988,9 @@ async function logWorkout() {
 }
 
 function checkWorkoutLogState() {
-  const day = getDay();
   const today = getToday();
   const yesterday = getYesterday();
   const loggedDate = localStorage.getItem('workoutLoggedDate');
-
-  if (day === 'Sun') {
-    document.getElementById('workoutCard').style.display = 'none';
-    return;
-  }
 
   if (loggedDate === today || loggedDate === yesterday) {
     showWorkoutComplete();
@@ -1293,39 +1287,25 @@ function renderWorkoutHistory() {
 
 // Render today's scheduled workout into the form
 function renderWorkoutForDay() {
-  const draft = getWorkoutDraft();
-  if (draft) {
-    renderWorkoutForm(draft.exerciseDefs, draft.values);
-    if (draft.timerStart) workoutTimerStart = draft.timerStart;
-    return;
-  }
-
-  const day = getDay();
-  let recommended;
-  if (day === 'Mon' || day === 'Tue') recommended = 'mon';
-  else if (day === 'Wed' || day === 'Thu') recommended = 'wed';
-  else if (day === 'Fri' || day === 'Sat') recommended = 'fri';
-  else recommended = 'mon'; // Sun — card will be hidden anyway
-
-  renderWorkoutSelector(recommended);
+  renderWorkoutSelector();
 }
 
 // Show workout plan picker before starting
-function renderWorkoutSelector(recommendedPlan) {
+function renderWorkoutSelector() {
   document.getElementById('page-workout').classList.remove('workout-logged');
   const container = document.getElementById('workout');
 
   const plans = [
-    { key: 'mon', label: 'Monday', exercises: monWorkout },
-    { key: 'wed', label: 'Wednesday', exercises: wedWorkout },
-    { key: 'fri', label: 'Friday', exercises: friWorkout },
+    { key: 'mon', label: 'Mon', exercises: monWorkout },
+    { key: 'wed', label: 'Wed', exercises: wedWorkout },
+    { key: 'fri', label: 'Fri', exercises: friWorkout },
   ];
 
   container.innerHTML = `
     <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
       ${plans.map(p => `
-        <label class="workout-plan-option${p.key === recommendedPlan ? ' selected' : ''}" onclick="selectWorkoutPlan('${p.key}')">
-          <input type="radio" name="workoutPlan" value="${p.key}"${p.key === recommendedPlan ? ' checked' : ''} style="display:none">
+        <label class="workout-plan-option" onclick="selectWorkoutPlan('${p.key}')">
+          <input type="radio" name="workoutPlan" value="${p.key}" style="display:none">
           <div class="plan-name">${p.label} Workout</div>
           <div class="plan-exercises">${p.exercises.map(e => e.name).join(' · ')}</div>
         </label>
@@ -1361,17 +1341,18 @@ function startWorkout() {
   }
 }
 
-// Find most recent logged workout matching a given plan (by day-group)
+// Find most recent logged workout matching a given plan (by first exercise name)
 function getLastWorkoutForPlan(planKey) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
-  const planDayPairs = { mon: [1, 2], wed: [3, 4], fri: [5, 6] };
-  const validDays = planDayPairs[planKey];
-  if (!validDays) return null;
+  const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
+  const plan = planMap[planKey];
+  if (!plan) return null;
+  const firstExercise = plan[0].name.toLowerCase();
   const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
   for (const date of sorted) {
-    const dow = new Date(date).getDay();
-    if (validDays.includes(dow)) return workouts[date];
+    const w = workouts[date];
+    if (w.exercises && w.exercises[0]?.name.toLowerCase() === firstExercise) return w;
   }
   return null;
 }
