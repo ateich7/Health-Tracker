@@ -609,6 +609,39 @@ canvas {
   margin-top: 14px;
 }
 
+/* ── Workout plan selector ── */
+.workout-plan-option {
+  display: flex;
+  flex-direction: column;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--br);
+  border: 2px solid transparent;
+  background: var(--objbg);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.workout-plan-option:hover {
+  background: var(--objbghov);
+}
+
+.workout-plan-option.selected {
+  border-color: var(--s600);
+}
+
+.plan-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--b);
+}
+
+.plan-exercises {
+  font-size: 0.75rem;
+  color: var(--bb);
+  margin-top: 0.15rem;
+}
+
 /* ── Set label (shown on mobile) ── */
 .set-label {
   display: none;

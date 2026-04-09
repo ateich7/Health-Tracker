@@ -993,18 +993,13 @@ function checkWorkoutLogState() {
   const yesterday = getYesterday();
   const loggedDate = localStorage.getItem('workoutLoggedDate');
 
-  if (day === 'Mon' || day === 'Wed' || day === 'Fri') {
-    if (loggedDate === today) {
-      showWorkoutComplete();
-    }
-  } else if (day === 'Tue' || day === 'Thu' || day === 'Sat') {
-    if (loggedDate === today || loggedDate === yesterday) {
-      showWorkoutComplete();
-    } else {
-      document.getElementById('workoutCard').style.display = 'none';
-    }
-  } else {
+  if (day === 'Sun') {
     document.getElementById('workoutCard').style.display = 'none';
+    return;
+  }
+
+  if (loggedDate === today || loggedDate === yesterday) {
+    showWorkoutComplete();
   }
 }
 
@@ -1298,8 +1293,6 @@ function renderWorkoutHistory() {
 
 // Render today's scheduled workout into the form
 function renderWorkoutForDay() {
-  const day = getDay();
-
   const draft = getWorkoutDraft();
   if (draft) {
     renderWorkoutForm(draft.exerciseDefs, draft.values);
@@ -1307,24 +1300,80 @@ function renderWorkoutForDay() {
     return;
   }
 
-  // Use last week's same day-group workout as defaults if available
-  const lastWorkout = getLastWeekDayGroupWorkout(day);
+  const day = getDay();
+  let recommended;
+  if (day === 'Mon' || day === 'Tue') recommended = 'mon';
+  else if (day === 'Wed' || day === 'Thu') recommended = 'wed';
+  else if (day === 'Fri' || day === 'Sat') recommended = 'fri';
+  else recommended = 'mon'; // Sun — card will be hidden anyway
+
+  renderWorkoutSelector(recommended);
+}
+
+// Show workout plan picker before starting
+function renderWorkoutSelector(recommendedPlan) {
+  document.getElementById('page-workout').classList.remove('workout-logged');
+  const container = document.getElementById('workout');
+
+  const plans = [
+    { key: 'mon', label: 'Monday', exercises: monWorkout },
+    { key: 'wed', label: 'Wednesday', exercises: wedWorkout },
+    { key: 'fri', label: 'Friday', exercises: friWorkout },
+  ];
+
+  container.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+      ${plans.map(p => `
+        <label class="workout-plan-option${p.key === recommendedPlan ? ' selected' : ''}" onclick="selectWorkoutPlan('${p.key}')">
+          <input type="radio" name="workoutPlan" value="${p.key}"${p.key === recommendedPlan ? ' checked' : ''} style="display:none">
+          <div class="plan-name">${p.label} Workout</div>
+          <div class="plan-exercises">${p.exercises.map(e => e.name).join(' · ')}</div>
+        </label>
+      `).join('')}
+    </div>
+    <button class="btn-primary" style="width:100%;" onclick="startWorkout()">Start Workout</button>
+  `;
+}
+
+// Update the selected plan option
+function selectWorkoutPlan(key) {
+  document.querySelectorAll('.workout-plan-option').forEach(el => el.classList.remove('selected'));
+  const radio = document.querySelector(`.workout-plan-option input[value="${key}"]`);
+  if (radio) {
+    radio.checked = true;
+    radio.closest('.workout-plan-option').classList.add('selected');
+  }
+}
+
+// Load the form for the selected workout plan
+function startWorkout() {
+  const selected = document.querySelector('input[name="workoutPlan"]:checked');
+  if (!selected) return;
+  const planKey = selected.value;
+
+  const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
+  const lastWorkout = getLastWorkoutForPlan(planKey);
+
   if (lastWorkout) {
     renderWorkoutForm(exerciseDefsFromHistory(lastWorkout));
-    return;
-  }
-
-  let exercises;
-  if (day === 'Mon' || day === 'Tue') {
-    exercises = monWorkout;
-  } else if (day === 'Wed' || day === 'Thu') {
-    exercises = wedWorkout;
-  } else if (day === 'Fri' || day === 'Sat') {
-    exercises = friWorkout;
   } else {
-    return;
+    renderWorkoutForm(planMap[planKey]);
   }
-  renderWorkoutForm(exercises);
+}
+
+// Find most recent logged workout matching a given plan (by day-group)
+function getLastWorkoutForPlan(planKey) {
+  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
+  const today = getToday();
+  const planDayPairs = { mon: [1, 2], wed: [3, 4], fri: [5, 6] };
+  const validDays = planDayPairs[planKey];
+  if (!validDays) return null;
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  for (const date of sorted) {
+    const dow = new Date(date).getDay();
+    if (validDays.includes(dow)) return workouts[date];
+  }
+  return null;
 }
 
 // Returns all known exercises (predefined + custom)
