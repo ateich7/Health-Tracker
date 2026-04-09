@@ -144,16 +144,14 @@ async function loadData() {
   }
   checkChipState('codesChip', 'codesLoggedDate');
 
-  // Derive workoutLoggedDate for checkWorkoutLogState
+  // Track last workout date for edit functionality
   const sortedDates   = Object.keys(workoutsObj).sort();
   const lastWorkout   = sortedDates[sortedDates.length - 1];
-  if (lastWorkout === today || lastWorkout === yesterday) {
+  if (lastWorkout) {
     localStorage.setItem('workoutLoggedDate', lastWorkout);
   } else {
     localStorage.removeItem('workoutLoggedDate');
   }
-
-  checkWorkoutLogState();
   populateExerciseSelect();
   renderWorkoutHistory();
   getQuote();
@@ -982,7 +980,7 @@ async function logWorkout() {
   const chip = document.getElementById('workoutChip');
   if (!chip.classList.contains('completed')) toggleTask(chip);
 
-  showWorkoutComplete();
+  renderWorkoutSelector();
   populateExerciseSelect();
   updateUI();
 }
