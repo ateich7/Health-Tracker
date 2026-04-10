@@ -3,7 +3,25 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ls:*)",
+      "Bash(git commit:*)",
+      "Bash(supabase --version)",
+      "Bash(psql --version)",
+      "Bash(grep -rn \"template\\\\|default.*workout\\\\|monWorkout\\\\|wedWorkout\\\\|friWorkout\" /Users/Ari/repos/personal/health/health-tracker/*.js)",
+      "Bash(supabase status:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase db:*)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel:*)",
+      "Bash(npx asar:*)",
+      "Read(//tmp/app-extracted/**)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); files=d.get\\('files',[]\\); [print\\(f['name'], f.get\\('contentType',''\\), f.get\\('checksum',''\\)\\) for f in files]\")",
+      "Bash(curl -s \"https://health-tracker-ari.vercel.app/renderer.js\")",
+      "Bash(kill 8294)",
+      "Bash(open '/Applications/Health Tracker.app')",
+      "Bash(pkill -x \"Health Tracker\")",
+      "Bash(cp -r 'dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')"
     ]
   }
 }

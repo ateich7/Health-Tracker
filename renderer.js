@@ -285,32 +285,60 @@ function updateWeightChart() {
 
   if (chartData.length === 0) return;
 
+  // 7-day moving average
+  const windowSize = 7;
+  const maData = chartData.map((d, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1);
+    const avg = slice.reduce((sum, p) => sum + p.y, 0) / slice.length;
+    return { x: d.x, day: d.day, y: parseFloat(avg.toFixed(1)) };
+  });
+
   const ctx = document.getElementById('weightChart').getContext('2d');
   weightChart = new Chart(ctx, {
     type: 'line',
     data: {
       //labels: chartData.map(d => d.date),
-      datasets: [{
-        label: 'Weight (lbs)',
-        data: chartData,
-        borderColor: '#0088FF',
-        backgroundColor: 'rgba(59, 130, 246, 0.25)',
-        tension: 0.3,
-        fill: true
-      }]
+      datasets: [
+        {
+          label: 'Weight (lbs)',
+          data: chartData,
+          borderColor: '#0088FF',
+          backgroundColor: 'rgba(59, 130, 246, 0.25)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3
+        },
+        {
+          label: '7-day avg',
+          data: maData,
+          borderColor: '#FF9500',
+          backgroundColor: 'transparent',
+          tension: 0.4,
+          fill: false,
+          pointRadius: 0,
+          borderWidth: 2,
+          borderDash: [5, 3]
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          labels: { color: '#FFFFFF', boxWidth: 20 }
+        },
         tooltip: {
           callbacks: {
             title: (e) => {
               const d = e[0].raw;
               return ` ${d.day} ${d.x}`;
             },
-            label: (context) => { return ` ${context.raw.y} lbs`; }
+            label: (context) => {
+              const label = context.dataset.label === '7-day avg' ? ' 7-day avg' : ' Weight';
+              return `${label}: ${context.raw.y} lbs`;
+            }
           }
         }
       },
