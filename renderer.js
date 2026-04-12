@@ -750,21 +750,18 @@ function toggleOnClick(element) {
   toggleTask(element.parentElement);
 }
 
-// Toggle codes chip
+// Toggle codes chip — one-way: once logged today, cannot be undone until tomorrow
 function toggleCodes(chip) {
   const today = getToday();
   const loggedToday = localStorage.getItem('codesLoggedDate') === today;
-  const codesLog = JSON.parse(localStorage.getItem('codesLog') || '[]');
 
-  if (!loggedToday) {
-    localStorage.setItem('codesLoggedDate', today);
-    if (!codesLog.includes(today)) {
-      codesLog.push(today);
-      localStorage.setItem('codesLog', JSON.stringify(codesLog));
-    }
-  } else {
-    localStorage.setItem('codesLoggedDate', null);
-    localStorage.setItem('codesLog', JSON.stringify(codesLog.filter(d => d !== today)));
+  if (loggedToday) return; // already logged today, ignore clicks
+
+  const codesLog = JSON.parse(localStorage.getItem('codesLog') || '[]');
+  localStorage.setItem('codesLoggedDate', today);
+  if (!codesLog.includes(today)) {
+    codesLog.push(today);
+    localStorage.setItem('codesLog', JSON.stringify(codesLog));
   }
   toggleTask(chip);
   updateStreaks();
@@ -1416,6 +1413,54 @@ function getYesterday() {
   return date.toLocaleDateString();  // same format as getToday()
 }
 
+// Calculate consecutive weeks (Mon–Sun) where 3+ workouts were logged.
+// The current week is not penalized if it hasn't ended yet.
+function calcWorkoutWeekStreak(workoutDates) {
+  const dateSet = new Set(workoutDates);
+
+  function getMondayOf(date) {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0);
+    const day = d.getDay(); // 0=Sun
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  }
+
+  function workoutsInWeek(monday) {
+    let count = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      if (dateSet.has(d.toLocaleDateString())) count++;
+    }
+    return count;
+  }
+
+  const now = new Date();
+  now.setHours(12, 0, 0, 0);
+  const currentMonday = getMondayOf(now);
+
+  let streak = 0;
+  let monday = new Date(currentMonday);
+
+  for (let w = 0; w < 200; w++) {
+    const count = workoutsInWeek(monday);
+    const isCurrentWeek = monday.toLocaleDateString() === currentMonday.toLocaleDateString();
+
+    if (count >= 3) {
+      streak++;
+    } else if (isCurrentWeek) {
+      // Don't penalize the current week if still in progress
+    } else {
+      break;
+    }
+    monday.setDate(monday.getDate() - 7);
+  }
+
+  return streak;
+}
+
 // Calculate streak of consecutive expected days where loggedDateStrings contains the date.
 // Saturdays are always excluded (not expected). workoutMode restricts expected days to Mon/Wed/Fri.
 // Today is not penalized if not yet logged (the day may not be over).
@@ -1472,18 +1517,16 @@ function updateStreaks() {
   const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
 
   const streaks = [
-    { label: 'Workout',  count: calcStreak(workoutDates, true), icon: 'fitness_center',       workouts: true },
-    { label: 'Sleep',    count: calcStreak(sleepDates),         icon: 'bedtime'           },
-    { label: 'Weight',   count: calcStreak(weightDates),        icon: 'monitor_weight'    },
-    { label: 'Codes',    count: calcStreak(codesDates),         icon: 'notes'             },
-    { label: 'Signals',  count: calcStreak(signalsDates),       icon: 'self_improvement'  },
-    { label: 'No Release', count: calcStreak(releaseDates),     icon: 'local_fire_department' },
+    { label: 'Workout',  count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center', unit: ['week', 'weeks'] },
+    { label: 'Sleep',    count: calcStreak(sleepDates),              icon: 'bedtime',        unit: ['day', 'days']  },
+    { label: 'Weight',   count: calcStreak(weightDates),             icon: 'monitor_weight', unit: ['day', 'days']  },
+    { label: 'Codes',    count: calcStreak(codesDates),              icon: 'notes',          unit: ['day', 'days']  },
+    { label: 'Signals',  count: calcStreak(signalsDates),            icon: 'self_improvement', unit: ['day', 'days'] },
+    { label: 'No Release', count: calcStreak(releaseDates),          icon: 'local_fire_department', unit: ['day', 'days'] },
   ];
 
   container.innerHTML = streaks.map(s => {
-    const unit = s.workouts
-      ? (s.count === 1 ? 'workout' : 'workouts')
-      : (s.count === 1 ? 'day' : 'days');
+    const unit = s.count === 1 ? s.unit[0] : s.unit[1];
     return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
