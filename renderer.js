@@ -1656,6 +1656,7 @@ const quotes = [
   { id: 58, quote: "Too many of us are not living our dreams because we are living our fears.", author: "Les Brown" },
   { id: 59, quote: "In a world where information is abundant and easy to access, the real advantage is knowing where to focus.", author: "James Clear" },
   { id: 60, quote: "The greatest discovery of all time is that a person can change their future by merely changing their attitude.", author: "Oprah Winfrey" },
-  { id: 61, quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" }
+  { id: 61, quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" },
+  { id: 62, quote: "The inspiration you seek is already within you. Be silent and listen.", author: "Rumi" }
 ];
 
