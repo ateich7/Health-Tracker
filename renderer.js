@@ -542,6 +542,17 @@ function updateSleepChart() {
 
   if (chartData.length === 0) return;
 
+  // 7-day moving averages
+  const windowSize = 7;
+  const maHours = chartData.map((d, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1);
+    return parseFloat((slice.reduce((s, p) => s + p.y, 0) / slice.length).toFixed(2));
+  });
+  const maRested = chartData.map((d, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1);
+    return parseFloat((slice.reduce((s, p) => s + p.z, 0) / slice.length).toFixed(2));
+  });
+
   const ctx = document.getElementById('sleepChart').getContext('2d');
   const datasets = [];
   const scales = {
@@ -560,12 +571,36 @@ function updateSleepChart() {
     yAxisID: 'y1'
   });
   datasets.push({
+    label: 'Hours (7-day avg)',
+    data: maHours,
+    borderColor: '#FF9500',
+    backgroundColor: 'transparent',
+    tension: 0.4,
+    fill: false,
+    pointRadius: 0,
+    borderWidth: 2,
+    borderDash: [5, 3],
+    yAxisID: 'y1'
+  });
+  datasets.push({
     label: 'Restedness Score',
     data: chartData.map(d => d.z),
     borderColor: '#34C759',
     backgroundColor: 'rgba(52, 199, 89, 0.2)',
     tension: 0.3,
     fill: true,
+    yAxisID: 'y2'
+  });
+  datasets.push({
+    label: 'Restedness (7-day avg)',
+    data: maRested,
+    borderColor: '#FFD60A',
+    backgroundColor: 'transparent',
+    tension: 0.4,
+    fill: false,
+    pointRadius: 0,
+    borderWidth: 2,
+    borderDash: [5, 3],
     yAxisID: 'y2'
   });
   scales.y1 = {
@@ -660,6 +695,18 @@ function updateSignalsChart() {
     }
   };
 
+  // 7-day moving averages
+  const maWindow = 7;
+  function movingAvg(key) {
+    return chartData.map((d, i) => {
+      const slice = chartData.slice(Math.max(0, i - maWindow + 1), i + 1);
+      return parseFloat((slice.reduce((s, p) => s + p[key], 0) / slice.length).toFixed(1));
+    });
+  }
+  const maConfi = movingAvg('confidence');
+  const maStress = movingAvg('stress');
+  const maLow = movingAvg('low');
+
   const ctx1 = document.getElementById('signalsChart').getContext('2d');
   signalsChart = new Chart(ctx1, {
     type: 'line',
@@ -675,6 +722,16 @@ function updateSignalsChart() {
           fill: true
         },
         {
+          label: 'Confi MA',
+          data: maConfi,
+          borderColor: '#0088FF',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        },
+        {
           label: 'Stress',
           data: chartData.map(d => d.stress),
           borderColor: '#FF6B6B',
@@ -683,12 +740,32 @@ function updateSignalsChart() {
           fill: true
         },
         {
+          label: 'Stress MA',
+          data: maStress,
+          borderColor: '#FF6B6B',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        },
+        {
           label: 'Low',
           data: chartData.map(d => d.low),
           borderColor: '#A78BFA',
           backgroundColor: 'rgba(167,139,250,0.15)',
           tension: 0.3,
           fill: true
+        },
+        {
+          label: 'Low MA',
+          data: maLow,
+          borderColor: '#A78BFA',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
         }
       ]
     },
@@ -1364,18 +1441,20 @@ function startWorkout() {
   }
 }
 
-// Find most recent logged workout matching a given plan (by first exercise name)
+// Find most recent logged workout matching a given plan by exercise name overlap
 function getLastWorkoutForPlan(planKey) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
   const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
   const plan = planMap[planKey];
   if (!plan) return null;
-  const firstExercise = plan[0].name.toLowerCase();
+  const planNames = new Set(plan.map(e => e.name.toLowerCase()));
   const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
   for (const date of sorted) {
     const w = workouts[date];
-    if (w.exercises && w.exercises[0]?.name.toLowerCase() === firstExercise) return w;
+    if (!Array.isArray(w) || w.length === 0) continue;
+    const matches = w.filter(e => planNames.has(e.name.toLowerCase())).length;
+    if (matches >= Math.ceil(planNames.size / 2)) return w;
   }
   return null;
 }

@@ -144,8 +144,8 @@
           <div class="card">
             <h2>Sleep</h2>
             <div class="input-group">
-              <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept">
-              <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)">
+              <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
+              <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
               <button class="btn-primary" onclick="logSleep()">Log</button>
             </div>
             <div class="chart-container">
@@ -212,7 +212,7 @@
               </div>
               <div class="card">
                 <p class="signals-chart-label">No-release days (last 30)</p>
-                <div class="chart-container" style="height:120px;">
+                <div class="chart-container">
                   <canvas id="signalsReleaseChart"></canvas>
                 </div>
               </div>
