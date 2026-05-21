@@ -1,4 +1,8 @@
-const SUPABASE_URL = 'https://eewgjegdxtaqvdlnagny.supabase.co';
+// supabase-client.js — initializes the Supabase client and exposes auth functions.
+// The `db` global is used throughout renderer.js for all database operations.
+// SUPABASE_ANON_KEY is a public (publishable) key — safe to commit.
+
+const SUPABASE_URL     = 'https://eewgjegdxtaqvdlnagny.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_qox_jEnHQF7ZIHenHqlHeg_YmkjlCy5';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

@@ -1,16 +1,35 @@
-let weightData = [];
-let sleepData = [];
-let psychData = [];
-let weightChart = null;
-let exerciseChart = null;
-let sleepChart = null;
-let signalsChart = null;
-let signalsReleaseChart = null;
-let currentUser = null;
-let editingWorkoutDate = null; // set when editing an existing workout so logWorkout saves to the right date
-let workoutTimerStart = null;  // timestamp (ms) when the user first entered a value during the current session
-let workoutLogs = [];          // full rows from workout_logs including duration_minutes
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL STATE
+// All data arrays are loaded once on sign-in and kept in sync with Supabase.
+// localStorage is used as a lightweight cache so chart functions can read
+// workout data without re-fetching on every render.
+// ─────────────────────────────────────────────────────────────────────────────
+let weightData  = [];   // rows from weight_logs
+let sleepData   = [];   // rows from sleep_logs
+let psychData   = [];   // rows from psych_logs
+let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 
+let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
+
+let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
+let exerciseChart       = null;
+let sleepChart          = null;
+let signalsChart        = null;
+let signalsReleaseChart = null;
+
+let currentUser        = null; // Supabase user object, set after sign-in
+let editingWorkoutDate = null; // non-null while editing a past workout; logWorkout() saves to this date
+let workoutTimerStart  = null; // ms timestamp of first input during a workout session
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKOUT PLANS
+// Three fixed weekly plans. Custom exercises added by the user are stored in
+// Supabase (custom_exercises table) and cached in localStorage under "customExercises".
+// Exercise types:
+//   isLift: true  → inputs are [reps, lbs] per set
+//   isRun:  true  → inputs are [miles, minutes, seconds] per set
+//   both false    → bodyweight, input is [reps] per set
+// ─────────────────────────────────────────────────────────────────────────────
 const monWorkout = [
   { name: "Pushups", sets: 4, isLift: false, isRun: false },
   { name: "Pullup & Chinup", sets: 4, isLift: false, isRun: false },
@@ -35,7 +54,11 @@ const friWorkout = [
   { name: "Rowing Machine", sets: 1, isLift: false, isRun: true },
 ];
 
-// Formats Date to English
+// ─────────────────────────────────────────────────────────────────────────────
+// APP INIT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Writes today's date (e.g. "May 21st") into the header
 function formatDate() {
   const date = new Date();
   const day = date.toLocaleDateString("en-US", { day: "numeric" });
@@ -44,24 +67,28 @@ function formatDate() {
   document.getElementById('dateToday').textContent = `${month} ${day}${suffix}`;
 }
 
-// Called by supabase-client.js once a valid session exists
+// Called by the auth handler once a valid session exists; bootstraps the whole UI
 async function initApp() {
   const { data: { user } } = await db.auth.getUser();
   currentUser = user;
 
   formatDate();
-  renderWorkoutForDay();
+  renderWorkoutSelector(); // show the plan picker immediately (before data loads)
 
+  // Restore the last-visited page so the app reopens where the user left off
   const savedPage = localStorage.getItem('activePage') || 'home';
   activatePage(savedPage);
 
   await loadData();
+
+  // Allow pressing Enter to submit the weight field
   document.getElementById('weightInput').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') logWeight();
   });
 }
 
-// Switch visible page
+// Switches the visible page AND refreshes the chart that just became visible,
+// then persists the selection to localStorage
 function showPage(name) {
   activatePage(name);
   localStorage.setItem('activePage', name);
@@ -73,7 +100,8 @@ function showPage(name) {
   else if (name === 'signals') updateSignalsChart();
 }
 
-// DOM-only page switch (no chart refresh, no storage write)
+// Pure DOM page-switch: shows the right .page div and highlights the nav item.
+// Called by showPage (which also handles charts/storage) and by initApp (no chart refresh needed yet).
 function activatePage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n => n.classList.remove('active'));
@@ -82,7 +110,12 @@ function activatePage(name) {
     .forEach(n => n.classList.add('active'));
 }
 
-// Delete a workout entry by date from Supabase and localStorage
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA LOADING
+// All five tables are fetched in parallel on init and cached locally.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Deletes a workout entry from Supabase and the localStorage cache
 async function deleteWorkoutEntry(date) {
   await db.from('workout_logs').delete().eq('user_id', currentUser.id).eq('date', date);
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
@@ -90,7 +123,8 @@ async function deleteWorkoutEntry(date) {
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
 }
 
-// Load all data from Supabase
+// Fetches all data from Supabase, rebuilds the localStorage workout cache,
+// marks today's chips complete, and triggers the initial UI render
 async function loadData() {
   const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
@@ -106,29 +140,20 @@ async function loadData() {
 
   workoutLogs = workoutsRes.data || [];
 
-  // Rebuild workouts object in localStorage so chart functions can read it
+  // Rebuild the workout localStorage cache so chart functions can read it
+  // without making additional Supabase calls
   const workoutsObj = {};
   workoutLogs.forEach(row => { workoutsObj[row.date] = row.exercises; });
   localStorage.setItem('workouts', JSON.stringify(workoutsObj));
 
-  // One-time cleanup: remove the duplicate today entry created by the edit-saves-wrong-date bug
-  const dupCleanupKey = 'dupCleanup_3/17/2026';
-  if (!localStorage.getItem(dupCleanupKey) && workoutsObj['3/17/2026']) {
-    await deleteWorkoutEntry('3/17/2026');
-    delete workoutsObj['3/17/2026'];
-    localStorage.setItem('workouts', JSON.stringify(workoutsObj));
-    localStorage.setItem(dupCleanupKey, '1');
-  }
-
-  // Cache custom exercises locally
+  // Cache custom exercise definitions locally (used by the add-exercise form)
   const customList = (customExRes.data || []).map(e => ({
     name: e.name, isLift: e.is_lift, isRun: e.is_run
   }));
   localStorage.setItem('customExercises', JSON.stringify(customList));
 
-  // Derive chip completion states from fetched data
-  const today     = getToday();
-  const yesterday = getYesterday();
+  // Mark nav chips as complete for activities already logged today
+  const today = getToday();
 
   if (weightData.some(e => e.date === today)) {
     const chip = document.getElementById('weightChip');
@@ -142,16 +167,14 @@ async function loadData() {
     const chip = document.getElementById('signalsChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
+  // Codes is stored only in localStorage (no Supabase table)
   checkChipState('codesChip', 'codesLoggedDate');
 
-  // Track last workout date for edit functionality
-  const sortedDates   = Object.keys(workoutsObj).sort();
-  const lastWorkout   = sortedDates[sortedDates.length - 1];
-  if (lastWorkout) {
-    localStorage.setItem('workoutLoggedDate', lastWorkout);
-  } else {
-    localStorage.removeItem('workoutLoggedDate');
-  }
+  // Remember the most recent workout date so the edit button knows what to reload
+  const sortedDates = Object.keys(workoutsObj).sort();
+  const lastWorkout = sortedDates[sortedDates.length - 1];
+  if (lastWorkout) localStorage.setItem('workoutLoggedDate', lastWorkout);
+  else             localStorage.removeItem('workoutLoggedDate');
   populateExerciseSelect();
   renderWorkoutHistory();
   getQuote();
@@ -163,7 +186,12 @@ async function loadData() {
   }, 100);
 }
 
-// Log weight
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGGING  (weight, sleep, psych/signals)
+// Each logger upserts to Supabase, updates the in-memory array, clears the
+// input, marks the chip complete, and refreshes the UI.
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function logWeight() {
   const input  = document.getElementById('weightInput');
   const weight = parseFloat(input.value);
@@ -174,9 +202,10 @@ async function logWeight() {
 
   await db.from('weight_logs').upsert(
     { user_id: currentUser.id, ...entry },
-    { onConflict: 'user_id,date' }
+    { onConflict: 'user_id,date' } // one entry per day per user
   );
 
+  // Update the in-memory array (replace today's entry if it exists)
   weightData = weightData.filter(e => e.date !== today);
   weightData.push(entry);
   weightData.sort((a, b) => a.timestamp - b.timestamp);
@@ -187,7 +216,6 @@ async function logWeight() {
   updateUI();
 }
 
-// Log sleep
 async function logSleep() {
   const hoursInput  = document.getElementById('sleepHoursInput');
   const restedInput = document.getElementById('sleepRestedInput');
@@ -214,25 +242,39 @@ async function logSleep() {
   updateUI();
 }
 
-// Check if chip should be marked complete
+// ─────────────────────────────────────────────────────────────────────────────
+// CHIP / TASK STATE
+// Nav items double as completion chips. toggleTask() flips the completed class
+// and syncs the green dot on the matching bottom-nav item (mobile).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// If localStorage records that this chip was already logged today, mark it complete
 function checkChipState(chipId, storageKey) {
   if (localStorage.getItem(storageKey) === getToday()) {
     toggleTask(document.getElementById(chipId));
   }
 }
 
-// Get today's date
+// ─────────────────────────────────────────────────────────────────────────────
+// DATE UTILITIES
+// Dates are stored as locale strings (e.g. "5/21/2026") to match Supabase date columns.
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getToday() {
   return new Date().toLocaleDateString();
 }
 
-// Get the day
+function getYesterday() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString();
+}
+
 function getDay() {
   return new Date().toLocaleDateString('en-US', { weekday: 'short' });
 }
 
-
-// Get last 30 days
+// Returns an array of the last 30 days as locale strings, oldest first
 function getLast30Days() {
   return Array.from({ length: 30 }, (_, i) => {
     const date = new Date();
@@ -241,7 +283,12 @@ function getLast30Days() {
   });
 }
 
-// Update all UI elements (only refreshes the chart for the active page)
+// ─────────────────────────────────────────────────────────────────────────────
+// UI REFRESH
+// updateUI is called after any data change. It only redraws the chart for the
+// currently visible page to avoid wasted work.
+// ─────────────────────────────────────────────────────────────────────────────
+
 function updateUI() {
   updateStats();
   updateStreaks();
@@ -252,7 +299,7 @@ function updateUI() {
   else if (activePage === 'signals') updateSignalsChart();
 }
 
-// Update stats
+// Updates the two weight stat boxes (7-day average and total change since first entry)
 function updateStats() {
   const recentWeights = weightData.slice(-7);
   const avgWeight = recentWeights.length > 0
@@ -269,11 +316,26 @@ function updateStats() {
     avgWeight ? `${avgWeight} lbs` : '--';
 }
 
-// Update weight chart
+function setWeightPeriod(days, btn) {
+  weightPeriodDays = days;
+  document.querySelectorAll('.weight-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateWeightChart();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHARTS
+// Each chart function destroys any existing Chart.js instance before building
+// a new one, so calling them repeatedly is safe.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Weight: line chart with actual weight + 7-day moving average overlay
+// weightPeriodDays controls how many past days are shown (0 = all time)
 function updateWeightChart() {
   if (weightChart) weightChart.destroy();
 
-  const chartData = weightData.slice(-30).map(e => {
+  const sliced = weightPeriodDays === 0 ? weightData : weightData.slice(-weightPeriodDays);
+  const chartData = sliced.map(e => {
     const dateObj = new Date(e.date);
 
     return {
@@ -357,7 +419,10 @@ function updateWeightChart() {
   });
 }
 
-// Update exercise chart
+// Exercise progress chart — adapts its axes to the exercise type:
+//   run      → dual-axis: distance (left) + time (right)
+//   lift     → dual-axis: total reps (left) + avg weight (right)
+//   bodyweight → single axis: total reps
 function updateExerciseChart() {
   if (exerciseChart) exerciseChart.destroy();
 
@@ -525,7 +590,8 @@ function updateExerciseChart() {
   });
 }
 
-// Update sleep chart
+// Sleep: dual-axis chart — hours slept (left) + restedness score (right),
+// each with a 7-day moving average overlay
 function updateSleepChart() {
   if (sleepChart) sleepChart.destroy();
 
@@ -638,7 +704,7 @@ function updateSleepChart() {
   });
 }
 
-// Log psych / signals entry
+// Logs the psychological signals (confidence, stress, low mood, release toggle)
 async function logPsych() {
   const confidence = parseInt(document.getElementById('psychConfidence').value);
   const stress     = parseInt(document.getElementById('psychStress').value);
@@ -662,6 +728,7 @@ async function logPsych() {
   updateSignalsChart();
 }
 
+// Toggles the "Released yesterday?" button between Yes/No
 function togglePsychRelease() {
   const btn = document.getElementById('psychRelease');
   const nowActive = !btn.classList.contains('active');
@@ -670,7 +737,8 @@ function togglePsychRelease() {
   btn.textContent = nowActive ? 'Yes' : 'No';
 }
 
-// Update signals charts
+// Signals: two charts — line chart for confidence/stress/low with 7-day MAs,
+// and a bar chart showing release/no-release days (green = released, red = no release)
 function updateSignalsChart() {
   if (signalsChart) signalsChart.destroy();
   if (signalsReleaseChart) signalsReleaseChart.destroy();
@@ -806,14 +874,14 @@ function updateSignalsChart() {
   });
 }
 
-// Toggle task completion
+// Marks a nav-item chip as completed (or toggles it back)
 function toggleTask(chip) {
   const check = chip.querySelector('.chip-check');
   chip.classList.toggle('completed');
   const isCompleted = chip.classList.contains('completed');
   if (check) check.style.display = isCompleted ? 'inline' : 'none';
 
-  // Sync completion dot to the matching bottom nav item
+  // Sync the green dot to the matching bottom-nav item (mobile nav)
   const page   = chip.dataset.page;
   const id     = chip.id;
   const bnItem = page
@@ -822,12 +890,12 @@ function toggleTask(chip) {
   if (bnItem) bnItem.classList.toggle('completed', isCompleted);
 }
 
-// Toggle chip on button click
+// Called by chip buttons — delegates to the parent chip element
 function toggleOnClick(element) {
   toggleTask(element.parentElement);
 }
 
-// Toggle codes chip — one-way: once logged today, cannot be undone until tomorrow
+// Codes chip is one-way: once marked done today it can't be undone until tomorrow
 function toggleCodes(chip) {
   const today = getToday();
   const loggedToday = localStorage.getItem('codesLoggedDate') === today;
@@ -844,7 +912,7 @@ function toggleCodes(chip) {
   updateStreaks();
 }
 
-// Open codes link
+// Opens the Codes Google Doc in a new window and marks the chip done
 function openTaskLink(element) {
   window.open(
     'https://docs.google.com/document/d/16lPD_vvbuhUpa0yR5gFKQDGuDJHWc8wQhCI39g5GDTM/edit',
@@ -854,23 +922,25 @@ function openTaskLink(element) {
   toggleCodes(element);
 }
 
-// Initialize when DOM is ready
-// Bootstrap: runs after all scripts are loaded and DOM is ready
-let appInitialized = false;
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOTSTRAP — runs after DOM is ready
+// ─────────────────────────────────────────────────────────────────────────────
+
+let appInitialized = false; // guard against double-init from onAuthStateChange + getSession
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Listen for sign-in (magic link / password) and sign-out after initial load
+  // Listen for sign-in / sign-out events that happen after initial page load
   db.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && !appInitialized) {
       appInitialized = true;
       document.getElementById('authScreen').style.display = 'none';
       initApp();
     } else if (event === 'SIGNED_OUT') {
-      window.location.reload();
+      window.location.reload(); // simplest way to reset all state
     }
   });
 
-  // Check for an existing session immediately
+  // If there's already a session (e.g. returning user), skip the auth screen immediately
   const { data: { session } } = await db.auth.getSession();
   if (session && !appInitialized) {
     appInitialized = true;
@@ -882,6 +952,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKOUT FORM
+// Flow: renderWorkoutSelector → startWorkout → renderWorkoutForm → logWorkout
+// Drafts are auto-saved to localStorage on every input so the user doesn't
+// lose progress if they accidentally navigate away.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Builds the HTML for one set row — input fields vary by exercise type
 function createSet(exercise, setIndex) {
   const label = `<span class="set-label">Set ${setIndex + 1}</span>`;
 
@@ -914,6 +992,7 @@ function createSet(exercise, setIndex) {
   `;
 }
 
+// Formats a set array for display (e.g. "10×25, 8×25" for lifts, "1.5mi 28:30" for runs)
 function formatPrevSets(sets, isLift, isRun) {
   if (!sets || sets.length === 0) return '';
   if (isRun) {
@@ -928,7 +1007,8 @@ function formatPrevSets(sets, isLift, isRun) {
   return sets.map(s => s[0] || 0).join(', ');
 }
 
-// Find most recent past workout that shares exercises with the given list
+// Finds the most recent past workout that shares exercises with the given list
+// (used to show "Last: …" reference values for each set)
 function getPreviousWorkout(exercises) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
@@ -942,7 +1022,7 @@ function getPreviousWorkout(exercises) {
   return null;
 }
 
-// Look up previous sets for a single exercise name across all history
+// Returns the set data for a named exercise from the most recent workout that included it
 function getPrevSetsForExercise(name) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
@@ -954,6 +1034,7 @@ function getPrevSetsForExercise(name) {
   return null;
 }
 
+// Builds the HTML for one exercise block (header + collapsible set inputs)
 function createExercise(exercise, prevSets) {
   const prev = prevSets ?? null;
   const prevText = prev ? formatPrevSets(prev, exercise.isLift, exercise.isRun) : '';
@@ -988,10 +1069,11 @@ function createExercise(exercise, prevSets) {
   return html;
 }
 
+// Expands or collapses an exercise block.
+// Enforces a max of 2 open at a time to reduce scroll length on mobile.
 function toggleExerciseCollapse(exEl) {
   const container = exEl.closest('#workout');
   if (exEl.classList.contains('ex-collapsed')) {
-    // Expanding: if 2 are already open, close the first open one
     const openEls = [...container.querySelectorAll('.exercise:not(.ex-collapsed)')];
     if (openEls.length >= 2) openEls[0].classList.add('ex-collapsed');
     exEl.classList.remove('ex-collapsed');
@@ -1002,7 +1084,7 @@ function toggleExerciseCollapse(exEl) {
 
 
 
-// Save in-progress workout form to localStorage so it survives accidental navigation
+// Saves the current in-progress form to localStorage so it survives navigation
 function saveWorkoutDraft() {
   const exercises = document.querySelectorAll('.exercise');
   if (!exercises.length) return;
@@ -1028,7 +1110,7 @@ function saveWorkoutDraft() {
   localStorage.setItem('workoutDraft', JSON.stringify({ date: getToday(), exerciseDefs, values, timerStart: workoutTimerStart }));
 }
 
-// Return today's draft if one exists, otherwise null
+// Returns today's draft if one is stored, otherwise null
 function getWorkoutDraft() {
   try {
     const draft = JSON.parse(localStorage.getItem('workoutDraft') || 'null');
@@ -1037,27 +1119,23 @@ function getWorkoutDraft() {
   return null;
 }
 
+// Saves the workout to Supabase; uses editingWorkoutDate if editing a past entry
 async function logWorkout() {
-  const date = editingWorkoutDate || getToday();
+  const isEditing = !!editingWorkoutDate;
+  const date      = editingWorkoutDate || getToday();
   editingWorkoutDate = null;
 
-  const exercises = document.querySelectorAll('.exercise');
-  const workoutData = [];
+  // Collect all exercise names and set values from the DOM
+  const workoutData = [...document.querySelectorAll('.exercise')].map(ex => ({
+    name: ex.querySelector('p').textContent,
+    sets: [...ex.querySelectorAll('.set')].map(setDiv =>
+      [...setDiv.querySelectorAll('input')].map(input => parseFloat(input.value) || 0)
+    )
+  }));
 
-  exercises.forEach(ex => {
-    const name = ex.querySelector('p').textContent;
-    const sets = [];
-    ex.querySelectorAll('.set').forEach(setDiv => {
-      const inputs   = setDiv.querySelectorAll('input');
-      const setEntry = Array.from(inputs).map(input => parseFloat(input.value) || 0);
-      sets.push(setEntry);
-    });
-    workoutData.push({ name, sets });
-  });
-
+  // Add 15 minutes to account for warm-up time before the first logged input
   const durationMinutes = workoutTimerStart
-    ? Math.round((Date.now() - workoutTimerStart) / 60000) + 15
-    : 15;
+    ? Math.round((Date.now() - workoutTimerStart) / 60000) + 15 : 15;
   workoutTimerStart = null;
 
   await db.from('workout_logs').upsert(
@@ -1065,12 +1143,23 @@ async function logWorkout() {
     { onConflict: 'user_id,date' }
   );
 
-  // Keep localStorage cache in sync for chart functions
+  // Keep localStorage cache and in-memory workoutLogs in sync
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   allWorkouts[date] = workoutData;
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
   localStorage.setItem('workoutLoggedDate', date);
   localStorage.removeItem('workoutDraft');
+
+  // Tag this workout date with the plan it was started from so future lookups are exact
+  if (!isEditing) {
+    const activePlanKey = localStorage.getItem('activePlanKey');
+    if (activePlanKey) {
+      const planWorkoutDates = JSON.parse(localStorage.getItem('planWorkoutDates') || '{}');
+      planWorkoutDates[activePlanKey] = date;
+      localStorage.setItem('planWorkoutDates', JSON.stringify(planWorkoutDates));
+    }
+  }
+  localStorage.removeItem('activePlanKey');
 
   // Keep workoutLogs in memory in sync
   const logIdx = workoutLogs.findIndex(r => r.date === date);
@@ -1087,29 +1176,7 @@ async function logWorkout() {
   updateUI();
 }
 
-function checkWorkoutLogState() {
-  const today = getToday();
-  const yesterday = getYesterday();
-  const loggedDate = localStorage.getItem('workoutLoggedDate');
-
-  if (loggedDate === today || loggedDate === yesterday) {
-    showWorkoutComplete();
-  }
-}
-
-// Show workout as logged with an Edit button
-function showWorkoutComplete() {
-  document.getElementById('workoutCard').style.display = '';
-  document.getElementById('page-workout').classList.add('workout-logged');
-  document.getElementById('workout').innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; padding: 4px 0;">
-      <span style="color: var(--s600); font-weight:600;">&#10003; Workout logged</span>
-      <button class="btn-primary" onclick="editWorkout()">Edit</button>
-    </div>
-  `;
-}
-
-// Re-open the most recently logged workout pre-filled for editing
+// Re-opens the most recently logged workout pre-filled for editing
 function editWorkout() {
   const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const loggedDate = localStorage.getItem('workoutLoggedDate');
@@ -1131,7 +1198,7 @@ function editWorkout() {
   }
 }
 
-// Set up drag-to-reorder on .exercise elements within container
+// Wires up drag-to-reorder on .exercise elements (desktop drag events + touch fallback)
 function setupExerciseDragDrop(container) {
   let dragEl = null;
 
@@ -1169,20 +1236,21 @@ function setupExerciseDragDrop(container) {
   container.addEventListener('drop', e => e.preventDefault());
 
   // ── Touch / mobile drag ──
+  // Touch drag — starts only when the user grabs the drag handle icon
   container.addEventListener('touchstart', e => {
     const handle = e.target.closest('.btn-drag-ex');
     if (!handle) return;
     dragEl = handle.closest('.exercise');
     if (!dragEl) return;
     dragEl.classList.add('dragging');
-    e.preventDefault(); // block scroll while dragging
+    e.preventDefault(); // prevent scrolling while dragging
   }, { passive: false });
 
   container.addEventListener('touchmove', e => {
     if (!dragEl) return;
     e.preventDefault();
     const touch = e.touches[0];
-    // Temporarily hide dragged element so elementFromPoint finds what's beneath it
+    // Temporarily hide the dragged element so elementFromPoint can find what's beneath it
     dragEl.style.visibility = 'hidden';
     const below = document.elementFromPoint(touch.clientX, touch.clientY);
     dragEl.style.visibility = '';
@@ -1205,7 +1273,9 @@ function setupExerciseDragDrop(container) {
   });
 }
 
-// Render the workout entry form, optionally pre-filled with savedData
+// Builds and injects the exercise input form into #workout
+// exercises: array of { name, sets (count), isLift, isRun }
+// savedData: optional array to pre-fill inputs (used when editing a past workout)
 function renderWorkoutForm(exercises, savedData) {
   document.getElementById('page-workout').classList.remove('workout-logged');
   const container = document.getElementById('workout');
@@ -1213,14 +1283,17 @@ function renderWorkoutForm(exercises, savedData) {
   container.removeEventListener('input', saveWorkoutDraft);
   container.addEventListener('input', saveWorkoutDraft);
   setupExerciseDragDrop(container);
+  // Start the session timer when the user first touches an input
   workoutTimerStart = null;
   container.addEventListener('input', function startTimer(e) {
     if (workoutTimerStart === null && e.target.closest('.exercise')) {
       workoutTimerStart = Date.now();
-      container.removeEventListener('input', startTimer);
+      container.removeEventListener('input', startTimer); // one-shot
     }
   });
 
+  // Find the most recent past workout that shares exercises with this list
+  // (used to show "Last: …" reference values in each exercise header)
   const prevWorkout = getPreviousWorkout(exercises);
   exercises.forEach(exercise => {
     const prevSets = prevWorkout?.exercises.find(
@@ -1229,7 +1302,7 @@ function renderWorkoutForm(exercises, savedData) {
     container.innerHTML += createExercise(exercise, prevSets);
   });
 
-  // Collapse all exercises beyond the first 2
+  // Collapse exercises beyond the first 2 to keep the form manageable on mobile
   container.querySelectorAll('.exercise').forEach((el, idx) => {
     if (idx >= 2) el.classList.add('ex-collapsed');
   });
@@ -1256,7 +1329,7 @@ function renderWorkoutForm(exercises, savedData) {
   }
 }
 
-// Pre-fill workout inputs from saved exercise data
+// Pre-fills all set inputs from saved exercise data (used by editWorkout)
 function prefillWorkout(savedExercises) {
   const exerciseEls = document.querySelectorAll('.exercise');
   savedExercises.forEach((savedEx, i) => {
@@ -1272,7 +1345,7 @@ function prefillWorkout(savedExercises) {
   });
 }
 
-// Auto-fill type/sets when user picks an existing exercise from the datalist
+// When the user picks an existing exercise from the datalist, auto-fill its type and set count
 function onExerciseNameInput() {
   const name = document.getElementById('newExName').value.trim();
   const match = getAllExercises().find(e => e.name.toLowerCase() === name.toLowerCase());
@@ -1281,7 +1354,7 @@ function onExerciseNameInput() {
   if (match.sets) document.getElementById('newExSets').value = match.sets;
 }
 
-// Add a custom exercise to the current workout form
+// Adds a custom exercise to the current form and persists its type to Supabase
 async function addExercise() {
   const nameInput = document.getElementById('newExName');
   const name = nameInput.value.trim();
@@ -1292,7 +1365,7 @@ async function addExercise() {
 
   const exercise = { name, sets, isLift: type === 'lift', isRun: type === 'run' };
 
-  // Persist new custom exercise type to Supabase + local cache
+  // Save the exercise type definition if it hasn't been seen before
   const allEx = getAllExercises();
   if (!allEx.find(e => e.name.toLowerCase() === name.toLowerCase())) {
     await db.from('custom_exercises').upsert(
@@ -1310,27 +1383,10 @@ async function addExercise() {
   saveWorkoutDraft();
 }
 
-// Find the most recent logged workout for the same day-group (Mon/Tue, Wed/Thu, Fri/Sat)
-function getLastWeekDayGroupWorkout(day) {
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const today = getToday();
-  // JS Date.getDay(): 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  const dayPairs = {
-    'Mon': [1, 2], 'Tue': [1, 2],
-    'Wed': [3, 4], 'Thu': [3, 4],
-    'Fri': [5, 6], 'Sat': [5, 6]
-  };
-  const validDays = dayPairs[day];
-  if (!validDays) return null;
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
-  for (const date of sorted) {
-    const dow = new Date(date).getDay();
-    if (validDays.includes(dow)) return workouts[date];
-  }
-  return null;
-}
-
-// Convert history exercise format [{name, sets: [[...], ...]}] to def format [{name, sets: N, isLift, isRun}]
+// Converts history-format exercise data [{name, sets:[[…],…]}]
+// to definition format [{name, sets:N, isLift, isRun}].
+// Type is inferred from set array length when the exercise is not in the known list:
+//   3 values → run (miles, min, sec), 2 → lift (reps, lbs), 1 → bodyweight (reps)
 function exerciseDefsFromHistory(historyExercises) {
   const allKnown = getAllExercises();
   return historyExercises.map(histEx => {
@@ -1346,11 +1402,11 @@ function exerciseDefsFromHistory(historyExercises) {
   });
 }
 
-function formatHistoryDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKOUT HISTORY
+// ─────────────────────────────────────────────────────────────────────────────
 
+// Renders the collapsible workout history list below the form
 function renderWorkoutHistory() {
   const container = document.getElementById('workoutHistory');
   if (!container) return;
@@ -1365,8 +1421,8 @@ function renderWorkoutHistory() {
   const allEx = getAllExercises();
 
   container.innerHTML = sorted.map(row => {
-    const dur = row.duration_minutes ? `${row.duration_minutes} min` : '—';
-    const dateLabel = formatHistoryDate(row.date);
+    const dur       = row.duration_minutes ? `${row.duration_minutes} min` : '—';
+    const dateLabel = new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const exerciseLines = (row.exercises || []).map(ex => {
       const info = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
       const summary = formatPrevSets(ex.sets, info?.isLift || false, info?.isRun || false);
@@ -1385,12 +1441,7 @@ function renderWorkoutHistory() {
   }).join('');
 }
 
-// Render today's scheduled workout into the form
-function renderWorkoutForDay() {
-  renderWorkoutSelector();
-}
-
-// Show workout plan picker before starting
+// Show the Mon/Wed/Fri plan picker (initial state of the workout page)
 function renderWorkoutSelector() {
   document.getElementById('page-workout').classList.remove('workout-logged');
   const container = document.getElementById('workout');
@@ -1415,7 +1466,7 @@ function renderWorkoutSelector() {
   `;
 }
 
-// Update the selected plan option
+// Highlights the clicked plan option
 function selectWorkoutPlan(key) {
   document.querySelectorAll('.workout-plan-option').forEach(el => el.classList.remove('selected'));
   const radio = document.querySelector(`.workout-plan-option input[value="${key}"]`);
@@ -1425,11 +1476,14 @@ function selectWorkoutPlan(key) {
   }
 }
 
-// Load the form for the selected workout plan
+// Loads the form for the selected plan, pre-populated from the last time that plan was done
 function startWorkout() {
   const selected = document.querySelector('input[name="workoutPlan"]:checked');
   if (!selected) return;
   const planKey = selected.value;
+
+  // Track which plan this workout session belongs to so logWorkout can tag it
+  localStorage.setItem('activePlanKey', planKey);
 
   const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
   const lastWorkout = getLastWorkoutForPlan(planKey);
@@ -1441,15 +1495,29 @@ function startWorkout() {
   }
 }
 
-// Find most recent logged workout matching a given plan by exercise name overlap
+// Finds the most recent logged workout matching a given plan key (mon/wed/fri).
+// Prefers an exact tagged date; falls back to >50% exercise overlap.
 function getLastWorkoutForPlan(planKey) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
+
+  // Prefer the exact date tagged when a workout was previously logged via this plan
+  const planWorkoutDates = JSON.parse(localStorage.getItem('planWorkoutDates') || '{}');
+  const taggedDate = planWorkoutDates[planKey];
+  if (taggedDate && taggedDate !== today && workouts[taggedDate]) {
+    return workouts[taggedDate];
+  }
+
+  // Fallback: overlap matching against the hardcoded plan (for workouts logged before tagging)
   const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
   const plan = planMap[planKey];
   if (!plan) return null;
   const planNames = new Set(plan.map(e => e.name.toLowerCase()));
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
+  const sorted = Object.keys(workouts)
+    .filter(d => d !== today)
+    .sort((a, b) => new Date(a) - new Date(b))
+    .reverse();
   for (const date of sorted) {
     const w = workouts[date];
     if (!Array.isArray(w) || w.length === 0) continue;
@@ -1459,13 +1527,17 @@ function getLastWorkoutForPlan(planKey) {
   return null;
 }
 
-// Returns all known exercises (predefined + custom)
+// ─────────────────────────────────────────────────────────────────────────────
+// EXERCISE HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Returns all known exercises (three fixed plans + user-added custom ones)
 function getAllExercises() {
   const custom = JSON.parse(localStorage.getItem('customExercises') || '[]');
   return [...monWorkout, ...wedWorkout, ...friWorkout, ...custom];
 }
 
-// Populate the exercise chart dropdown from all logged + predefined exercises
+// Populates the exercise chart dropdown with every exercise ever logged
 function populateExerciseSelect() {
   const select = document.getElementById('exerciseSelect');
   if (!select) return;
@@ -1486,14 +1558,13 @@ function populateExerciseSelect() {
   }
 }
 
-function getYesterday() {
-  const date = new Date();
-  date.setDate(date.getDate() - 1); // go back 1 day
-  return date.toLocaleDateString();  // same format as getToday()
-}
 
-// Calculate consecutive weeks (Mon–Sun) where 3+ workouts were logged.
-// The current week is not penalized if it hasn't ended yet.
+// ─────────────────────────────────────────────────────────────────────────────
+// STREAKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Counts consecutive calendar weeks (Mon–Sun) that contain 3+ workouts.
+// The current (in-progress) week is not penalized even if under 3 yet.
 function calcWorkoutWeekStreak(workoutDates) {
   const dateSet = new Set(workoutDates);
 
@@ -1540,9 +1611,11 @@ function calcWorkoutWeekStreak(workoutDates) {
   return streak;
 }
 
-// Calculate streak of consecutive expected days where loggedDateStrings contains the date.
-// Saturdays are always excluded (not expected). workoutMode restricts expected days to Mon/Wed/Fri.
-// Today is not penalized if not yet logged (the day may not be over).
+// Counts consecutive expected days where the user logged an entry.
+// Rules:
+//   - Saturdays are always skipped (not expected)
+//   - workoutMode = true: only Mon/Wed/Fri are expected
+//   - Today is never penalized (the day may not be over yet)
 function calcStreak(loggedDateStrings, workoutMode = false) {
   const dateSet = new Set(loggedDateStrings);
 
@@ -1584,6 +1657,7 @@ function calcStreak(loggedDateStrings, workoutMode = false) {
   return streak;
 }
 
+// Rebuilds the streak grid on the home page
 function updateStreaks() {
   const container = document.getElementById('streaksGrid');
   if (!container) return;
@@ -1616,7 +1690,12 @@ function updateStreaks() {
   }).join('');
 }
 
-//Gets location for weather display
+// ─────────────────────────────────────────────────────────────────────────────
+// WEATHER
+// Currently hardcoded to NYC coordinates. Uncomment the getLocation() call in
+// loadWeather() to use the device's actual location instead.
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getLocation() {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
@@ -1629,113 +1708,101 @@ function getLocation() {
   });
 }
 
-const API_KEY = "1856f6602a8285d123677bb2359f0e65";
-
-const lat = 40.8075; // example: NYC
-const lon = -73.9626;
+const WEATHER_API_KEY = "1856f6602a8285d123677bb2359f0e65";
+const LAT = 40.8075; // NYC
+const LON = -73.9626;
 
 async function fetchWeather(lat, lon) {
   const res = await fetch(
     `https://api.openweathermap.org/data/3.0/onecall` +
-    `?lat=${lat}&lon=${lon}` +
-    `&exclude=minutely,hourly,daily,alerts` +
-    `&units=imperial` +
-    `&appid=${API_KEY}`
+    `?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily,alerts&units=imperial&appid=${WEATHER_API_KEY}`
   );
-
   if (!res.ok) throw new Error("Weather fetch failed");
   return res.json();
 }
 
 async function loadWeather() {
-  //const { lat, lon } = await getLocation();
-  const data = await fetchWeather(lat, lon);
-
-  document.getElementById("location").textContent =
-    data.timezone;
-
-  document.getElementById("temp").textContent =
-    `${Math.round(data.current.temp)}°F`;
-
-  document.getElementById("desc").textContent =
-    data.current.weather[0].description;
+  // const { lat, lon } = await getLocation(); // uncomment to use device location
+  const data = await fetchWeather(LAT, LON);
+  document.getElementById("location").textContent = data.timezone;
+  document.getElementById("temp").textContent     = `${Math.round(data.current.temp)}°F`;
+  document.getElementById("desc").textContent     = data.current.weather[0].description;
 }
 
-loadWeather();
+loadWeather(); // runs immediately on page load
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// QUOTES
+// ─────────────────────────────────────────────────────────────────────────────
 
 function getQuote() {
-  let qNum = randomInt(1, quotes.length);
-  document.getElementById("quote").textContent = quotes[qNum - 1].quote;
-  document.getElementById("author").textContent = "- " + quotes[qNum - 1].author;
-
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  document.getElementById("quote").textContent  = q.quote;
+  document.getElementById("author").textContent = "- " + q.author;
 }
 
 const quotes = [
-  { id: 1, quote: "After all, the future is built by ruthless pragmatists; not the armchair theorizers who meander the forest of their own words.", author: "Anonymous" },
-  { id: 2, quote: "One man with courage is the majority.", author: "Thomas Jefferson" },
-  { id: 3, quote: "Better to do something imperfectly than to do nothing flawlessly.", author: "Harriet Braiker" },
-  { id: 4, quote: "Striving for excellence motivates you; striving for perfection is demoralizing.", author: "Robert Shuller" },
-  { id: 5, quote: "The soul becomes dyed with the colour of its thoughts.", author: "Marcus Aurelius" },
-  { id: 6, quote: "What doesn't transmit light creates its own darkness.", author: "Unknown" },
-  { id: 7, quote: "Do every act of your life as though it were the very last act of your life.", author: "Marcus Aurelius" },
-  { id: 8, quote: "Perfection of character is this: to live each day as if it were your last, without frenzy, without apathy, without pretence.", author: "Marcus Aurelius" },
-  { id: 9, quote: "No longer wander at hazard; for neither wilt thou read thy own memoirs, nor the acts of the ancient Romans and Hellenes, and the selections from books which thou wast reserving for thy old age. Hasten then to the end which thou hast before thee, and throwing away idle hopes, come to thy own aid, if thou carest at all for thyself, while it is in thy power.", author: "Marcus Aurelius" },
-  { id: 10, quote: "Every moment think steadily as a Roman and a man to do what thou hast in hand with perfect and simple dignity, and feeling of affection, and freedom, and justice; and to give thyself relief from all other thoughts. And thou wilt give thyself relief, if thou doest every act of thy life as if it were the last, laying aside all carelessness and passionate aversion from the commands of reason, and all hypocrisy, and self-love, and discontent with the portion which has been given to thee. Thou seest how few the things are, the which if a man lays hold of, he is able to live a life which flows in quiet, and is like the existence of the gods; for the gods on their part will require nothing more from him who observes these things.", author: "Marcus Aurelius" },
-  { id: 11, quote: "Pass then through this little space of time conformably to nature, and end thy journey in content, just as an olive falls off when it is ripe, blessing nature who produced it, and thanking the tree on which it grew.", author: "Marcus Aurelius" },
-  { id: 12, quote: "Not that this is a misfortune, but that to bear it nobly is good fortune.", author: "Marcus Aurelius" },
-  { id: 13, quote: "We lose ourselves when we compromise the very ideals that we fight to defend. And we honor those ideals by upholding them not when it's easy, but when it is hard.", author: "Barack Obama" },
-  { id: 14, quote: "It's not the load that breaks you down – it's the way you carry it.", author: "Lou Holtz" },
-  { id: 15, quote: "You'll never get ahead of anyone as long as you try to get even with him.", author: "Lou Holtz" },
-  { id: 16, quote: "Thou art an old man; no longer let this be a slave, no longer be pulled by the strings like a puppet to unsocial movements, no longer either be dissatisfied with thy present lot, or shrink from the future.", author: "Marcus Aurelius" },
-  { id: 17, quote: "Art is never finished, only abandoned.", author: "Leonardo da Vinci" },
-  { id: 18, quote: "Wisdom is the daughter of experience.", author: "Leonardo da Vinci" },
-  { id: 19, quote: "Men of lofty genius sometimes accomplish the most when they work least, for their minds are occupied with their ideas and the perfection of their conceptions, to which they afterwards give form.", author: "Leonardo da Vinci" },
-  { id: 20, quote: "Do not wish for an easy life. Wish for the strength to endure a difficult one.", author: "Bruce Lee" },
-  { id: 21, quote: "If you think you’re boring your audience, go slower not faster.", author: "Gustav Mahler" },
-  { id: 22, quote: "Saying no frees you up to saying yes when it matters most.", author: "Adam Grant" },
-  { id: 23, quote: "You are what you do, not what you say you'll do.", author: "Carl Jung" },
-  { id: 24, quote: "My powers are ordinary. Only my application brings me success.", author: "Isaac Newton" },
-  { id: 25, quote: "My life has always been my music, it’s always come first, but the music ain’t worth nothing if you can’t lay it on the public. The main thing is to live for that audience, ’cause what you’re there for is to please the people.", author: "Louis Armstrong" },
-  { id: 26, quote: "Learn from the mistakes of others. You can never live long enough to make them all yourself.", author: "Groucho Marx" },
-  { id: 27, quote: "In times of change, learners inherit the earth, while the learned find themselves beautifully equipped to deal with a world that no longer exists.", author: "Eric Hoffer" },
-  { id: 28, quote: "Beware the barrenness of a busy life.", author: "Socrates" },
-  { id: 29, quote: "As you think, so shall you become.", author: "Bruce Lee" },
-  { id: 30, quote: "We won't be distracted by comparison if we are captivated with purpose.", author: "Bob Goff" },
-  { id: 31, quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
-  { id: 32, quote: "You often feel tired, not because you've done too much, but because you've done too little of what sparks a light in you.", author: "Unknown" },
-  { id: 33, quote: "But we are entitled only to the moment, and owe nothing to the future except that we follow our convictions.", author: "Lysander au Lune" },
-  { id: 34, quote: "If you can imagine it, you can achieve it. If you can dream it, you can become it.", author: "William Arthur Ward" },
-  { id: 35, quote: "The fear of death follows from the fear of life. One who lives life fully is prepared to die at any time.", author: "Edward Abbey" },
-  { id: 36, quote: "It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.", author: "Seneca" },
-  { id: 37, quote: "The universe is full of magical things patiently waiting for our wits to grow sharper.", author: "Eden Phillpotts" },
-  { id: 38, quote: "Our dreams can come true if we have the courage to pursue them.", author: "Walt Disney" },
-  { id: 39, quote: "Those who have a 'why' to live, can bear with almost any 'how'.", author: "Viktor E. Frankl" },
-  { id: 40, quote: "Sometimes it is not enough to do our best; we must do what is required.", author: "Winston Churchill" },
-  { id: 41, quote: "The cave you fear to enter holds the treasure that you seek.", author: "Joseph Campbell" },
-  { id: 42, quote: "As is a tale, so is life: not how long it is, but how good it is, is what matters.", author: "Seneca" },
-  { id: 43, quote: "If a man knows not to which port he sails, no wind is favorable.", author: "Seneca" },
-  { id: 44, quote: "It is not that we have so little time but that we lose so much. The life we receive is not short but we make it so; we are not ill provided but use what we have wastefully.", author: "Seneca" },
-  { id: 45, quote: "He who is brave is free.", author: "Seneca" },
-  { id: 46, quote: "Often a very old man has no other proof of his long life than his age.", author: "Seneca" },
-  { id: 47, quote: "Tomorrow becomes never. No matter how small the task, take the first step now.", author: "Tim Ferriss" },
-  { id: 48, quote: "If you cannot do great things, do small things in a great way.", author: "Napoleon Hill" },
-  { id: 49, quote: "The time is always right to do what is right.", author: "Martin Luther King Jr." },
-  { id: 50, quote: "Besides the noble art of getting things done, there is the noble art of leaving things undone. The wisdom of life consists in the elimination of non-essentials.", author: "Lin Yutang" },
-  { id: 51, quote: "You can, you should, and if you’re brave enough to start, you will.", author: "Stephen King" },
-  { id: 52, quote: "We awaken in others the same attitude of mind we hold toward them.", author: "Elbert Hubbard" },
-  { id: 53, quote: "Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.", author: "Thomas Edison" },
-  { id: 54, quote: "You can feel sore tomorrow or you can feel sorry tomorrow. You choose.", author: "Unknown" },
-  { id: 55, quote: "Nothing diminishes anxiety faster than action.", author: "Walter Anderson" },
-  { id: 56, quote: "Pain is temporary, quitting lasts forever.", author: "Lance Armstrong" },
-  { id: 57, quote: "What gets measured gets managed.", author: "Peter Drucker" },
-  { id: 58, quote: "Too many of us are not living our dreams because we are living our fears.", author: "Les Brown" },
-  { id: 59, quote: "In a world where information is abundant and easy to access, the real advantage is knowing where to focus.", author: "James Clear" },
-  { id: 60, quote: "The greatest discovery of all time is that a person can change their future by merely changing their attitude.", author: "Oprah Winfrey" },
-  { id: 61, quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" },
-  { id: 62, quote: "The inspiration you seek is already within you. Be silent and listen.", author: "Rumi" }
+  { quote:"After all, the future is built by ruthless pragmatists; not the armchair theorizers who meander the forest of their own words.", author: "Anonymous" },
+  { quote: "One man with courage is the majority.", author: "Thomas Jefferson" },
+  { quote: "Better to do something imperfectly than to do nothing flawlessly.", author: "Harriet Braiker" },
+  { quote: "Striving for excellence motivates you; striving for perfection is demoralizing.", author: "Robert Shuller" },
+  { quote: "The soul becomes dyed with the colour of its thoughts.", author: "Marcus Aurelius" },
+  { quote: "What doesn't transmit light creates its own darkness.", author: "Unknown" },
+  { quote: "Do every act of your life as though it were the very last act of your life.", author: "Marcus Aurelius" },
+  { quote: "Perfection of character is this: to live each day as if it were your last, without frenzy, without apathy, without pretence.", author: "Marcus Aurelius" },
+  { quote: "No longer wander at hazard; for neither wilt thou read thy own memoirs, nor the acts of the ancient Romans and Hellenes, and the selections from books which thou wast reserving for thy old age. Hasten then to the end which thou hast before thee, and throwing away idle hopes, come to thy own aid, if thou carest at all for thyself, while it is in thy power.", author: "Marcus Aurelius" },
+  { quote: "Every moment think steadily as a Roman and a man to do what thou hast in hand with perfect and simple dignity, and feeling of affection, and freedom, and justice; and to give thyself relief from all other thoughts. And thou wilt give thyself relief, if thou doest every act of thy life as if it were the last, laying aside all carelessness and passionate aversion from the commands of reason, and all hypocrisy, and self-love, and discontent with the portion which has been given to thee. Thou seest how few the things are, the which if a man lays hold of, he is able to live a life which flows in quiet, and is like the existence of the gods; for the gods on their part will require nothing more from him who observes these things.", author: "Marcus Aurelius" },
+  { quote: "Pass then through this little space of time conformably to nature, and end thy journey in content, just as an olive falls off when it is ripe, blessing nature who produced it, and thanking the tree on which it grew.", author: "Marcus Aurelius" },
+  { quote: "Not that this is a misfortune, but that to bear it nobly is good fortune.", author: "Marcus Aurelius" },
+  { quote: "We lose ourselves when we compromise the very ideals that we fight to defend. And we honor those ideals by upholding them not when it's easy, but when it is hard.", author: "Barack Obama" },
+  { quote: "It's not the load that breaks you down – it's the way you carry it.", author: "Lou Holtz" },
+  { quote: "You'll never get ahead of anyone as long as you try to get even with him.", author: "Lou Holtz" },
+  { quote: "Thou art an old man; no longer let this be a slave, no longer be pulled by the strings like a puppet to unsocial movements, no longer either be dissatisfied with thy present lot, or shrink from the future.", author: "Marcus Aurelius" },
+  { quote: "Art is never finished, only abandoned.", author: "Leonardo da Vinci" },
+  { quote: "Wisdom is the daughter of experience.", author: "Leonardo da Vinci" },
+  { quote: "Men of lofty genius sometimes accomplish the most when they work least, for their minds are occupied with their ideas and the perfection of their conceptions, to which they afterwards give form.", author: "Leonardo da Vinci" },
+  { quote: "Do not wish for an easy life. Wish for the strength to endure a difficult one.", author: "Bruce Lee" },
+  { quote: "If you think you’re boring your audience, go slower not faster.", author: "Gustav Mahler" },
+  { quote: "Saying no frees you up to saying yes when it matters most.", author: "Adam Grant" },
+  { quote: "You are what you do, not what you say you'll do.", author: "Carl Jung" },
+  { quote: "My powers are ordinary. Only my application brings me success.", author: "Isaac Newton" },
+  { quote: "My life has always been my music, it’s always come first, but the music ain’t worth nothing if you can’t lay it on the public. The main thing is to live for that audience, ’cause what you’re there for is to please the people.", author: "Louis Armstrong" },
+  { quote: "Learn from the mistakes of others. You can never live long enough to make them all yourself.", author: "Groucho Marx" },
+  { quote: "In times of change, learners inherit the earth, while the learned find themselves beautifully equipped to deal with a world that no longer exists.", author: "Eric Hoffer" },
+  { quote: "Beware the barrenness of a busy life.", author: "Socrates" },
+  { quote: "As you think, so shall you become.", author: "Bruce Lee" },
+  { quote: "We won't be distracted by comparison if we are captivated with purpose.", author: "Bob Goff" },
+  { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { quote: "You often feel tired, not because you've done too much, but because you've done too little of what sparks a light in you.", author: "Unknown" },
+  { quote: "But we are entitled only to the moment, and owe nothing to the future except that we follow our convictions.", author: "Lysander au Lune" },
+  { quote: "If you can imagine it, you can achieve it. If you can dream it, you can become it.", author: "William Arthur Ward" },
+  { quote: "The fear of death follows from the fear of life. One who lives life fully is prepared to die at any time.", author: "Edward Abbey" },
+  { quote: "It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.", author: "Seneca" },
+  { quote: "The universe is full of magical things patiently waiting for our wits to grow sharper.", author: "Eden Phillpotts" },
+  { quote: "Our dreams can come true if we have the courage to pursue them.", author: "Walt Disney" },
+  { quote: "Those who have a 'why' to live, can bear with almost any 'how'.", author: "Viktor E. Frankl" },
+  { quote: "Sometimes it is not enough to do our best; we must do what is required.", author: "Winston Churchill" },
+  { quote: "The cave you fear to enter holds the treasure that you seek.", author: "Joseph Campbell" },
+  { quote: "As is a tale, so is life: not how long it is, but how good it is, is what matters.", author: "Seneca" },
+  { quote: "If a man knows not to which port he sails, no wind is favorable.", author: "Seneca" },
+  { quote: "It is not that we have so little time but that we lose so much. The life we receive is not short but we make it so; we are not ill provided but use what we have wastefully.", author: "Seneca" },
+  { quote: "He who is brave is free.", author: "Seneca" },
+  { quote: "Often a very old man has no other proof of his long life than his age.", author: "Seneca" },
+  { quote: "Tomorrow becomes never. No matter how small the task, take the first step now.", author: "Tim Ferriss" },
+  { quote: "If you cannot do great things, do small things in a great way.", author: "Napoleon Hill" },
+  { quote: "The time is always right to do what is right.", author: "Martin Luther King Jr." },
+  { quote: "Besides the noble art of getting things done, there is the noble art of leaving things undone. The wisdom of life consists in the elimination of non-essentials.", author: "Lin Yutang" },
+  { quote: "You can, you should, and if you’re brave enough to start, you will.", author: "Stephen King" },
+  { quote: "We awaken in others the same attitude of mind we hold toward them.", author: "Elbert Hubbard" },
+  { quote: "Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.", author: "Thomas Edison" },
+  { quote: "You can feel sore tomorrow or you can feel sorry tomorrow. You choose.", author: "Unknown" },
+  { quote: "Nothing diminishes anxiety faster than action.", author: "Walter Anderson" },
+  { quote: "Pain is temporary, quitting lasts forever.", author: "Lance Armstrong" },
+  { quote: "What gets measured gets managed.", author: "Peter Drucker" },
+  { quote: "Too many of us are not living our dreams because we are living our fears.", author: "Les Brown" },
+  { quote: "In a world where information is abundant and easy to access, the real advantage is knowing where to focus.", author: "James Clear" },
+  { quote: "The greatest discovery of all time is that a person can change their future by merely changing their attitude.", author: "Oprah Winfrey" },
+  { quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" },
+  { quote: "The inspiration you seek is already within you. Be silent and listen.", author: "Rumi" }
 ];
 

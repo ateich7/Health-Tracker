@@ -133,6 +133,12 @@
                 <div class="stat-value blue" id="weightChange">--</div>
               </div>
             </div>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
+            </div>
             <div class="chart-container">
               <canvas id="weightChart"></canvas>
             </div>
@@ -291,6 +297,8 @@
     </nav>
   </div>
 
+  <!-- Load order matters: supabase-js must come before supabase-client.js (which uses window.supabase),
+       and both must come before renderer.js (which uses the `db` global set by supabase-client.js). -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>

@@ -24,7 +24,5 @@
     "electron": "^39.2.3",
     "electron-builder": "^26.0.12"
   },
-  "dependencies": {
-    "recharts": "^3.5.0"
-  }
+  "dependencies": {}
 }
