@@ -60,6 +60,12 @@ Exercise type is determined by the number of sets in the data array: 3 items = r
 ### Moving averages
 7-day trailing moving averages are computed and overlaid on the weight, sleep hours, restedness, and all signals charts.
 
+## After making any changes
+Always run the full build after making changes — this pushes to GitHub, deploys to Vercel, and rebuilds the Electron app:
+```bash
+npm run build
+```
+
 ## Build & deploy
 ```bash
 npm run build

@@ -299,16 +299,23 @@ function updateUI() {
   else if (activePage === 'signals') updateSignalsChart();
 }
 
-// Updates the two weight stat boxes (7-day average and total change since first entry)
+// Updates the two weight stat boxes. Uses the same period slice as the chart so
+// "Change Since Beginning" reflects the start of the currently selected time frame.
 function updateStats() {
+  const sliced = weightPeriodDays === 0 ? weightData : weightData.slice(-weightPeriodDays);
+
   const recentWeights = weightData.slice(-7);
   const avgWeight = recentWeights.length > 0
     ? (recentWeights.reduce((sum, e) => sum + e.weight, 0) / recentWeights.length).toFixed(1)
     : null;
 
-  const weightChange = weightData.length > 0 && avgWeight
-    ? (avgWeight - weightData[0].weight).toFixed(1)
+  const weightChange = sliced.length > 0 && avgWeight
+    ? (avgWeight - sliced[0].weight).toFixed(1)
     : null;
+
+  const periodLabels = { 7: 'This Week', 30: 'This Month', 90: 'Last 3 Months', 0: 'All Time' };
+  document.getElementById('weightChangeLabel').textContent =
+    `Change (${periodLabels[weightPeriodDays] ?? 'Selected Period'})`;
 
   document.getElementById('weightChange').textContent =
     weightChange ? `${weightChange > 0 ? '+' : ''}${weightChange} lbs` : '--';
@@ -321,6 +328,7 @@ function setWeightPeriod(days, btn) {
   document.querySelectorAll('.weight-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   updateWeightChart();
+  updateStats();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
