@@ -1784,7 +1784,7 @@ function updateStreaks() {
   const socialDates   = socialData.map(e => e.date);
 
   const streaks = [
-    { label: '3+ workouts',    count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',        unit: ['week', 'weeks']  },
+    { label: '3 workouts',     count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',        unit: ['week', 'weeks']  },
     { label: '> 7 hrs sleep',  count: calcDailyStreak(sleepOver7),         icon: 'bedtime',               unit: ['night', 'nights'] },
     { label: 'no release',     count: calcStreak(releaseDates),             icon: 'local_fire_department', unit: ['day', 'days']    },
     { label: 'any interaction',count: calcDailyStreak(socialDates),         icon: 'people',                unit: ['day', 'days']    },
