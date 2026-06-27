@@ -1441,7 +1441,7 @@ div {
   padding: 0 20px;
 }
 
-.signals-release-card {
+.signals-top-bar .signals-release-card {
   flex: 1;
   padding: 8px 16px;
   display: flex;
@@ -1455,6 +1455,11 @@ div {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+.signals-release-chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .signals-release-card .signals-chart-label {
