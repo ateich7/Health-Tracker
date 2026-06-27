@@ -23,7 +23,9 @@
       "Bash(pkill -x \"Health Tracker\")",
       "Bash(cp -r 'dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')",
       "Bash(npm run *)",
-      "Skill(claude-in-chrome)"
+      "Skill(claude-in-chrome)",
+      "Bash(curl -s \"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js\")",
+      "Bash(grep -o 'filler.\\\\{0,200\\\\}')"
     ]
   }
 }

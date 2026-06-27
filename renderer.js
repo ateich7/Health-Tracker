@@ -664,6 +664,8 @@ function updateSleepChart() {
     pointRadius: 0,
     borderWidth: 3,
     borderDash: [6, 4],
+    segment: { borderDash: () => [6, 4] },
+    clip: false,
     yAxisID: 'y1'
   });
   if (hasRestedData) {
@@ -677,6 +679,8 @@ function updateSleepChart() {
       pointRadius: 0,
       borderWidth: 3,
       borderDash: [6, 4],
+      segment: { borderDash: () => [6, 4] },
+      clip: false,
       yAxisID: 'y2'
     });
   }
@@ -1151,8 +1155,10 @@ async function logWorkout() {
     ? Math.round((Date.now() - workoutTimerStart) / 60000) + 15 : 15;
   workoutTimerStart = null;
 
+  const activePlanKey = !isEditing ? (localStorage.getItem('activePlanKey') || null) : null;
+
   await db.from('workout_logs').upsert(
-    { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes },
+    { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes, plan_key: activePlanKey },
     { onConflict: 'user_id,date' }
   );
 
@@ -1162,21 +1168,11 @@ async function logWorkout() {
   localStorage.setItem('workouts', JSON.stringify(allWorkouts));
   localStorage.setItem('workoutLoggedDate', date);
   localStorage.removeItem('workoutDraft');
-
-  // Tag this workout date with the plan it was started from so future lookups are exact
-  if (!isEditing) {
-    const activePlanKey = localStorage.getItem('activePlanKey');
-    if (activePlanKey) {
-      const planWorkoutDates = JSON.parse(localStorage.getItem('planWorkoutDates') || '{}');
-      planWorkoutDates[activePlanKey] = date;
-      localStorage.setItem('planWorkoutDates', JSON.stringify(planWorkoutDates));
-    }
-  }
   localStorage.removeItem('activePlanKey');
 
   // Keep workoutLogs in memory in sync
   const logIdx = workoutLogs.findIndex(r => r.date === date);
-  const newRow = { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes };
+  const newRow = { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes, plan_key: activePlanKey };
   if (logIdx >= 0) workoutLogs[logIdx] = newRow;
   else workoutLogs.push(newRow);
   renderWorkoutHistory();
@@ -1420,21 +1416,6 @@ function exerciseDefsFromHistory(historyExercises) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Renders the collapsible workout history list below the form
-function inferWorkoutName(exercises) {
-  const planMap   = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
-  const planNames = { mon: 'Mon Workout', wed: 'Wed Workout', fri: 'Fri Workout' };
-  const exNames   = (exercises || []).map(e => e.name.toLowerCase());
-
-  let bestKey = null, bestScore = 0;
-  for (const [key, plan] of Object.entries(planMap)) {
-    const planEx  = plan.map(e => e.name.toLowerCase());
-    const overlap = exNames.filter(n => planEx.includes(n)).length;
-    const score   = overlap / Math.max(plan.length, exNames.length, 1);
-    if (score > bestScore) { bestScore = score; bestKey = key; }
-  }
-  return bestScore > 0.3 ? planNames[bestKey] : 'Workout';
-}
-
 function renderWorkoutHistory() {
   const container = document.getElementById('workoutHistory');
   if (!container) return;
@@ -1452,7 +1433,8 @@ function renderWorkoutHistory() {
     const dur  = row.duration_minutes ? `${row.duration_minutes} min` : '—';
     const d    = new Date(row.date + 'T12:00:00');
     const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const name = inferWorkoutName(row.exercises);
+    const planNames = { mon: 'Mon Workout', wed: 'Wed Workout', fri: 'Fri Workout' };
+    const name = planNames[row.plan_key] || 'Workout';
     const exerciseLines = (row.exercises || []).map(ex => {
       const info    = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
       const summary = formatPrevSets(ex.sets, info?.isLift || false, info?.isRun || false);

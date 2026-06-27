@@ -25,6 +25,7 @@ create table if not exists workout_logs (
   date             text    not null,
   exercises        jsonb   not null,
   duration_minutes integer,
+  plan_key         text,
   unique (user_id, date)
 );
 
@@ -48,5 +49,6 @@ create policy "Own sleep logs"       on sleep_logs       for all using (auth.uid
 create policy "Own workout logs"     on workout_logs     for all using (auth.uid() = user_id);
 create policy "Own custom exercises" on custom_exercises for all using (auth.uid() = user_id);
 
--- Migration: add duration_minutes to existing workout_logs tables
+-- Migrations for existing workout_logs tables
 -- alter table workout_logs add column if not exists duration_minutes integer;
+-- alter table workout_logs add column if not exists plan_key text;
