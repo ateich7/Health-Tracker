@@ -1474,7 +1474,14 @@ div {
   gap: 10px;
 }
 
+.social-cat-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .social-cat-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1511,26 +1518,20 @@ div {
   color: var(--bb);
 }
 
-.social-cat-count-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .social-minus {
-  background: none;
+  background: var(--objbg);
   border: none;
   color: var(--bb);
-  font-size: 22px;
-  font-weight: 400;
+  font-size: 24px;
+  font-weight: 300;
   cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-  border-radius: 4px;
-  transition: color 0.15s;
+  padding: 0 14px;
+  border-radius: var(--br);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 
-.social-minus:hover { color: var(--b); }
+.social-minus:hover { background: var(--objbghov); color: var(--b); }
 
 .social-cat-count {
   font-size: 26px;
