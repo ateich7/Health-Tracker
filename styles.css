@@ -849,16 +849,54 @@ div {
   font-size: 12px;
 }
 
-/* Home page: center the quote card */
+/* Home page: top row (streaks + quote) then weight card fills remaining space */
 #page-home.active {
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
 }
 
 #page-home .card {
-  flex: 0 1 auto;
-  max-width: 620px;
-  width: 100%;
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+#page-home .home-weight-card {
+  flex: 1;
+  min-height: 0;
+}
+
+.home-top-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  flex: 0 0 auto;
+}
+
+.home-top-row .card {
+  flex: 1;
+  padding: 16px 20px;
+}
+
+.home-top-row .card h2 {
+  margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+.home-top-row .streak-item {
+  padding: 8px 6px 6px;
+  gap: 2px;
+}
+
+.home-top-row .streak-count {
+  font-size: 1.4rem;
+}
+
+.home-top-row .spacer {
+  height: 8px;
+}
+
+.home-top-row #quoteCard h5 {
+  font-size: 15px;
 }
 
 /* Streaks */
@@ -978,9 +1016,8 @@ div {
     height: 220px;
   }
 
-  /* Sleep & weight charts */
-  #page-sleep .chart-container,
-  #page-weight .chart-container {
+  /* Sleep chart */
+  #page-sleep .chart-container {
     height: 280px;
   }
 
@@ -994,7 +1031,7 @@ div {
     max-height: unset !important;
   }
 
-  /* Home page: top-aligned */
+  /* Home page: stack everything vertically on mobile */
   #page-home.active {
     justify-content: flex-start;
     align-items: stretch;
@@ -1002,6 +1039,22 @@ div {
 
   #page-home .card {
     max-width: 100%;
+  }
+
+  #page-home .home-weight-card {
+    flex: 0 0 auto;
+  }
+
+  .home-top-row {
+    flex-direction: column;
+  }
+
+  #page-home .home-top-row .card {
+    padding: 16px;
+  }
+
+  #page-home .chart-container {
+    height: 280px;
   }
 
   /* Mobile-only elements */

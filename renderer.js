@@ -92,7 +92,7 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'weight') updateWeightChart();
+  if (name === 'home') updateWeightChart();
   else if (name === 'sleep') updateSleepChart();
   else if (name === 'workout') updateExerciseChart();
   else if (name === 'signals') updateSignalsChart();
@@ -153,10 +153,6 @@ async function loadData() {
   // Mark nav chips as complete for activities already logged today
   const today = getToday();
 
-  if (weightData.some(e => e.date === today)) {
-    const chip = document.getElementById('weightChip');
-    if (!chip.classList.contains('completed')) toggleTask(chip);
-  }
   if (sleepData.some(e => e.date === today)) {
     const chip = document.getElementById('sleepChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
@@ -209,8 +205,6 @@ async function logWeight() {
   weightData.sort((a, b) => a.timestamp - b.timestamp);
 
   input.value = '';
-  const chip = document.getElementById('weightChip');
-  if (!chip.classList.contains('completed')) toggleTask(chip);
   updateUI();
 }
 
@@ -291,7 +285,7 @@ function updateUI() {
   updateStats();
   updateStreaks();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'weight') updateWeightChart();
+  if (activePage === 'home') updateWeightChart();
   else if (activePage === 'sleep') updateSleepChart();
   else if (activePage === 'workout') updateExerciseChart();
   else if (activePage === 'signals') updateSignalsChart();

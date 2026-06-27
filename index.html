@@ -59,12 +59,7 @@
           <span class="material-icons">home</span>
           <span>Home</span>
         </div>
-        <div class="nav-item" id="weightChip" data-page="weight" onclick="showPage('weight')">
-          <span class="material-icons">monitor_weight</span>
-          <span>Weight</span>
-          <span class="chip-check material-icons" style="display:none;">check_circle</span>
-        </div>
-        <div class="nav-item" id="sleepChip" data-page="sleep" onclick="showPage('sleep')">
+<div class="nav-item" id="sleepChip" data-page="sleep" onclick="showPage('sleep')">
           <span class="material-icons">bedtime</span>
           <span>Sleep</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
@@ -99,25 +94,19 @@
 
         <!-- Home -->
         <div id="page-home" class="page">
-          <div class="card" id="streaksCard">
-            <h2>Streaks</h2>
-            <div class="streak-grid" id="streaksGrid"></div>
+          <div class="home-top-row">
+            <div class="card" id="streaksCard">
+              <h2>Streaks</h2>
+              <div class="streak-grid" id="streaksGrid"></div>
+            </div>
+            <div class="card" id="quoteCard">
+              <h2>Quote</h2>
+              <h5 id="quote"></h5>
+              <div class="spacer"></div>
+              <div id="author"></div>
+            </div>
           </div>
-          <div class="card" id="quoteCard">
-            <h2>Quote</h2>
-            <h5 id="quote"></h5>
-            <div class="spacer"></div>
-            <div id="author"></div>
-          </div>
-          <div class="mobile-only" style="gap:10px;">
-            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
-            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
-          </div>
-        </div>
-
-        <!-- Weight -->
-        <div id="page-weight" class="page">
-          <div class="card">
+          <div class="card home-weight-card">
             <h2>Weight</h2>
             <div class="input-group">
               <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
@@ -142,6 +131,10 @@
             <div class="chart-container">
               <canvas id="weightChart"></canvas>
             </div>
+          </div>
+          <div class="mobile-only" style="gap:10px;">
+            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
+            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
           </div>
         </div>
 
@@ -259,14 +252,7 @@
         <span class="material-icons">home</span>
         <span>Home</span>
       </div>
-      <div class="bottom-nav-item" data-page="weight" onclick="showPage('weight')">
-        <div class="bn-icon-wrap">
-          <span class="material-icons">monitor_weight</span>
-          <span class="bottom-done-dot"></span>
-        </div>
-        <span>Weight</span>
-      </div>
-      <div class="bottom-nav-item" data-page="sleep" onclick="showPage('sleep')">
+<div class="bottom-nav-item" data-page="sleep" onclick="showPage('sleep')">
         <div class="bn-icon-wrap">
           <span class="material-icons">bedtime</span>
           <span class="bottom-done-dot"></span>
