@@ -1165,7 +1165,24 @@ div {
   }
 
   .home-top-row .streak-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .home-top-row .streak-item {
+    padding: 8px 2px 6px;
+  }
+
+  .home-top-row .streak-icon {
+    font-size: 20px !important;
+  }
+
+  .home-top-row .streak-count {
+    font-size: 1.1rem;
+  }
+
+  .home-top-row .streak-unit {
+    display: none;
   }
 
   #page-home .home-top-row .card {
