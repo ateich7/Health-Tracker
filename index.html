@@ -69,11 +69,6 @@
           <span>Signals</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
         </div>
-        <div class="nav-item" id="codesChip" onclick="openTaskLink(this)">
-          <span class="material-icons">notes</span>
-          <span>Codes</span>
-          <span class="chip-check material-icons" style="display:none;">check_circle</span>
-        </div>
         <div class="nav-item" id="workoutChip" data-page="workout" onclick="showPage('workout')">
           <span class="material-icons">fitness_center</span>
           <span>Workout</span>
@@ -178,6 +173,11 @@
 
         <!-- Signals -->
         <div id="page-signals" class="page">
+          <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
+            <span class="material-icons">notes</span>
+            <span>Codes</span>
+            <span class="chip-check material-icons" style="display:none;">check_circle</span>
+          </button>
           <div class="signals-layout">
             <div class="card signals-entry-card">
               <h2>Signals</h2>
@@ -295,13 +295,6 @@
           <span class="bottom-done-dot"></span>
         </div>
         <span>Signals</span>
-      </div>
-      <div class="bottom-nav-item" data-chip="codesChip" onclick="openTaskLink(document.getElementById('codesChip'))">
-        <div class="bn-icon-wrap">
-          <span class="material-icons">notes</span>
-          <span class="bottom-done-dot"></span>
-        </div>
-        <span>Codes</span>
       </div>
     </nav>
   </div>
