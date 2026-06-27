@@ -1371,12 +1371,10 @@ div {
     margin: 16px;
   }
 
-  /* Signals: on mobile just show the Codes button; hide the release chart card */
+  /* Signals: top bar fixed height so Chart.js has a container size reference */
   .signals-top-bar {
-    height: auto;
-  }
-  #page-signals .signals-release-card {
-    display: none;
+    overflow: hidden;
+    width: 100%;
   }
   .signals-inline-form {
     flex-wrap: wrap;
