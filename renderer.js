@@ -1505,14 +1505,20 @@ function renderWorkoutHistory() {
       </div>`;
   }
 
-  const LIMIT   = 5;
-  const preview = sorted.slice(0, LIMIT);
-  const rest    = sorted.slice(LIMIT);
+  const isDesktop = window.innerWidth > 768;
 
-  let html = preview.map(renderRow).join('');
-  if (rest.length) {
-    html += `<div id="whExtra" style="display:none;">${rest.map(renderRow).join('')}</div>`;
-    html += `<button class="btn-primary wh-see-all-btn" onclick="toggleWorkoutHistoryAll(this)">See All</button>`;
+  let html;
+  if (isDesktop) {
+    html = sorted.map(renderRow).join('');
+  } else {
+    const LIMIT   = 5;
+    const preview = sorted.slice(0, LIMIT);
+    const rest    = sorted.slice(LIMIT);
+    html = preview.map(renderRow).join('');
+    if (rest.length) {
+      html += `<div id="whExtra" style="display:none;">${rest.map(renderRow).join('')}</div>`;
+      html += `<button class="btn-primary wh-see-all-btn" onclick="toggleWorkoutHistoryAll(this)">See All</button>`;
+    }
   }
   container.innerHTML = html;
 }
