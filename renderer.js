@@ -809,7 +809,7 @@ function updateSignalsChart() {
   if (signalsChart) signalsChart.destroy();
   if (signalsReleaseChart) signalsReleaseChart.destroy();
 
-  const chartData = psychData.slice(-30).map(e => ({
+  const chartData = psychData.slice(-signalsPeriodDays).map(e => ({
     x: e.date.split('/').slice(0, 2).join('/'),
     confidence: e.confidence,
     stress: e.stress,
@@ -841,68 +841,72 @@ function updateSignalsChart() {
   const maStress = movingAvg('stress');
   const maLow = movingAvg('low');
 
+  const datasets = [];
+  if (signalLineToggles.confidence) {
+    datasets.push({
+      label: 'Confidence',
+      data: chartData.map(d => d.confidence),
+      borderColor: '#0088FF',
+      backgroundColor: 'rgba(0,136,255,0.15)',
+      tension: 0.3,
+      fill: true
+    });
+    datasets.push({
+      label: 'Confi MA',
+      data: maConfi,
+      borderColor: '#0088FF',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false
+    });
+  }
+  if (signalLineToggles.stress) {
+    datasets.push({
+      label: 'Stress',
+      data: chartData.map(d => d.stress),
+      borderColor: '#FF6B6B',
+      backgroundColor: 'rgba(255,107,107,0.15)',
+      tension: 0.3,
+      fill: true
+    });
+    datasets.push({
+      label: 'Stress MA',
+      data: maStress,
+      borderColor: '#FF6B6B',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false
+    });
+  }
+  if (signalLineToggles.low) {
+    datasets.push({
+      label: 'Low',
+      data: chartData.map(d => d.low),
+      borderColor: '#A78BFA',
+      backgroundColor: 'rgba(167,139,250,0.15)',
+      tension: 0.3,
+      fill: true
+    });
+    datasets.push({
+      label: 'Low MA',
+      data: maLow,
+      borderColor: '#A78BFA',
+      borderDash: [5, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      fill: false
+    });
+  }
+
   const ctx1 = document.getElementById('signalsChart').getContext('2d');
   signalsChart = new Chart(ctx1, {
     type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Confidence',
-          data: chartData.map(d => d.confidence),
-          borderColor: '#0088FF',
-          backgroundColor: 'rgba(0,136,255,0.15)',
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'Confi MA',
-          data: maConfi,
-          borderColor: '#0088FF',
-          borderDash: [5, 4],
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false
-        },
-        {
-          label: 'Stress',
-          data: chartData.map(d => d.stress),
-          borderColor: '#FF6B6B',
-          backgroundColor: 'rgba(255,107,107,0.15)',
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'Stress MA',
-          data: maStress,
-          borderColor: '#FF6B6B',
-          borderDash: [5, 4],
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false
-        },
-        {
-          label: 'Low',
-          data: chartData.map(d => d.low),
-          borderColor: '#A78BFA',
-          backgroundColor: 'rgba(167,139,250,0.15)',
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'Low MA',
-          data: maLow,
-          borderColor: '#A78BFA',
-          borderDash: [5, 4],
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false
-        }
-      ]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
