@@ -608,16 +608,20 @@ function updateSleepChart() {
 
   if (chartData.length === 0) return;
 
-  // 7-day moving averages
+  // 7-day moving averages (filter nulls so absent values don't drag the average toward 0)
   const windowSize = 7;
-  const maHours = chartData.map((d, i) => {
-    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1);
+  const maHours = chartData.map((_, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p.y != null);
+    if (!slice.length) return null;
     return parseFloat((slice.reduce((s, p) => s + p.y, 0) / slice.length).toFixed(2));
   });
-  const maRested = chartData.map((d, i) => {
-    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1);
+  const maRested = chartData.map((_, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p.z != null);
+    if (!slice.length) return null;
     return parseFloat((slice.reduce((s, p) => s + p.z, 0) / slice.length).toFixed(2));
   });
+
+  const hasRestedData = chartData.some(d => d.z != null);
 
   const ctx = document.getElementById('sleepChart').getContext('2d');
   const datasets = [];
@@ -627,6 +631,8 @@ function updateSleepChart() {
       grid: { color: 'rgba(250,250,250,0.4)' }
     }
   };
+
+  // Fills first, trend lines last so dashed lines render on top of fill areas
   datasets.push({
     label: 'Hours Slept',
     data: chartData.map(d => d.y),
@@ -634,8 +640,21 @@ function updateSleepChart() {
     backgroundColor: 'rgba(0, 136, 255, 0.2)',
     tension: 0.3,
     fill: true,
+    order: 2,
     yAxisID: 'y1'
   });
+  if (hasRestedData) {
+    datasets.push({
+      label: 'Restedness Score',
+      data: chartData.map(d => d.z),
+      borderColor: '#34C759',
+      backgroundColor: 'rgba(52, 199, 89, 0.2)',
+      tension: 0.3,
+      fill: true,
+      order: 2,
+      yAxisID: 'y2'
+    });
+  }
   datasets.push({
     label: 'Hours (7-day avg)',
     data: maHours,
@@ -646,29 +665,24 @@ function updateSleepChart() {
     pointRadius: 0,
     borderWidth: 2,
     borderDash: [5, 3],
+    order: 1,
     yAxisID: 'y1'
   });
-  datasets.push({
-    label: 'Restedness Score',
-    data: chartData.map(d => d.z),
-    borderColor: '#34C759',
-    backgroundColor: 'rgba(52, 199, 89, 0.2)',
-    tension: 0.3,
-    fill: true,
-    yAxisID: 'y2'
-  });
-  datasets.push({
-    label: 'Restedness (7-day avg)',
-    data: maRested,
-    borderColor: '#FFD60A',
-    backgroundColor: 'transparent',
-    tension: 0.4,
-    fill: false,
-    pointRadius: 0,
-    borderWidth: 2,
-    borderDash: [5, 3],
-    yAxisID: 'y2'
-  });
+  if (hasRestedData) {
+    datasets.push({
+      label: 'Restedness (7-day avg)',
+      data: maRested,
+      borderColor: '#FFD60A',
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      fill: false,
+      pointRadius: 0,
+      borderWidth: 2,
+      borderDash: [5, 3],
+      order: 1,
+      yAxisID: 'y2'
+    });
+  }
   scales.y1 = {
     type: 'linear',
     position: 'left',
@@ -677,13 +691,15 @@ function updateSleepChart() {
     grid: { color: 'rgba(250,250,250,0.4)' },
     title: { display: true, text: 'Hours Slept', color: '#0088FF' }
   };
-  scales.y2 = {
-    type: 'linear',
-    position: 'right',
-    ticks: { color: '#34C759' },
-    grid: { display: false },
-    title: { display: true, text: 'Restedness Score', color: '#34C759' }
-  };
+  if (hasRestedData) {
+    scales.y2 = {
+      type: 'linear',
+      position: 'right',
+      ticks: { color: '#34C759' },
+      grid: { display: false },
+      title: { display: true, text: 'Restedness Score', color: '#34C759' }
+    };
+  }
 
   sleepChart = new Chart(ctx, {
     type: 'line',
