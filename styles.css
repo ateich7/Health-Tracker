@@ -916,12 +916,36 @@ div {
   font-size: 22px;
 }
 
-#page-home .stats-grid {
+/* Desktop: input + stat boxes + filter buttons all on one row */
+.weight-controls-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
-#page-home .input-group {
-  margin-bottom: 16px;
+.weight-controls-row .input-group {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.weight-controls-row .stats-grid {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.weight-controls-row .weight-filter-row {
+  flex: none;
+  margin-bottom: 0;
+}
+
+.weight-controls-row .weight-filter-btn {
+  flex: none;
+  padding: 6px 10px;
 }
 
 .home-top-row {
@@ -1138,6 +1162,32 @@ div {
 
   #page-home .chart-container {
     height: 280px;
+  }
+
+  /* Restore weight controls to stacked column on mobile */
+  .weight-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .weight-controls-row .input-group {
+    margin-bottom: 16px;
+  }
+
+  .weight-controls-row .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    margin-bottom: 16px;
+  }
+
+  .weight-controls-row .weight-filter-row {
+    margin-bottom: 12px;
+  }
+
+  .weight-controls-row .weight-filter-btn {
+    flex: 1;
+    padding: 6px 0;
   }
 
   /* Mobile-only elements */

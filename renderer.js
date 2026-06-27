@@ -312,10 +312,6 @@ function updateStats() {
     ? (avgWeight - sliced[0].weight).toFixed(1)
     : null;
 
-  const periodLabels = { 7: 'This Week', 30: 'This Month', 90: 'Last 3 Months', 0: 'All Time' };
-  document.getElementById('weightChangeLabel').textContent =
-    `Change (${periodLabels[weightPeriodDays] ?? 'Selected Period'})`;
-
   document.getElementById('weightChange').textContent =
     weightChange ? `${weightChange > 0 ? '+' : ''}${weightChange} lbs` : '--';
   document.getElementById('avgWeight').textContent =

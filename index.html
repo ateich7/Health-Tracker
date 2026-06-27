@@ -108,25 +108,27 @@
           </div>
           <div class="card home-weight-card">
             <h2>Weight</h2>
-            <div class="input-group">
-              <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
-              <button class="btn-primary" onclick="logWeight()">Log</button>
-            </div>
-            <div class="stats-grid">
-              <div class="stat-box blue">
-                <div class="stat-label">Current Weight (weighted average)</div>
-                <div class="stat-value blue" id="avgWeight">--</div>
+            <div class="weight-controls-row">
+              <div class="input-group">
+                <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
+                <button class="btn-primary" onclick="logWeight()">Log</button>
               </div>
-              <div class="stat-box blue">
-                <div class="stat-label" id="weightChangeLabel">Change Since Beginning</div>
-                <div class="stat-value blue" id="weightChange">--</div>
+              <div class="stats-grid">
+                <div class="stat-box blue">
+                  <div class="stat-label">Current (avg)</div>
+                  <div class="stat-value blue" id="avgWeight">--</div>
+                </div>
+                <div class="stat-box blue">
+                  <div class="stat-label">Change</div>
+                  <div class="stat-value blue" id="weightChange">--</div>
+                </div>
               </div>
-            </div>
-            <div class="weight-filter-row">
-              <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
-              <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
-              <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
-              <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
+              <div class="weight-filter-row">
+                <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
+                <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
+                <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
+                <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
+              </div>
             </div>
             <div class="chart-container">
               <canvas id="weightChart"></canvas>
