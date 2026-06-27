@@ -1514,15 +1514,15 @@ function renderWorkoutSelector() {
   ];
 
   container.innerHTML = `
-    <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+    <div class="workout-selector-row">
       ${plans.map(p => `
         <label class="workout-plan-option" onclick="selectWorkoutPlan('${p.key}')">
           <input type="radio" name="workoutPlan" value="${p.key}" style="display:none">
           <div class="plan-name">${p.label}</div>
         </label>
       `).join('')}
+      <button class="btn-primary workout-start-btn" onclick="startWorkout()">Start Workout</button>
     </div>
-    <button class="btn-primary" style="width:100%;" onclick="startWorkout()">Start Workout</button>
   `;
 }
 

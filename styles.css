@@ -504,15 +504,9 @@ canvas {
   border-radius: var(--br);
 }
 
-/* Workout card: scroll exercises, keep log button always visible */
+/* Workout card: no scroll on desktop, full-width top row */
 #workoutCard {
-  overflow: hidden;
-}
-
-#workout {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
+  overflow: visible;
 }
 
 #logWorkoutBtn {
@@ -778,41 +772,32 @@ div {
   min-height: 150px;
 }
 
-/* Workout page: history card below, top row has two cards side by side */
+/* Workout page: create card full-width on top, history + chart side by side below */
 #page-workout.active {
   flex-direction: column;
 }
 
-.wh-top-row {
+#workoutCard {
+  flex: none;
+}
+
+.wh-bottom-row {
   display: flex;
   flex-direction: row;
   gap: 20px;
-  flex: 1;
-  min-height: 0;
 }
 
-.wh-top-row .card {
+.wh-bottom-row .card {
   flex: 1;
-  min-height: 0;
-}
-
-/* When workout is already logged, shrink the left card to its content */
-#page-workout.active.workout-logged #workoutCard {
-  flex: 0 0 auto;
-  min-width: 180px;
-  max-width: 260px;
 }
 
 /* History card */
 #workoutHistoryCard {
   flex: 1;
-  max-height: 280px;
 }
 
 #workoutHistory {
-  overflow-y: auto;
   flex: 1;
-  min-height: 0;
 }
 
 .wh-row {
@@ -1138,14 +1123,19 @@ div {
     height: 280px;
   }
 
-  /* Workout top row stacks vertically on mobile */
-  .wh-top-row {
+  /* Workout bottom row stacks vertically on mobile */
+  .wh-bottom-row {
     flex-direction: column;
-    flex: none;
   }
 
-  #workoutHistoryCard {
-    max-height: unset !important;
+  /* Workout card: scroll exercises on mobile, keep log button visible */
+  #workoutCard {
+    overflow: hidden;
+  }
+
+  #workout {
+    overflow-y: auto;
+    max-height: 55vh;
   }
 
   /* Home page: stack everything vertically on mobile */
@@ -1377,7 +1367,7 @@ div {
   display: none;
 }
 
-.signals-entry-card {
+.page .signals-entry-card {
   flex: 0 0 auto;
   padding: 10px 20px;
 }
