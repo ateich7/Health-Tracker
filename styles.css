@@ -1414,3 +1414,112 @@ div {
   padding: 10px 16px;
   font-size: 14px;
 }
+
+/* ─── Social page ─────────────────────────────────────────────────────────── */
+.social-layout {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 0;
+}
+
+.social-entry-card {
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.social-date-label {
+  color: var(--h);
+  font-size: 13px;
+  margin: -4px 0 14px;
+  opacity: 0.7;
+}
+
+.social-chart-label {
+  color: var(--h);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.social-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-cat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px 14px 16px;
+  border-radius: var(--br);
+  background: var(--objbg);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border-left: 3px solid transparent;
+}
+
+.social-cat-btn:hover { background: var(--objbghov); }
+.social-cat-btn[data-cat="no_stakes"]   { border-left-color: rgba(180,180,180,0.5); }
+.social-cat-btn[data-cat="low_stakes"]  { border-left-color: rgba(255,210,50,0.7); }
+.social-cat-btn[data-cat="med_stakes"]  { border-left-color: var(--p600); }
+.social-cat-btn[data-cat="high_stakes"] { border-left-color: var(--s600); }
+
+.social-cat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.social-cat-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--b);
+}
+
+.social-cat-desc {
+  font-size: 11px;
+  color: var(--bb);
+}
+
+.social-cat-count-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.social-minus {
+  background: none;
+  border: none;
+  color: var(--bb);
+  font-size: 22px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.social-minus:hover { color: var(--b); }
+
+.social-cat-count {
+  font-size: 26px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+.social-cat-btn[data-cat="no_stakes"]   .social-cat-count { color: rgba(180,180,180,0.8); }
+.social-cat-btn[data-cat="low_stakes"]  .social-cat-count { color: rgba(255,210,50,0.9); }
+.social-cat-btn[data-cat="med_stakes"]  .social-cat-count { color: var(--p300); }
+.social-cat-btn[data-cat="high_stakes"] .social-cat-count { color: var(--s600); }
+
+@media (max-width: 768px) {
+  .social-layout { flex-direction: column; }
+  .social-entry-card { width: 100%; }
+}

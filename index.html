@@ -74,6 +74,11 @@
           <span>Workout</span>
           <span class="chip-check material-icons" style="display:none;">check_circle</span>
         </div>
+        <div class="nav-item" id="socialChip" data-page="social" onclick="showPage('social')">
+          <span class="material-icons">people</span>
+          <span>Social</span>
+          <span class="chip-check material-icons" style="display:none;">check_circle</span>
+        </div>
         <div class="nav-item nav-migrate" onclick="migrateLocalData()">
           <span class="material-icons">upload</span>
           <span>Migrate Data</span>
@@ -242,6 +247,64 @@
           </div>
         </div>
 
+        <!-- Social -->
+        <div id="page-social" class="page">
+          <div class="social-layout">
+            <div class="card social-entry-card">
+              <h2>Social</h2>
+              <p class="social-date-label">Tap to log an approach</p>
+              <div class="social-categories">
+                <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
+                  <div class="social-cat-info">
+                    <span class="social-cat-name">No Stakes</span>
+                    <span class="social-cat-desc">Cashier, old guy, etc.</span>
+                  </div>
+                  <div class="social-cat-count-wrap">
+                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('no_stakes')">−</button>
+                    <span class="social-cat-count" id="socialCount_no_stakes">0</span>
+                  </div>
+                </div>
+                <div class="social-cat-btn" data-cat="low_stakes" onclick="logSocial('low_stakes')">
+                  <div class="social-cat-info">
+                    <span class="social-cat-name">Low Stakes</span>
+                    <span class="social-cat-desc">Unattractive girl</span>
+                  </div>
+                  <div class="social-cat-count-wrap">
+                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('low_stakes')">−</button>
+                    <span class="social-cat-count" id="socialCount_low_stakes">0</span>
+                  </div>
+                </div>
+                <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
+                  <div class="social-cat-info">
+                    <span class="social-cat-name">Medium Stakes</span>
+                    <span class="social-cat-desc">Attractive girl, short question</span>
+                  </div>
+                  <div class="social-cat-count-wrap">
+                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('med_stakes')">−</button>
+                    <span class="social-cat-count" id="socialCount_med_stakes">0</span>
+                  </div>
+                </div>
+                <div class="social-cat-btn" data-cat="high_stakes" onclick="logSocial('high_stakes')">
+                  <div class="social-cat-info">
+                    <span class="social-cat-name">High Stakes</span>
+                    <span class="social-cat-desc">Attractive girl, real conversation</span>
+                  </div>
+                  <div class="social-cat-count-wrap">
+                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('high_stakes')">−</button>
+                    <span class="social-cat-count" id="socialCount_high_stakes">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <p class="social-chart-label">Approaches (last 30 days)</p>
+              <div class="chart-container">
+                <canvas id="socialChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Workout -->
         <div id="page-workout" class="page">
           <div class="wh-top-row">
@@ -295,6 +358,13 @@
           <span class="bottom-done-dot"></span>
         </div>
         <span>Signals</span>
+      </div>
+      <div class="bottom-nav-item" data-page="social" onclick="showPage('social')">
+        <div class="bn-icon-wrap">
+          <span class="material-icons">people</span>
+          <span class="bottom-done-dot"></span>
+        </div>
+        <span>Social</span>
       </div>
     </nav>
   </div>

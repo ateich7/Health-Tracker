@@ -29,7 +29,9 @@
       "Bash(git -C /Users/Ari/repos/personal/health/health-tracker log --oneline -5)",
       "Bash(git -C /Users/Ari/repos/personal/health/health-tracker status)",
       "Bash(git *)",
-      "Bash(npx vercel *)"
+      "Bash(npx vercel *)",
+      "Bash(pkill -x 'Health Tracker')",
+      "Bash(cp -r '/Users/Ari/repos/personal/health/health-tracker/dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')"
     ]
   }
 }

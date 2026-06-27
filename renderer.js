@@ -8,6 +8,7 @@ let weightData  = [];   // rows from weight_logs
 let sleepData   = [];   // rows from sleep_logs
 let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
+let socialData  = [];   // rows from social_logs
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
@@ -18,6 +19,7 @@ let exerciseChart       = null;
 let sleepChart          = null;
 let signalsChart        = null;
 let signalsReleaseChart = null;
+let socialChart         = null;
 
 let currentUser        = null; // Supabase user object, set after sign-in
 let editingWorkoutDate = null; // non-null while editing a past workout; logWorkout() saves to this date
@@ -103,6 +105,7 @@ function showPage(name) {
   else if (name === 'sleep') updateSleepChart();
   else if (name === 'workout') updateExerciseChart();
   else if (name === 'signals') updateSignalsChart();
+  else if (name === 'social') updateSocialChart();
 }
 
 // Pure DOM page-switch: shows the right .page div and highlights the nav item.
@@ -131,17 +134,19 @@ async function deleteWorkoutEntry(date) {
 // Fetches all data from Supabase, rebuilds the localStorage workout cache,
 // marks today's chips complete, and triggers the initial UI render
 async function loadData() {
-  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes] = await Promise.all([
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('workout_logs').select('*').eq('user_id', currentUser.id),
     db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
-    db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp')
+    db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
+    db.from('social_logs').select('*').eq('user_id', currentUser.id)
   ]);
 
   weightData = weightsRes.data || [];
   sleepData  = sleepsRes.data  || [];
   psychData  = psychRes.data   || [];
+  socialData = socialRes.data  || [];
 
   workoutLogs = workoutsRes.data || [];
 
@@ -171,6 +176,12 @@ async function loadData() {
   // Codes is stored only in localStorage (no Supabase table)
   checkChipState('codesChip', 'codesLoggedDate');
 
+  const todaySocial = socialData.find(e => e.date === today);
+  if (todaySocial && (todaySocial.no_stakes + todaySocial.low_stakes + todaySocial.med_stakes + todaySocial.high_stakes) > 0) {
+    const chip = document.getElementById('socialChip');
+    if (chip && !chip.classList.contains('completed')) toggleTask(chip);
+  }
+
   // Remember the most recent workout date so the edit button knows what to reload
   const sortedDates = Object.keys(workoutsObj).sort();
   const lastWorkout = sortedDates[sortedDates.length - 1];
@@ -179,6 +190,7 @@ async function loadData() {
   populateExerciseSelect();
   renderWorkoutHistory();
   getQuote();
+  updateSocialUI();
   updateUI();
 
   setTimeout(() => {
@@ -296,6 +308,7 @@ function updateUI() {
   else if (activePage === 'sleep') updateSleepChart();
   else if (activePage === 'workout') updateExerciseChart();
   else if (activePage === 'signals') updateSignalsChart();
+  else if (activePage === 'social') updateSocialChart();
 }
 
 // Updates the two weight stat boxes. Uses the same period slice as the chart so
@@ -1850,4 +1863,104 @@ const quotes = [
   { quote: "Adventure is worthwhile in itself.", author: "Amelia Earhart" },
   { quote: "The inspiration you seek is already within you. Be silent and listen.", author: "Rumi" }
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOCIAL TRACKER
+// ─────────────────────────────────────────────────────────────────────────────
+
+function updateSocialUI() {
+  const today = getToday();
+  const row   = socialData.find(r => r.date === today) || {};
+  ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes'].forEach(cat => {
+    const el = document.getElementById(`socialCount_${cat}`);
+    if (el) el.textContent = row[cat] || 0;
+  });
+}
+
+async function logSocial(category) {
+  const today    = getToday();
+  const existing = socialData.find(e => e.date === today) || { no_stakes: 0, low_stakes: 0, med_stakes: 0, high_stakes: 0 };
+  const updated  = { no_stakes: existing.no_stakes || 0, low_stakes: existing.low_stakes || 0, med_stakes: existing.med_stakes || 0, high_stakes: existing.high_stakes || 0 };
+  updated[category]++;
+
+  await db.from('social_logs').upsert(
+    { user_id: currentUser.id, date: today, ...updated },
+    { onConflict: 'user_id,date' }
+  );
+
+  const wasFirst = !socialData.some(e => e.date === today) ||
+    (existing.no_stakes + existing.low_stakes + existing.med_stakes + existing.high_stakes) === 0;
+  socialData = socialData.filter(e => e.date !== today);
+  socialData.push({ user_id: currentUser.id, date: today, ...updated });
+
+  if (wasFirst) {
+    const chip = document.getElementById('socialChip');
+    if (chip && !chip.classList.contains('completed')) toggleTask(chip);
+  }
+  updateSocialUI();
+  updateSocialChart();
+}
+
+async function unlogSocial(category) {
+  const today    = getToday();
+  const existing = socialData.find(e => e.date === today);
+  if (!existing || !existing[category]) return;
+  const updated = { no_stakes: existing.no_stakes || 0, low_stakes: existing.low_stakes || 0, med_stakes: existing.med_stakes || 0, high_stakes: existing.high_stakes || 0 };
+  updated[category] = Math.max(0, updated[category] - 1);
+
+  await db.from('social_logs').upsert(
+    { user_id: currentUser.id, date: today, ...updated },
+    { onConflict: 'user_id,date' }
+  );
+
+  socialData = socialData.filter(e => e.date !== today);
+  socialData.push({ user_id: currentUser.id, date: today, ...updated });
+  updateSocialUI();
+  updateSocialChart();
+}
+
+function updateSocialChart() {
+  if (socialChart) socialChart.destroy();
+  const canvas = document.getElementById('socialChart');
+  if (!canvas) return;
+
+  const DAYS = 30;
+  const labels = [], noS = [], lowS = [], medS = [], highS = [];
+
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString();
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    const row = socialData.find(r => r.date === dateStr) || {};
+    noS.push(row.no_stakes   || 0);
+    lowS.push(row.low_stakes  || 0);
+    medS.push(row.med_stakes  || 0);
+    highS.push(row.high_stakes || 0);
+  }
+
+  socialChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'No Stakes',   data: noS,   backgroundColor: 'rgba(160,160,160,0.55)', stack: 'a' },
+        { label: 'Low Stakes',  data: lowS,  backgroundColor: 'rgba(255,210,50,0.7)',   stack: 'a' },
+        { label: 'Med Stakes',  data: medS,  backgroundColor: 'rgba(0,136,255,0.7)',    stack: 'a' },
+        { label: 'High Stakes', data: highS, backgroundColor: 'rgba(52,199,89,0.75)',   stack: 'a' },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: 'rgba(255,255,255,0.55)', font: { size: 11 }, boxWidth: 12 } }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.45)', maxRotation: 45, font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: 'rgba(255,255,255,0.45)', stepSize: 1, precision: 0 }, grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+}
 

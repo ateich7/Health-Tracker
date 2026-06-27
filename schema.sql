@@ -49,6 +49,20 @@ create policy "Own sleep logs"       on sleep_logs       for all using (auth.uid
 create policy "Own workout logs"     on workout_logs     for all using (auth.uid() = user_id);
 create policy "Own custom exercises" on custom_exercises for all using (auth.uid() = user_id);
 
+create table if not exists social_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  date text not null,
+  no_stakes integer default 0,
+  low_stakes integer default 0,
+  med_stakes integer default 0,
+  high_stakes integer default 0,
+  unique (user_id, date)
+);
+
+alter table social_logs enable row level security;
+create policy "Own social logs" on social_logs for all using (auth.uid() = user_id);
+
 -- Migrations for existing workout_logs tables
 -- alter table workout_logs add column if not exists duration_minutes integer;
 -- alter table workout_logs add column if not exists plan_key text;
