@@ -147,6 +147,27 @@
               <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
               <button class="btn-primary" onclick="logSleep()">Log</button>
             </div>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn sleep-filter-btn" data-days="7" onclick="setSleepPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn sleep-filter-btn" data-days="14" onclick="setSleepPeriod(14, this)">2 Weeks</button>
+              <button class="weight-filter-btn sleep-filter-btn" data-days="21" onclick="setSleepPeriod(21, this)">3 Weeks</button>
+              <button class="weight-filter-btn sleep-filter-btn" data-days="30" onclick="setSleepPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn sleep-filter-btn" data-days="90" onclick="setSleepPeriod(90, this)">3 Months</button>
+            </div>
+            <div class="sleep-toggle-row">
+              <button class="sleep-toggle-btn active" onclick="toggleSleepLine('hours', this)">
+                <span class="sleep-toggle-dot" style="background:#0088FF"></span>Hours
+              </button>
+              <button class="sleep-toggle-btn active" onclick="toggleSleepLine('hoursAvg', this)">
+                <span class="sleep-toggle-dot" style="background:#FF9500"></span>Hrs Avg
+              </button>
+              <button class="sleep-toggle-btn active" onclick="toggleSleepLine('rested', this)">
+                <span class="sleep-toggle-dot" style="background:#34C759"></span>Rested
+              </button>
+              <button class="sleep-toggle-btn active" onclick="toggleSleepLine('restedAvg', this)">
+                <span class="sleep-toggle-dot" style="background:#FFD60A"></span>Rest Avg
+              </button>
+            </div>
             <div class="chart-container">
               <canvas id="sleepChart"></canvas>
             </div>

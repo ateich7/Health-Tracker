@@ -10,6 +10,8 @@ let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
+let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
+const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
@@ -76,6 +78,11 @@ async function initApp() {
   renderWorkoutSelector(); // show the plan picker immediately (before data loads)
 
   activatePage('home');
+
+  // Mark the correct sleep filter button active based on screen size
+  document.querySelectorAll('.sleep-filter-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.days) === sleepPeriodDays);
+  });
 
   await loadData();
 
@@ -321,6 +328,19 @@ function setWeightPeriod(days, btn) {
   btn.classList.add('active');
   updateWeightChart();
   updateStats();
+}
+
+function setSleepPeriod(days, btn) {
+  sleepPeriodDays = days;
+  document.querySelectorAll('.sleep-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateSleepChart();
+}
+
+function toggleSleepLine(key, btn) {
+  sleepLineToggles[key] = !sleepLineToggles[key];
+  btn.classList.toggle('active', sleepLineToggles[key]);
+  updateSleepChart();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -595,7 +615,7 @@ function updateExerciseChart() {
 function updateSleepChart() {
   if (sleepChart) sleepChart.destroy();
 
-  const chartData = sleepData.slice(-30).map(e => {
+  const chartData = sleepData.slice(-sleepPeriodDays).map(e => {
     const dateObj = new Date(e.date);
 
     return {
@@ -632,18 +652,19 @@ function updateSleepChart() {
     }
   };
 
-  // Fills first in the array, trend lines last — Chart.js renders in array order
-  // so later datasets appear on top; this keeps dashed lines above the fill areas.
-  datasets.push({
-    label: 'Hours Slept',
-    data: chartData.map(d => d.y),
-    borderColor: '#0088FF',
-    backgroundColor: 'rgba(0, 136, 255, 0.2)',
-    tension: 0.3,
-    fill: true,
-    yAxisID: 'y1'
-  });
-  if (hasRestedData) {
+  // Fills rendered first (underneath), trend lines last (on top)
+  if (sleepLineToggles.hours) {
+    datasets.push({
+      label: 'Hours Slept',
+      data: chartData.map(d => d.y),
+      borderColor: '#0088FF',
+      backgroundColor: 'rgba(0, 136, 255, 0.2)',
+      tension: 0.3,
+      fill: true,
+      yAxisID: 'y1'
+    });
+  }
+  if (hasRestedData && sleepLineToggles.rested) {
     datasets.push({
       label: 'Restedness Score',
       data: chartData.map(d => d.z),
@@ -654,21 +675,23 @@ function updateSleepChart() {
       yAxisID: 'y2'
     });
   }
-  datasets.push({
-    label: 'Hours (7-day avg)',
-    data: maHours,
-    borderColor: '#FF9500',
-    backgroundColor: 'transparent',
-    tension: 0.4,
-    fill: false,
-    pointRadius: 0,
-    borderWidth: 3,
-    borderDash: [6, 4],
-    segment: { borderDash: () => [6, 4] },
-    clip: false,
-    yAxisID: 'y1'
-  });
-  if (hasRestedData) {
+  if (sleepLineToggles.hoursAvg) {
+    datasets.push({
+      label: 'Hours (7-day avg)',
+      data: maHours,
+      borderColor: '#FF9500',
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      fill: false,
+      pointRadius: 0,
+      borderWidth: 3,
+      borderDash: [6, 4],
+      segment: { borderDash: () => [6, 4] },
+      clip: false,
+      yAxisID: 'y1'
+    });
+  }
+  if (hasRestedData && sleepLineToggles.restedAvg) {
     datasets.push({
       label: 'Restedness (7-day avg)',
       data: maRested,
@@ -692,7 +715,7 @@ function updateSleepChart() {
     grid: { color: 'rgba(250,250,250,0.4)' },
     title: { display: true, text: 'Hours Slept', color: '#0088FF' }
   };
-  if (hasRestedData) {
+  if (hasRestedData && (sleepLineToggles.rested || sleepLineToggles.restedAvg)) {
     scales.y2 = {
       type: 'linear',
       position: 'right',

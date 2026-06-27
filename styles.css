@@ -198,6 +198,41 @@ button {
   color: var(--b);
 }
 
+.sleep-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sleep-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: none;
+  background: var(--objbg);
+  color: var(--bb);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.sleep-toggle-btn.active {
+  opacity: 1;
+  color: var(--b);
+}
+
+.sleep-toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -898,6 +933,7 @@ div {
 
 .home-top-row .card {
   flex: 1;
+  min-width: 0;
   padding: 16px 20px;
 }
 
@@ -937,6 +973,8 @@ div {
 
 .home-top-row #quoteCard h5 {
   font-size: 15px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Streaks */
