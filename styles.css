@@ -1278,6 +1278,39 @@ div {
   }
 }
 
+/* ─── Codes button (top of Signals page) ────────────────────────────────────── */
+.codes-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--objbg);
+  color: var(--b);
+  border-radius: var(--br);
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.codes-btn:hover {
+  background: var(--objbghov);
+}
+
+.codes-btn.completed {
+  background: var(--s900);
+}
+
+.codes-btn.completed .material-icons:first-child {
+  color: var(--s600);
+}
+
+.codes-btn .chip-check {
+  margin-left: auto;
+  font-size: 18px !important;
+  color: var(--s600);
+}
+
 /* ─── Signals page ───────────────────────────────────────────────────────────── */
 .signals-layout {
   display: flex;
