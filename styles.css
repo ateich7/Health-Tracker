@@ -1293,13 +1293,12 @@ div {
     margin: 16px;
   }
 
-  /* Signals: stack vertically on mobile */
+  /* Signals: on mobile just show the Codes button; hide the release chart card */
   .signals-top-bar {
     height: auto;
-    flex-direction: column;
   }
   .signals-release-card {
-    height: 120px;
+    display: none;
   }
   .signals-inline-form {
     flex-wrap: wrap;
