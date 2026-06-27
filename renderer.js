@@ -1945,10 +1945,10 @@ function updateSocialChart() {
     data: {
       labels,
       datasets: [
-        { label: 'No Stakes',   data: noS,   backgroundColor: 'rgba(255,255,255,0.15)', stack: 'a' },
-        { label: 'Low Stakes',  data: lowS,  backgroundColor: 'rgba(255,255,255,0.35)', stack: 'a' },
-        { label: 'Med Stakes',  data: medS,  backgroundColor: 'rgba(255,255,255,0.60)', stack: 'a' },
-        { label: 'High Stakes', data: highS, backgroundColor: 'rgba(255,255,255,0.90)', stack: 'a' },
+        { label: '💬 No Stakes',   data: noS,   backgroundColor: 'rgba(99,  102, 241, 0.60)', stack: 'a' },
+        { label: '🙂 Low Stakes',  data: lowS,  backgroundColor: 'rgba(56,  189, 248, 0.75)', stack: 'a' },
+        { label: '⚡ Med Stakes',  data: medS,  backgroundColor: 'rgba(251, 146, 60,  0.85)', stack: 'a' },
+        { label: '🔥 High Stakes', data: highS, backgroundColor: 'rgba(250, 204, 21,  1.00)', stack: 'a' },
       ]
     },
     options: {
