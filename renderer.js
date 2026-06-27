@@ -912,19 +912,12 @@ function updateSignalsChart() {
       plugins: { legend: { display: false } },
       scales: {
         x: {
-          ticks: {
-            color: '#FFFFFF',
-            font: { size: 9 },
-            maxRotation: 45,
-            minRotation: 45,
-            maxTicksLimit: 15
-          },
-          grid: { color: 'rgba(250,250,250,0.4)' }
+          display: false
         },
         y: {
           min: 0, max: 1,
-          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'No' : 'Yes' },
-          grid: { color: 'rgba(250,250,250,0.4)' }
+          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'No' : 'Yes', font: { size: 10 } },
+          grid: { color: 'rgba(250,250,250,0.2)' }
         }
       }
     }
