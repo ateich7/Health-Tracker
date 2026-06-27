@@ -802,10 +802,13 @@ div {
   display: flex;
   flex-direction: row;
   gap: 20px;
+  flex: 1;
+  min-height: 0;
 }
 
 .wh-bottom-row .card {
   flex: 1;
+  min-height: 0;
 }
 
 /* History card */
