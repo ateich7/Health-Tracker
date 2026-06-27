@@ -1417,6 +1417,10 @@ div {
   flex: 1;
 }
 
+.signal-field:has(.signal-switch) {
+  flex: 0 0 auto;
+}
+
 .signal-label {
   color: var(--h);
   font-size: 11px;
