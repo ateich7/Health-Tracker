@@ -1135,6 +1135,7 @@ div {
   /* ── Page content ── */
   .page-content {
     padding: 14px;
+    overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -1428,6 +1429,8 @@ div {
   flex: 1;
   position: relative;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .signals-release-card .signals-chart-label {
