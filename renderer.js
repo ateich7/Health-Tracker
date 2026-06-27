@@ -1780,19 +1780,14 @@ function updateStreaks() {
   const workoutDates  = workoutLogs.map(r => r.date);
   const sleepOver7    = sleepData.filter(e => e.hours > 7).map(e => e.date);
   const weightDates   = weightData.map(e => e.date);
-  const signalsDates  = psychData.map(e => e.date);
   const releaseDates  = psychData.filter(e => !e.released).map(e => e.date);
-  const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
   const socialDates   = socialData.map(e => e.date);
 
   const streaks = [
-    { label: 'Workout',    count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',       unit: ['week', 'weeks'] },
-    { label: 'Sleep 7h+',  count: calcDailyStreak(sleepOver7),         icon: 'bedtime',              unit: ['day', 'days']  },
-    { label: 'Weight',     count: calcStreak(weightDates),              icon: 'monitor_weight',       unit: ['day', 'days']  },
-    { label: 'Codes',      count: calcStreak(codesDates),               icon: 'notes',                unit: ['day', 'days']  },
-    { label: 'Signals',    count: calcStreak(signalsDates),             icon: 'self_improvement',     unit: ['day', 'days']  },
-    { label: 'No Release', count: calcStreak(releaseDates),             icon: 'local_fire_department', unit: ['day', 'days'] },
-    { label: 'Social',     count: calcDailyStreak(socialDates),         icon: 'people',               unit: ['day', 'days']  },
+    { label: '3+ workouts',    count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',        unit: ['week', 'weeks']  },
+    { label: '> 7 hrs sleep',  count: calcDailyStreak(sleepOver7),         icon: 'bedtime',               unit: ['night', 'nights'] },
+    { label: 'no release',     count: calcStreak(releaseDates),             icon: 'local_fire_department', unit: ['day', 'days']    },
+    { label: 'any interaction',count: calcDailyStreak(socialDates),         icon: 'people',                unit: ['day', 'days']    },
   ];
 
   container.innerHTML = streaks.map(s => {
@@ -1802,6 +1797,7 @@ function updateStreaks() {
       <span class="material-icons streak-icon">${s.icon}</span>
       <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
       <div class="streak-unit">${unit}</div>
+      <div class="streak-label">${s.label}</div>
     </div>`;
   }).join('');
 }
