@@ -1735,7 +1735,6 @@ function updateStreaks() {
       <span class="material-icons streak-icon">${s.icon}</span>
       <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
       <div class="streak-unit">${unit}</div>
-      <div class="streak-label">${s.label}</div>
     </div>`;
   }).join('');
 }
