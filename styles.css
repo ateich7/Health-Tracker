@@ -1169,23 +1169,40 @@ div {
     flex-direction: column;
   }
 
-  /* Workout card: scroll exercises on mobile, keep log button visible */
+  /* Workout card: fills vertical space on mobile when showing selector */
   #workoutCard {
     overflow: hidden;
+    flex: 1;
   }
 
   #workout {
     overflow-y: auto;
     max-height: 55vh;
+    height: 100%;
   }
 
-  /* Workout selector: stack vertically on mobile */
+  /* Workout selector: stack vertically on mobile, fill height */
   .workout-selector-row {
     flex-direction: column;
+    height: 100%;
+  }
+
+  .workout-selector-row .workout-plan-option {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .workout-selector-row .plan-name {
+    font-size: 1.25rem;
+    text-align: center;
   }
 
   .workout-start-btn {
     align-self: stretch;
+    padding: 1.1rem;
+    font-size: 1.1rem;
   }
 
   /* Home page: stack everything vertically on mobile */

@@ -1537,9 +1537,9 @@ function renderWorkoutSelector() {
   const container = document.getElementById('workout');
 
   const plans = [
-    { key: 'mon', label: 'Monday' },
-    { key: 'wed', label: 'Wednesday' },
-    { key: 'fri', label: 'Friday' },
+    { key: 'mon', label: 'Fullbody Calisthenics' },
+    { key: 'wed', label: 'Cardio + Lowerbody' },
+    { key: 'fri', label: 'Upperbody' },
   ];
 
   container.innerHTML = `
