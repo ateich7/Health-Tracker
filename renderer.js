@@ -13,6 +13,8 @@ let socialData  = [];   // rows from social_logs
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
 const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
+let signalsPeriodDays = 30;
+const signalLineToggles = { confidence: true, stress: true, low: true };
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
@@ -84,6 +86,9 @@ async function initApp() {
   // Mark the correct sleep filter button active based on screen size
   document.querySelectorAll('.sleep-filter-btn').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.days) === sleepPeriodDays);
+  });
+  document.querySelectorAll('.signals-filter-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.days) === signalsPeriodDays);
   });
 
   await loadData();
@@ -350,6 +355,19 @@ function toggleSleepLine(key, btn) {
   sleepLineToggles[key] = !sleepLineToggles[key];
   btn.classList.toggle('active', sleepLineToggles[key]);
   updateSleepChart();
+}
+
+function setSignalsPeriod(days, btn) {
+  signalsPeriodDays = days;
+  document.querySelectorAll('.signals-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateSignalsChart();
+}
+
+function toggleSignalLine(key, btn) {
+  signalLineToggles[key] = !signalLineToggles[key];
+  btn.classList.toggle('active', signalLineToggles[key]);
+  updateSignalsChart();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

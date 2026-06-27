@@ -216,7 +216,24 @@
             </div>
           </div>
           <div class="card signals-chart-main">
-            <p class="signals-chart-label">Scores (last 30 days)</p>
+            <p class="signals-chart-label">Scores</p>
+            <div class="weight-filter-row signals-filter-row">
+              <button class="weight-filter-btn signals-filter-btn" data-days="7" onclick="setSignalsPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn signals-filter-btn" data-days="14" onclick="setSignalsPeriod(14, this)">2 Weeks</button>
+              <button class="weight-filter-btn signals-filter-btn active" data-days="30" onclick="setSignalsPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn signals-filter-btn" data-days="90" onclick="setSignalsPeriod(90, this)">3 Months</button>
+            </div>
+            <div class="sleep-toggle-row">
+              <button class="sleep-toggle-btn active" onclick="toggleSignalLine('confidence', this)">
+                <span class="sleep-toggle-dot" style="background:#0088FF"></span>Confidence
+              </button>
+              <button class="sleep-toggle-btn active" onclick="toggleSignalLine('stress', this)">
+                <span class="sleep-toggle-dot" style="background:#FF6B6B"></span>Stress
+              </button>
+              <button class="sleep-toggle-btn active" onclick="toggleSignalLine('low', this)">
+                <span class="sleep-toggle-dot" style="background:#A78BFA"></span>Low
+              </button>
+            </div>
             <div class="chart-container">
               <canvas id="signalsChart"></canvas>
             </div>

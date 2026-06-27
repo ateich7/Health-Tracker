@@ -1412,6 +1412,7 @@ div {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
 }
 
 .signal-label {
@@ -1423,7 +1424,7 @@ div {
 }
 
 .signal-input {
-  width: 72px;
+  width: 100%;
   padding: 8px 10px;
   text-align: center;
   font-size: 20px;
