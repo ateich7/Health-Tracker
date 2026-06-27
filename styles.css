@@ -1444,6 +1444,7 @@ div {
   align-items: center;
   padding: 3px;
   gap: 2px;
+  width: fit-content;
 }
 
 .switch-opt {
