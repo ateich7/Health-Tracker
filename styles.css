@@ -1359,7 +1359,7 @@ div {
   .signals-top-bar {
     height: auto;
   }
-  .signals-release-card {
+  #page-signals .signals-release-card {
     display: none;
   }
   .signals-inline-form {
