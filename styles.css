@@ -1518,10 +1518,10 @@ div {
 }
 
 .social-cat-btn:hover { background: var(--objbghov); }
-.social-cat-btn[data-cat="no_stakes"]   { border-left-color: rgba(180,180,180,0.5); }
-.social-cat-btn[data-cat="low_stakes"]  { border-left-color: rgba(255,210,50,0.7); }
-.social-cat-btn[data-cat="med_stakes"]  { border-left-color: var(--p600); }
-.social-cat-btn[data-cat="high_stakes"] { border-left-color: var(--s600); }
+.social-cat-btn[data-cat="no_stakes"]   { border-left-color: rgba(255,255,255,0.15); }
+.social-cat-btn[data-cat="low_stakes"]  { border-left-color: rgba(255,255,255,0.38); }
+.social-cat-btn[data-cat="med_stakes"]  { border-left-color: rgba(255,255,255,0.65); }
+.social-cat-btn[data-cat="high_stakes"] { border-left-color: rgba(255,255,255,0.95); }
 
 .social-cat-info {
   display: flex;
@@ -1562,10 +1562,10 @@ div {
   text-align: center;
 }
 
-.social-cat-btn[data-cat="no_stakes"]   .social-cat-count { color: rgba(180,180,180,0.8); }
-.social-cat-btn[data-cat="low_stakes"]  .social-cat-count { color: rgba(255,210,50,0.9); }
-.social-cat-btn[data-cat="med_stakes"]  .social-cat-count { color: var(--p300); }
-.social-cat-btn[data-cat="high_stakes"] .social-cat-count { color: var(--s600); }
+.social-cat-btn[data-cat="no_stakes"]   .social-cat-count { color: rgba(255,255,255,0.25); }
+.social-cat-btn[data-cat="low_stakes"]  .social-cat-count { color: rgba(255,255,255,0.50); }
+.social-cat-btn[data-cat="med_stakes"]  .social-cat-count { color: rgba(255,255,255,0.78); }
+.social-cat-btn[data-cat="high_stakes"] .social-cat-count { color: rgba(255,255,255,1.00); }
 
 @media (max-width: 768px) {
   .social-layout { flex-direction: column; }
