@@ -13,7 +13,7 @@ let socialData  = [];   // rows from social_logs
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
 const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
-let signalsPeriodDays = 30;
+let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
 
