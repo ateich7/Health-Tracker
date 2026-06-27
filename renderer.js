@@ -1346,6 +1346,7 @@ function setupExerciseDragDrop(container) {
 // savedData: optional array to pre-fill inputs (used when editing a past workout)
 function renderWorkoutForm(exercises, savedData) {
   document.getElementById('page-workout').classList.remove('workout-logged');
+  document.getElementById('page-workout').classList.remove('workout-selecting');
   const container = document.getElementById('workout');
   container.innerHTML = '';
   container.removeEventListener('input', saveWorkoutDraft);
@@ -1537,6 +1538,7 @@ function toggleWorkoutHistoryAll(btn) {
 // Show the Mon/Wed/Fri plan picker (initial state of the workout page)
 function renderWorkoutSelector() {
   document.getElementById('page-workout').classList.remove('workout-logged');
+  document.getElementById('page-workout').classList.add('workout-selecting');
   const container = document.getElementById('workout');
 
   const plans = [
