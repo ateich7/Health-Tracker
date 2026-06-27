@@ -1700,6 +1700,32 @@ function calcWorkoutWeekStreak(workoutDates) {
   return streak;
 }
 
+// Counts consecutive calendar days with a log entry. No days are skipped.
+// Today is not penalized if unlogged (the day may not be over yet).
+function calcDailyStreak(loggedDateStrings) {
+  const dateSet = new Set(loggedDateStrings);
+  const now = new Date();
+  now.setHours(12, 0, 0, 0);
+  const todayStr = now.toLocaleDateString();
+  let streak = 0;
+  let d = new Date(now);
+  for (let i = 0; i < 500; i++) {
+    const dateStr = d.toLocaleDateString();
+    const isLogged = dateSet.has(dateStr);
+    if (dateStr === todayStr && !isLogged) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+    if (isLogged) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 // Counts consecutive expected days where the user logged an entry.
 // Rules:
 //   - Saturdays are always skipped (not expected)
@@ -1752,19 +1778,21 @@ function updateStreaks() {
   if (!container) return;
 
   const workoutDates  = workoutLogs.map(r => r.date);
-  const sleepDates    = sleepData.map(e => e.date);
+  const sleepOver7    = sleepData.filter(e => e.hours > 7).map(e => e.date);
   const weightDates   = weightData.map(e => e.date);
   const signalsDates  = psychData.map(e => e.date);
   const releaseDates  = psychData.filter(e => !e.released).map(e => e.date);
   const codesDates    = JSON.parse(localStorage.getItem('codesLog') || '[]');
+  const socialDates   = socialData.map(e => e.date);
 
   const streaks = [
-    { label: 'Workout',  count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center', unit: ['week', 'weeks'] },
-    { label: 'Sleep',    count: calcStreak(sleepDates),              icon: 'bedtime',        unit: ['day', 'days']  },
-    { label: 'Weight',   count: calcStreak(weightDates),             icon: 'monitor_weight', unit: ['day', 'days']  },
-    { label: 'Codes',    count: calcStreak(codesDates),              icon: 'notes',          unit: ['day', 'days']  },
-    { label: 'Signals',  count: calcStreak(signalsDates),            icon: 'self_improvement', unit: ['day', 'days'] },
-    { label: 'No Release', count: calcStreak(releaseDates),          icon: 'local_fire_department', unit: ['day', 'days'] },
+    { label: 'Workout',    count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',       unit: ['week', 'weeks'] },
+    { label: 'Sleep 7h+',  count: calcDailyStreak(sleepOver7),         icon: 'bedtime',              unit: ['day', 'days']  },
+    { label: 'Weight',     count: calcStreak(weightDates),              icon: 'monitor_weight',       unit: ['day', 'days']  },
+    { label: 'Codes',      count: calcStreak(codesDates),               icon: 'notes',                unit: ['day', 'days']  },
+    { label: 'Signals',    count: calcStreak(signalsDates),             icon: 'self_improvement',     unit: ['day', 'days']  },
+    { label: 'No Release', count: calcStreak(releaseDates),             icon: 'local_fire_department', unit: ['day', 'days'] },
+    { label: 'Social',     count: calcDailyStreak(socialDates),         icon: 'people',               unit: ['day', 'days']  },
   ];
 
   container.innerHTML = streaks.map(s => {
