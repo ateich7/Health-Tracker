@@ -767,8 +767,7 @@ div {
 
 /* History card */
 #workoutHistoryCard {
-  flex: 0 0 auto !important;
-  min-height: unset !important;
+  flex: 1;
   max-height: 280px;
 }
 
