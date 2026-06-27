@@ -931,9 +931,10 @@ div {
   flex: 0 0 auto;
 }
 
-.home-top-row .card {
+#page-home .home-top-row .card {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   padding: 16px 20px;
 }
 
