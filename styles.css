@@ -1546,10 +1546,22 @@ div {
   flex-shrink: 0;
 }
 
+.social-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.social-card-header h2 {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
 .social-date-label {
   color: var(--h);
   font-size: 13px;
-  margin: -4px 0 14px;
+  margin: 0;
   opacity: 0.7;
 }
 
