@@ -15,6 +15,7 @@ let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
 const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
 let signalsPeriodDays = 30;
 const signalLineToggles = { confidence: true, stress: true, low: true };
+let socialDays = 30;
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
@@ -1948,15 +1949,48 @@ async function unlogSocial(category) {
   updateSocialChart();
 }
 
+function setSocialPeriod(days, btn) {
+  socialDays = days;
+  document.querySelectorAll('.social-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateSocialChart();
+}
+
+const socialIconPlugin = {
+  id: 'socialIcons',
+  afterDraw(chart) {
+    const ctx = chart.ctx;
+    // Material Icons Unicode codepoints: chat, mood, bolt, whatshot
+    const glyphs = ['', '', '', ''];
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      meta.data.forEach((bar, j) => {
+        if (!dataset.data[j]) return;
+        const props = bar.getProps(['x', 'y', 'base', 'width'], true);
+        const segH = props.base - props.y;
+        if (segH < 14) return;
+        const size = Math.min(segH - 4, 14);
+        ctx.save();
+        ctx.font = `${size}px "Material Icons"`;
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(glyphs[i], props.x, props.y + segH / 2);
+        ctx.restore();
+      });
+    });
+  }
+};
+
 function updateSocialChart() {
   if (socialChart) socialChart.destroy();
   const canvas = document.getElementById('socialChart');
   if (!canvas) return;
 
-  const DAYS = 30;
   const labels = [], noS = [], lowS = [], medS = [], highS = [];
 
-  for (let i = DAYS - 1; i >= 0; i--) {
+  for (let i = socialDays - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toLocaleDateString();
@@ -1973,23 +2007,24 @@ function updateSocialChart() {
     data: {
       labels,
       datasets: [
-        { label: '💬 No Stakes',   data: noS,   backgroundColor: 'rgba(99,  102, 241, 0.60)', stack: 'a' },
-        { label: '🙂 Low Stakes',  data: lowS,  backgroundColor: 'rgba(56,  189, 248, 0.75)', stack: 'a' },
-        { label: '⚡ Med Stakes',  data: medS,  backgroundColor: 'rgba(251, 146, 60,  0.85)', stack: 'a' },
-        { label: '🔥 High Stakes', data: highS, backgroundColor: 'rgba(250, 204, 21,  1.00)', stack: 'a' },
+        { label: 'No Stakes',   data: noS,   backgroundColor: 'rgba(99,  102, 241, 0.60)', stack: 'a' },
+        { label: 'Low Stakes',  data: lowS,  backgroundColor: 'rgba(56,  189, 248, 0.75)', stack: 'a' },
+        { label: 'Med Stakes',  data: medS,  backgroundColor: 'rgba(251, 146, 60,  0.85)', stack: 'a' },
+        { label: 'High Stakes', data: highS, backgroundColor: 'rgba(250, 204, 21,  1.00)', stack: 'a' },
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: 'rgba(255,255,255,0.55)', font: { size: 11 }, boxWidth: 12 } }
+        legend: { display: false }
       },
       scales: {
         x: { stacked: true, ticks: { color: 'rgba(255,255,255,0.45)', maxRotation: 45, font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
         y: { stacked: true, beginAtZero: true, ticks: { color: 'rgba(255,255,255,0.45)', stepSize: 1, precision: 0 }, grid: { color: 'rgba(255,255,255,0.06)' } }
       }
-    }
+    },
+    plugins: [socialIconPlugin]
   });
 }
 
