@@ -15,7 +15,7 @@ let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
 const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
 let signalsPeriodDays = 30;
 const signalLineToggles = { confidence: true, stress: true, low: true };
-let socialDays = 30;
+let socialDays = 7;
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
