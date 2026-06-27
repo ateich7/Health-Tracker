@@ -735,22 +735,27 @@ function updateSleepChart() {
       yAxisID: 'y2'
     });
   }
+  const isMobile = window.innerWidth <= 768;
+
   scales.y1 = {
     type: 'linear',
     position: 'left',
     beginAtZero: true,
-    ticks: { color: '#0088FF' },
+    ticks: { color: '#0088FF', display: !isMobile },
     grid: { color: 'rgba(250,250,250,0.4)' },
-    title: { display: true, text: 'Hours Slept', color: '#0088FF' }
+    title: { display: false }
   };
   if (hasRestedData && (sleepLineToggles.rested || sleepLineToggles.restedAvg)) {
     scales.y2 = {
       type: 'linear',
       position: 'right',
-      ticks: { color: '#34C759' },
+      ticks: { color: '#34C759', display: !isMobile },
       grid: { display: false },
-      title: { display: true, text: 'Restedness Score', color: '#34C759' }
+      title: { display: false }
     };
+  }
+  if (isMobile) {
+    scales.x.ticks = { ...scales.x.ticks, display: false };
   }
 
   sleepChart = new Chart(ctx, {
@@ -763,9 +768,7 @@ function updateSleepChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          labels: { color: '#c4cad4' },
-        }
+        legend: { display: !isMobile, labels: { color: '#c4cad4' } }
       },
       scales: scales
     }
