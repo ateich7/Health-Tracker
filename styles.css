@@ -517,6 +517,23 @@ canvas {
 }
 
 /* ─── Workout page specifics ─────────────────────────────────────────────────── */
+/* Workout plan selector: horizontal row of day buttons + start button */
+.workout-selector-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.workout-selector-row .workout-plan-option {
+  flex: 1;
+}
+
+.workout-start-btn {
+  flex: none;
+  align-self: stretch;
+}
+
 /* Workout plan selector */
 .workout-plan-option {
   display: flex;
@@ -1136,6 +1153,15 @@ div {
   #workout {
     overflow-y: auto;
     max-height: 55vh;
+  }
+
+  /* Workout selector: stack vertically on mobile */
+  .workout-selector-row {
+    flex-direction: column;
+  }
+
+  .workout-start-btn {
+    align-self: stretch;
   }
 
   /* Home page: stack everything vertically on mobile */
