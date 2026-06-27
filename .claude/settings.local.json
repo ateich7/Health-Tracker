@@ -25,7 +25,10 @@
       "Bash(npm run *)",
       "Skill(claude-in-chrome)",
       "Bash(curl -s \"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js\")",
-      "Bash(grep -o 'filler.\\\\{0,200\\\\}')"
+      "Bash(grep -o 'filler.\\\\{0,200\\\\}')",
+      "Bash(git -C /Users/Ari/repos/personal/health/health-tracker log --oneline -5)",
+      "Bash(git -C /Users/Ari/repos/personal/health/health-tracker status)",
+      "Bash(git *)"
     ]
   }
 }

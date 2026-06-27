@@ -857,12 +857,10 @@ div {
   color: var(--bb);
 }
 
-/* Home page: natural flow, scrollable */
+/* Home page */
 #page-home.active {
   align-items: stretch;
   justify-content: flex-start;
-  height: auto;
-  min-height: 100%;
 }
 
 #page-home .card {
@@ -871,11 +869,8 @@ div {
 }
 
 #page-home .home-weight-card {
-  flex: 0 0 auto;
-}
-
-#page-home .chart-container {
-  height: 300px;
+  flex: 1;
+  min-height: 0;
 }
 
 #page-home .stat-box {
@@ -911,13 +906,29 @@ div {
   font-size: 1.1em;
 }
 
+.home-top-row .streak-grid {
+  grid-template-columns: repeat(6, 1fr);
+}
+
 .home-top-row .streak-item {
-  padding: 8px 6px 6px;
-  gap: 2px;
+  padding: 6px 4px;
+  gap: 1px;
+}
+
+.home-top-row .streak-icon {
+  font-size: 14px !important;
 }
 
 .home-top-row .streak-count {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
+}
+
+.home-top-row .streak-unit {
+  font-size: 10px;
+}
+
+.home-top-row .streak-label {
+  font-size: 9px;
 }
 
 .home-top-row .spacer {
@@ -1076,6 +1087,10 @@ div {
 
   .home-top-row {
     flex-direction: column;
+  }
+
+  .home-top-row .streak-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   #page-home .home-top-row .card {
