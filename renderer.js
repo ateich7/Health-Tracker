@@ -1407,6 +1407,21 @@ function exerciseDefsFromHistory(historyExercises) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Renders the collapsible workout history list below the form
+function inferWorkoutName(exercises) {
+  const planMap   = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
+  const planNames = { mon: 'Mon Workout', wed: 'Wed Workout', fri: 'Fri Workout' };
+  const exNames   = (exercises || []).map(e => e.name.toLowerCase());
+
+  let bestKey = null, bestScore = 0;
+  for (const [key, plan] of Object.entries(planMap)) {
+    const planEx  = plan.map(e => e.name.toLowerCase());
+    const overlap = exNames.filter(n => planEx.includes(n)).length;
+    const score   = overlap / Math.max(plan.length, exNames.length, 1);
+    if (score > bestScore) { bestScore = score; bestKey = key; }
+  }
+  return bestScore > 0.3 ? planNames[bestKey] : 'Workout';
+}
+
 function renderWorkoutHistory() {
   const container = document.getElementById('workoutHistory');
   if (!container) return;
@@ -1420,25 +1435,44 @@ function renderWorkoutHistory() {
 
   const allEx = getAllExercises();
 
-  container.innerHTML = sorted.map(row => {
-    const dur       = row.duration_minutes ? `${row.duration_minutes} min` : '—';
-    const dateLabel = new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  function renderRow(row) {
+    const dur  = row.duration_minutes ? `${row.duration_minutes} min` : '—';
+    const d    = new Date(row.date + 'T12:00:00');
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const name = inferWorkoutName(row.exercises);
     const exerciseLines = (row.exercises || []).map(ex => {
-      const info = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
+      const info    = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
       const summary = formatPrevSets(ex.sets, info?.isLift || false, info?.isRun || false);
       return `<div class="wh-ex"><span class="wh-exname">${ex.name}</span><span class="wh-exsets">${summary}</span></div>`;
     }).join('');
-
     return `
       <div class="wh-row" onclick="this.classList.toggle('wh-open')">
         <div class="wh-header">
-          <span class="wh-date">${dateLabel}</span>
+          <span class="wh-date">${name}, ${date}</span>
           <span class="wh-dur">${dur}</span>
           <span class="material-icons wh-arrow">expand_more</span>
         </div>
         <div class="wh-detail">${exerciseLines}</div>
       </div>`;
-  }).join('');
+  }
+
+  const LIMIT   = 5;
+  const preview = sorted.slice(0, LIMIT);
+  const rest    = sorted.slice(LIMIT);
+
+  let html = preview.map(renderRow).join('');
+  if (rest.length) {
+    html += `<div id="whExtra" style="display:none;">${rest.map(renderRow).join('')}</div>`;
+    html += `<button class="btn-primary wh-see-all-btn" onclick="toggleWorkoutHistoryAll(this)">See All</button>`;
+  }
+  container.innerHTML = html;
+}
+
+function toggleWorkoutHistoryAll(btn) {
+  const extra    = document.getElementById('whExtra');
+  const expanded = extra.style.display !== 'none';
+  extra.style.display = expanded ? 'none' : 'block';
+  btn.textContent     = expanded ? 'See All' : 'Show Less';
 }
 
 // Show the Mon/Wed/Fri plan picker (initial state of the workout page)

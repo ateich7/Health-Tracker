@@ -849,6 +849,14 @@ div {
   font-size: 12px;
 }
 
+.wh-see-all-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--bb);
+}
+
 /* Home page: top row (streaks + quote) then weight card fills remaining space */
 #page-home.active {
   align-items: stretch;
