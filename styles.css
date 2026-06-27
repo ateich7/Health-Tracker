@@ -1202,6 +1202,7 @@ div {
   .workout-selector-row {
     flex-direction: column;
     height: 100%;
+    gap: 10px;
   }
 
   .workout-selector-row .workout-plan-option {
@@ -1214,6 +1215,11 @@ div {
   .workout-selector-row .plan-name {
     font-size: 1.25rem;
     text-align: center;
+  }
+
+  .workout-selector-row .workout-start-btn {
+    flex: none;
+    margin-top: 10px;
   }
 
   .workout-start-btn {
