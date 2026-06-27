@@ -75,9 +75,7 @@ async function initApp() {
   formatDate();
   renderWorkoutSelector(); // show the plan picker immediately (before data loads)
 
-  // Restore the last-visited page so the app reopens where the user left off
-  const savedPage = localStorage.getItem('activePage') || 'home';
-  activatePage(savedPage);
+  activatePage('home');
 
   await loadData();
 
