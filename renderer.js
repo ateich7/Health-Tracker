@@ -777,13 +777,12 @@ async function logPsych() {
   updateSignalsChart();
 }
 
-// Toggles the "Released yesterday?" button between Yes/No
+// Toggles the "Released yesterday?" switch between Yes/No
 function togglePsychRelease() {
   const btn = document.getElementById('psychRelease');
   const nowActive = !btn.classList.contains('active');
   btn.classList.toggle('active', nowActive);
   btn.classList.toggle('inactive', !nowActive);
-  btn.textContent = nowActive ? 'Yes' : 'No';
 }
 
 // Signals: two charts — line chart for confidence/stress/low with 7-day MAs,
@@ -912,7 +911,16 @@ function updateSignalsChart() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#FFFFFF' }, grid: { color: 'rgba(250,250,250,0.4)' } },
+        x: {
+          ticks: {
+            color: '#FFFFFF',
+            font: { size: 9 },
+            maxRotation: 45,
+            minRotation: 45,
+            maxTicksLimit: 15
+          },
+          grid: { color: 'rgba(250,250,250,0.4)' }
+        },
         y: {
           min: 0, max: 1,
           ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'No' : 'Yes' },

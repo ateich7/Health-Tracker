@@ -191,35 +191,34 @@
               </div>
             </div>
           </div>
-          <div class="signals-layout">
-            <div class="card signals-entry-card">
-              <h2>Signals</h2>
-              <p class="signals-date-label">How was yesterday?</p>
-              <div class="signals-form">
-                <div class="signal-row">
-                  <span class="signal-label">Confidence</span>
-                  <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
-                </div>
-                <div class="signal-row">
-                  <span class="signal-label">Stress</span>
-                  <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
-                </div>
-                <div class="signal-row">
-                  <span class="signal-label">Low</span>
-                  <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
-                </div>
-                <div class="signal-row signal-row-toggle">
-                  <span class="signal-label">Released</span>
-                  <button id="psychRelease" class="signal-toggle-btn inactive" onclick="togglePsychRelease()">No</button>
+          <div class="card signals-entry-card">
+            <div class="signals-inline-form">
+              <div class="signal-field">
+                <span class="signal-label">Confidence</span>
+                <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Stress</span>
+                <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Low</span>
+                <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Released</span>
+                <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
+                  <span class="switch-opt switch-no">No</span>
+                  <span class="switch-opt switch-yes">Yes</span>
                 </div>
               </div>
-              <button class="btn-primary" style="width:100%; margin-top:20px;" onclick="logPsych()">Log</button>
+              <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
             </div>
-            <div class="card signals-chart-main">
-              <p class="signals-chart-label">Scores (last 30 days)</p>
-              <div class="chart-container">
-                <canvas id="signalsChart"></canvas>
-              </div>
+          </div>
+          <div class="card signals-chart-main">
+            <p class="signals-chart-label">Scores (last 30 days)</p>
+            <div class="chart-container">
+              <canvas id="signalsChart"></canvas>
             </div>
           </div>
         </div>
@@ -231,45 +230,45 @@
               <h2>Social</h2>
               <p class="social-date-label">Tap to log an approach</p>
               <div class="social-categories">
-                <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
-                  <div class="social-cat-info">
-                    <span class="social-cat-name">No Stakes</span>
-                    <span class="social-cat-desc">Cashier, old guy, etc.</span>
-                  </div>
-                  <div class="social-cat-count-wrap">
-                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('no_stakes')">−</button>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">No Stakes</span>
+                      <span class="social-cat-desc">Cashier, old guy, etc.</span>
+                    </div>
                     <span class="social-cat-count" id="socialCount_no_stakes">0</span>
                   </div>
+                  <button class="social-minus" data-cat="no_stakes" onclick="unlogSocial('no_stakes')">−</button>
                 </div>
-                <div class="social-cat-btn" data-cat="low_stakes" onclick="logSocial('low_stakes')">
-                  <div class="social-cat-info">
-                    <span class="social-cat-name">Low Stakes</span>
-                    <span class="social-cat-desc">Unattractive girl</span>
-                  </div>
-                  <div class="social-cat-count-wrap">
-                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('low_stakes')">−</button>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="low_stakes" onclick="logSocial('low_stakes')">
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">Low Stakes</span>
+                      <span class="social-cat-desc">Unattractive girl</span>
+                    </div>
                     <span class="social-cat-count" id="socialCount_low_stakes">0</span>
                   </div>
+                  <button class="social-minus" data-cat="low_stakes" onclick="unlogSocial('low_stakes')">−</button>
                 </div>
-                <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
-                  <div class="social-cat-info">
-                    <span class="social-cat-name">Medium Stakes</span>
-                    <span class="social-cat-desc">Attractive girl, short question</span>
-                  </div>
-                  <div class="social-cat-count-wrap">
-                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('med_stakes')">−</button>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">Medium Stakes</span>
+                      <span class="social-cat-desc">Attractive girl, short question</span>
+                    </div>
                     <span class="social-cat-count" id="socialCount_med_stakes">0</span>
                   </div>
+                  <button class="social-minus" data-cat="med_stakes" onclick="unlogSocial('med_stakes')">−</button>
                 </div>
-                <div class="social-cat-btn" data-cat="high_stakes" onclick="logSocial('high_stakes')">
-                  <div class="social-cat-info">
-                    <span class="social-cat-name">High Stakes</span>
-                    <span class="social-cat-desc">Attractive girl, real conversation</span>
-                  </div>
-                  <div class="social-cat-count-wrap">
-                    <button class="social-minus" onclick="event.stopPropagation(); unlogSocial('high_stakes')">−</button>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="high_stakes" onclick="logSocial('high_stakes')">
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">High Stakes</span>
+                      <span class="social-cat-desc">Attractive girl, real conversation</span>
+                    </div>
                     <span class="social-cat-count" id="socialCount_high_stakes">0</span>
                   </div>
+                  <button class="social-minus" data-cat="high_stakes" onclick="unlogSocial('high_stakes')">−</button>
                 </div>
               </div>
             </div>
