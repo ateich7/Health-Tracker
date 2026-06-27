@@ -1065,6 +1065,8 @@ div {
    ───────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
+  .sleep-toggle-row { display: none; }
+
   body {
     padding: 0;
     height: 100dvh;
