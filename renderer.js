@@ -1452,26 +1452,11 @@ function renderWorkoutHistory() {
 
   const allEx = getAllExercises();
 
-  function inferPlanKey(exercises) {
-    const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
-    const exNames = (exercises || []).map(e => e.name.toLowerCase());
-    let bestKey = null, bestScore = 0;
-    for (const [key, plan] of Object.entries(planMap)) {
-      const planEx  = plan.map(e => e.name.toLowerCase());
-      const overlap = exNames.filter(n => planEx.includes(n)).length;
-      const score   = overlap / Math.max(plan.length, exNames.length, 1);
-      if (score > bestScore) { bestScore = score; bestKey = key; }
-    }
-    return bestScore > 0.3 ? bestKey : null;
-  }
-
   function renderRow(row) {
     const dur  = row.duration_minutes ? `${row.duration_minutes} min` : '—';
     const d    = new Date(row.date);
     const date = isNaN(d) ? row.date : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const planNames = { mon: 'Monday', wed: 'Wednesday', fri: 'Friday' };
-    const planKey = row.plan_key || inferPlanKey(row.exercises);
-    const name = planNames[planKey] || 'Workout';
+    const name = isNaN(d) ? 'Workout' : d.toLocaleDateString('en-US', { weekday: 'long' });
     const exerciseLines = (row.exercises || []).map(ex => {
       const info    = allEx.find(e => e.name.toLowerCase() === ex.name.toLowerCase());
       const summary = formatPrevSets(ex.sets, info?.isLift || false, info?.isRun || false);
