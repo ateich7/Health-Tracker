@@ -632,7 +632,8 @@ function updateSleepChart() {
     }
   };
 
-  // Fills first, trend lines last so dashed lines render on top of fill areas
+  // Fills first in the array, trend lines last — Chart.js renders in array order
+  // so later datasets appear on top; this keeps dashed lines above the fill areas.
   datasets.push({
     label: 'Hours Slept',
     data: chartData.map(d => d.y),
@@ -640,7 +641,6 @@ function updateSleepChart() {
     backgroundColor: 'rgba(0, 136, 255, 0.2)',
     tension: 0.3,
     fill: true,
-    order: 2,
     yAxisID: 'y1'
   });
   if (hasRestedData) {
@@ -651,7 +651,6 @@ function updateSleepChart() {
       backgroundColor: 'rgba(52, 199, 89, 0.2)',
       tension: 0.3,
       fill: true,
-      order: 2,
       yAxisID: 'y2'
     });
   }
@@ -663,9 +662,8 @@ function updateSleepChart() {
     tension: 0.4,
     fill: false,
     pointRadius: 0,
-    borderWidth: 2,
-    borderDash: [5, 3],
-    order: 1,
+    borderWidth: 3,
+    borderDash: [6, 4],
     yAxisID: 'y1'
   });
   if (hasRestedData) {
@@ -677,9 +675,8 @@ function updateSleepChart() {
       tension: 0.4,
       fill: false,
       pointRadius: 0,
-      borderWidth: 2,
-      borderDash: [5, 3],
-      order: 1,
+      borderWidth: 3,
+      borderDash: [6, 4],
       yAxisID: 'y2'
     });
   }
@@ -1497,9 +1494,9 @@ function renderWorkoutSelector() {
   const container = document.getElementById('workout');
 
   const plans = [
-    { key: 'mon', label: 'Mon', exercises: monWorkout },
-    { key: 'wed', label: 'Wed', exercises: wedWorkout },
-    { key: 'fri', label: 'Fri', exercises: friWorkout },
+    { key: 'mon', label: 'Monday' },
+    { key: 'wed', label: 'Wednesday' },
+    { key: 'fri', label: 'Friday' },
   ];
 
   container.innerHTML = `
@@ -1507,8 +1504,7 @@ function renderWorkoutSelector() {
       ${plans.map(p => `
         <label class="workout-plan-option" onclick="selectWorkoutPlan('${p.key}')">
           <input type="radio" name="workoutPlan" value="${p.key}" style="display:none">
-          <div class="plan-name">${p.label} Workout</div>
-          <div class="plan-exercises">${p.exercises.map(e => e.name).join(' · ')}</div>
+          <div class="plan-name">${p.label}</div>
         </label>
       `).join('')}
     </div>
