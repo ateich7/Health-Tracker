@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "electron-build": "electron-builder --mac",
-    "install-app": "npm run electron-build && pkill -x 'Health Tracker' || true && cp -r 'dist/mac/Health Tracker.app' /Applications/'Health Tracker.app' && open '/Applications/Health Tracker.app'",
+    "install-app": "npm run electron-build && pkill -x 'Health Tracker' || true && cp -r 'dist/mac/Health Tracker.app' /Applications/'Health Tracker.app'",
     "build": "git add -A && git commit -m 'Deploy' && git push && npx vercel --prod && npm run install-app"
   },
   "build": {

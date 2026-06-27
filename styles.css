@@ -196,8 +196,7 @@ button {
 }
 
 .weight-filter-btn {
-  flex: 1;
-  padding: 6px 0;
+  padding: 6px 14px;
   border-radius: var(--br);
   border: none;
   background: var(--objbg);
