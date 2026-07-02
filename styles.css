@@ -1228,7 +1228,7 @@ div {
   /* Workout selector: stack vertically on mobile, fill height */
   .workout-selector-row {
     flex-direction: column;
-    height: 100%;
+    flex: 1;
     gap: 10px;
   }
 
