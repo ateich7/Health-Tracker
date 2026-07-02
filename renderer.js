@@ -1678,9 +1678,9 @@ function renderWorkoutSelector() {
   const container = document.getElementById('workout');
 
   const plans = [
-    { key: 'mon', label: 'Fullbody Calisthenics' },
-    { key: 'wed', label: 'Cardio + Lowerbody' },
-    { key: 'fri', label: 'Upperbody' },
+    { key: 'mon', label: 'Fullbody Calisthenics', icon: 'accessibility_new' },
+    { key: 'wed', label: 'Cardio + Lowerbody', icon: 'directions_run' },
+    { key: 'fri', label: 'Upperbody', icon: 'fitness_center' },
   ];
 
   container.innerHTML = `
@@ -1688,10 +1688,14 @@ function renderWorkoutSelector() {
       ${plans.map(p => `
         <label class="workout-plan-option" onclick="selectWorkoutPlan('${p.key}')">
           <input type="radio" name="workoutPlan" value="${p.key}" style="display:none">
+          <span class="material-icons plan-icon">${p.icon}</span>
           <div class="plan-name">${p.label}</div>
         </label>
       `).join('')}
-      <button class="btn-primary workout-start-btn" onclick="startWorkout()">Start Workout</button>
+      <button class="btn-primary workout-start-btn" onclick="startWorkout()">
+        <span class="material-icons">play_arrow</span>
+        Start Workout
+      </button>
     </div>
   `;
 }
