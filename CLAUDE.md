@@ -43,7 +43,7 @@ All upserts use `onConflict: 'user_id,date'` (or `user_id,name`) so re-logging a
 3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
 
 ### Chip / task-completion state
-Each nav item has a `.chip-check` icon (and bottom nav has a `.bottom-done-dot`) that lights up when today's entry is logged. `updateChipState()` reads from the in-memory data arrays and sets visibility.
+Each tab (sleep, signals, workout, social — both sidebar `.nav-item` and mobile `.bottom-nav-item`) has a `.task-dot` on its icon that signals the task is *not yet* done today; it disappears once `toggleTask()` adds `.completed` to the chip. Workout is only needed Mon/Wed/Fri, so `loadData()` adds `.no-task-today` to the workout chip/tab on other days to hide its dot regardless of completion. The standalone Codes button (Signals page) is unrelated to tabs and still uses the old `.chip-check` checkmark, shown when logged.
 
 ### Workout drafts
 The active workout form auto-saves to `localStorage` on every input (`saveWorkoutDraft()`). On load, `restoreWorkoutDraft()` repopulates the form. Draft is cleared on successful save.

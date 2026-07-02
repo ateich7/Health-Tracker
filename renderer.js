@@ -188,6 +188,16 @@ async function loadData() {
     if (chip && !chip.classList.contains('completed')) toggleTask(chip);
   }
 
+  // Workout is only scheduled on Mon/Wed/Fri, so its task-dot only shows those days
+  if (!['Mon', 'Wed', 'Fri'].includes(getDay())) {
+    document.getElementById('workoutChip').classList.add('no-task-today');
+    document.querySelector('.bottom-nav-item[data-page="workout"]').classList.add('no-task-today');
+  }
+  if (workoutLogs.some(e => e.date === today)) {
+    const chip = document.getElementById('workoutChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
+
   // Remember the most recent workout date so the edit button knows what to reload
   const sortedDates = Object.keys(workoutsObj).sort();
   const lastWorkout = sortedDates[sortedDates.length - 1];
@@ -1128,6 +1138,7 @@ function createExercise(exercise, prevSets) {
       </div>
     </div>
     <div class="ex-right-col">
+      <span class="material-icons ex-check-icon" title="All sets logged">check_circle</span>
       <span class="material-icons ex-chevron">expand_more</span>
       <button class="btn-remove-ex" onclick="event.stopPropagation(); this.closest('.exercise').remove()" title="Remove exercise">
         <span class="material-icons">close</span>
@@ -1156,6 +1167,103 @@ function toggleExerciseCollapse(exEl) {
   } else {
     exEl.classList.add('ex-collapsed');
   }
+}
+
+// Reads the current input values for one exercise, grouped by set.
+// Set width (1/2/3 inputs) tells us the exercise type, per the same
+// convention used when saving/loading workouts (bodyweight/lift/run).
+function getExerciseSetValues(exEl) {
+  return [...exEl.querySelectorAll('.ex-sets-body .set')].map(setEl =>
+    [...setEl.querySelectorAll('input')].map(i => i.value)
+  );
+}
+
+function isExerciseComplete(exEl) {
+  const sets = getExerciseSetValues(exEl);
+  return sets.length > 0 && sets.every(set => set.every(v => v.trim() !== ''));
+}
+
+// Shows/hides the green "Logged: …" line under the exercise name once every
+// set is filled in, so a collapsed, finished exercise still shows what was entered.
+function updateExerciseSummary(exEl, complete) {
+  const nameCol = exEl.querySelector('.ex-name-col');
+  let summaryEl = nameCol.querySelector('.ex-logged-summary');
+  if (!complete) {
+    if (summaryEl) summaryEl.remove();
+    return;
+  }
+  const sets = getExerciseSetValues(exEl);
+  const width = sets[0].length;
+  const text = formatPrevSets(sets, width === 2, width === 3);
+  if (!summaryEl) {
+    summaryEl = document.createElement('span');
+    summaryEl.className = 'ex-logged-summary';
+    nameCol.appendChild(summaryEl);
+  }
+  summaryEl.textContent = `Logged: ${text}`;
+}
+
+// Fires on every keystroke. Only handles the "un-completing" direction (user
+// clears a field they'd already filled) so a stale "complete" state doesn't
+// linger. The auto-collapse itself waits for focusout (see below) so we never
+// yank an exercise closed while the user is still mid-keystroke on a value.
+function handleExerciseInput(e) {
+  const exEl = e.target.closest('.exercise');
+  if (!exEl || !exEl.classList.contains('ex-complete')) return;
+  if (!isExerciseComplete(exEl)) {
+    exEl.classList.remove('ex-complete');
+    updateExerciseSummary(exEl, false);
+  }
+}
+
+// Fires when a field loses focus (tab, tap elsewhere, keyboard dismissed).
+// Marks an exercise complete once all its sets are filled, and auto-collapses
+// it so the gym-goer isn't stuck scrolling past exercises they've already
+// finished. Opens the next unfinished exercise below it, keeping the flow
+// moving top-to-bottom.
+function handleExerciseFieldBlur(e) {
+  if (!e.target.matches('input')) return;
+  const exEl = e.target.closest('.exercise');
+  if (!exEl) return;
+
+  const complete = isExerciseComplete(exEl);
+  if (!complete) return;
+  const wasComplete = exEl.classList.contains('ex-complete');
+  exEl.classList.add('ex-complete');
+  updateExerciseSummary(exEl, true);
+
+  if (!wasComplete && !exEl.classList.contains('ex-collapsed')) {
+    exEl.classList.add('ex-collapsed');
+    advanceToNextExercise(exEl);
+  }
+}
+
+// Opens the next exercise below the one just finished that isn't already
+// complete, so exactly one exercise stays expanded and ready to log.
+function advanceToNextExercise(currentEl) {
+  const container = currentEl.closest('#workout');
+  const exercises = [...container.querySelectorAll('.exercise')];
+  const next = exercises.slice(exercises.indexOf(currentEl) + 1)
+    .find(el => !el.classList.contains('ex-complete'));
+  if (next) next.classList.remove('ex-collapsed');
+}
+
+// Runs after the form is built (and any saved/prefilled values are applied):
+// collapses every already-complete exercise with its logged summary, and
+// expands only the first unfinished one so the user always sees what's next.
+function initExerciseCollapseState(container) {
+  let opened = false;
+  container.querySelectorAll('.exercise').forEach(exEl => {
+    const complete = isExerciseComplete(exEl);
+    exEl.classList.toggle('ex-complete', complete);
+    updateExerciseSummary(exEl, complete);
+    if (!complete && !opened) {
+      exEl.classList.remove('ex-collapsed');
+      opened = true;
+    } else {
+      exEl.classList.add('ex-collapsed');
+    }
+  });
 }
 
 
@@ -1351,6 +1459,10 @@ function renderWorkoutForm(exercises, savedData) {
   container.innerHTML = '';
   container.removeEventListener('input', saveWorkoutDraft);
   container.addEventListener('input', saveWorkoutDraft);
+  container.removeEventListener('input', handleExerciseInput);
+  container.addEventListener('input', handleExerciseInput);
+  container.removeEventListener('focusout', handleExerciseFieldBlur);
+  container.addEventListener('focusout', handleExerciseFieldBlur);
   setupExerciseDragDrop(container);
   // Start the session timer when the user first touches an input
   workoutTimerStart = null;
@@ -1369,11 +1481,6 @@ function renderWorkoutForm(exercises, savedData) {
       e => e.name.toLowerCase() === exercise.name.toLowerCase()
     )?.sets ?? null;
     container.innerHTML += createExercise(exercise, prevSets);
-  });
-
-  // Collapse exercises beyond the first 2 to keep the form manageable on mobile
-  container.querySelectorAll('.exercise').forEach((el, idx) => {
-    if (idx >= 2) el.classList.add('ex-collapsed');
   });
 
   const allExNames = getAllExercises().map(e => e.name);
@@ -1396,6 +1503,10 @@ function renderWorkoutForm(exercises, savedData) {
   if (savedData) {
     prefillWorkout(savedData);
   }
+
+  // Collapse any exercise that's already fully filled in (e.g. editing a past
+  // workout) and expand only the first one still needing input.
+  initExerciseCollapseState(container);
 }
 
 // Pre-fills all set inputs from saved exercise data (used by editWorkout)
@@ -1504,6 +1615,7 @@ function renderWorkoutHistory() {
         <div class="wh-header">
           <span class="wh-date">${name}, ${date}</span>
           <span class="wh-dur">${dur}</span>
+          <span class="material-icons wh-delete" onclick="event.stopPropagation(); deleteWorkoutRow('${row.date}')">delete</span>
           <span class="material-icons wh-arrow">expand_more</span>
         </div>
         <div class="wh-detail">${exerciseLines}</div>
@@ -1526,6 +1638,30 @@ function renderWorkoutHistory() {
     }
   }
   container.innerHTML = html;
+}
+
+// Deletes a logged workout from history after confirmation, then syncs
+// in-memory state, the chip, and every view that reads workout data
+async function deleteWorkoutRow(date) {
+  if (!confirm(`Delete the workout logged on ${date}?`)) return;
+
+  await deleteWorkoutEntry(date);
+  workoutLogs = workoutLogs.filter(r => r.date !== date);
+
+  if (date === getToday()) {
+    const chip = document.getElementById('workoutChip');
+    if (chip.classList.contains('completed')) toggleTask(chip);
+  }
+
+  // Point the edit button at whatever workout is now most recent (if any)
+  const remainingDates = workoutLogs.map(r => r.date).sort((a, b) => new Date(a) - new Date(b));
+  const lastWorkout = remainingDates[remainingDates.length - 1];
+  if (lastWorkout) localStorage.setItem('workoutLoggedDate', lastWorkout);
+  else             localStorage.removeItem('workoutLoggedDate');
+
+  renderWorkoutHistory();
+  populateExerciseSelect();
+  updateUI();
 }
 
 function toggleWorkoutHistoryAll(btn) {

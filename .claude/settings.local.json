@@ -31,7 +31,10 @@
       "Bash(git *)",
       "Bash(npx vercel *)",
       "Bash(pkill -x 'Health Tracker')",
-      "Bash(cp -r '/Users/Ari/repos/personal/health/health-tracker/dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')"
+      "Bash(cp -r '/Users/Ari/repos/personal/health/health-tracker/dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')",
+      "Skill(run)",
+      "Bash(git -C /Users/Ari/repos/personal/health/health-tracker diff CLAUDE.md)",
+      "Bash(node -e ' *)"
     ]
   }
 }
