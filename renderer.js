@@ -12,7 +12,12 @@ let socialData  = [];   // rows from social_logs
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
-const sleepLineToggles = { hours: true, hoursAvg: true, rested: true, restedAvg: true };
+const sleepLineToggles = {
+  hours: true, hoursAvg: true,
+  timeInBed: true, timeInBedAvg: true,
+  rested: true, restedAvg: true,
+  efficiency: true, efficiencyAvg: true
+};
 let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
@@ -244,14 +249,16 @@ async function logWeight() {
 }
 
 async function logSleep() {
-  const hoursInput  = document.getElementById('sleepHoursInput');
-  const restedInput = document.getElementById('sleepRestedInput');
-  const hours  = parseFloat(hoursInput.value);
-  const rested = parseFloat(restedInput.value);
+  const hoursInput      = document.getElementById('sleepHoursInput');
+  const timeInBedInput  = document.getElementById('sleepTimeInBedInput');
+  const restedInput     = document.getElementById('sleepRestedInput');
+  const hours      = parseFloat(hoursInput.value);
+  const timeInBed  = parseFloat(timeInBedInput.value);
+  const rested     = parseFloat(restedInput.value);
   if (!hours || hours < 0 || hours > 24) return;
 
   const today = getToday();
-  const entry = { date: today, hours, rested, timestamp: Date.now() };
+  const entry = { date: today, hours, time_in_bed: timeInBed || null, rested, timestamp: Date.now() };
 
   await db.from('sleep_logs').upsert(
     { user_id: currentUser.id, ...entry },
@@ -262,8 +269,9 @@ async function logSleep() {
   sleepData.push(entry);
   sleepData.sort((a, b) => a.timestamp - b.timestamp);
 
-  hoursInput.value  = '';
-  restedInput.value = '';
+  hoursInput.value     = '';
+  timeInBedInput.value = '';
+  restedInput.value    = '';
   const chip = document.getElementById('sleepChip');
   if (!chip.classList.contains('completed')) toggleTask(chip);
   updateUI();
@@ -648,19 +656,26 @@ function updateExerciseChart() {
   });
 }
 
-// Sleep: dual-axis chart — hours slept (left) + restedness score (right),
-// each with a 7-day moving average overlay
+// Sleep: multi-axis chart — hours slept + time in bed (left, hours), restedness
+// score (right, 1-10), and sleep efficiency % (right, 0-100 — the CBT-I ratio of
+// hours slept to time in bed), each with a 7-day moving average overlay
 function updateSleepChart() {
   if (sleepChart) sleepChart.destroy();
 
   const chartData = sleepData.slice(-sleepPeriodDays).map(e => {
     const dateObj = new Date(e.date);
+    const timeInBed = e.time_in_bed;
+    const efficiency = (e.hours != null && timeInBed)
+      ? parseFloat(((e.hours / timeInBed) * 100).toFixed(1))
+      : null;
 
     return {
       x: e.date.split('/').slice(0, 2).join('/'),
       day: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
       y: e.hours,
-      z: e.rested
+      z: e.rested,
+      w: timeInBed,
+      v: efficiency
     };
   });
 
@@ -668,18 +683,19 @@ function updateSleepChart() {
 
   // 7-day moving averages (filter nulls so absent values don't drag the average toward 0)
   const windowSize = 7;
-  const maHours = chartData.map((_, i) => {
-    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p.y != null);
+  const movingAverage = key => chartData.map((_, i) => {
+    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p[key] != null);
     if (!slice.length) return null;
-    return parseFloat((slice.reduce((s, p) => s + p.y, 0) / slice.length).toFixed(2));
+    return parseFloat((slice.reduce((s, p) => s + p[key], 0) / slice.length).toFixed(2));
   });
-  const maRested = chartData.map((_, i) => {
-    const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p.z != null);
-    if (!slice.length) return null;
-    return parseFloat((slice.reduce((s, p) => s + p.z, 0) / slice.length).toFixed(2));
-  });
+  const maHours      = movingAverage('y');
+  const maRested     = movingAverage('z');
+  const maTimeInBed  = movingAverage('w');
+  const maEfficiency = movingAverage('v');
 
-  const hasRestedData = chartData.some(d => d.z != null);
+  const hasRestedData     = chartData.some(d => d.z != null);
+  const hasTimeInBedData  = chartData.some(d => d.w != null);
+  const hasEfficiencyData = chartData.some(d => d.v != null);
 
   const ctx = document.getElementById('sleepChart').getContext('2d');
   const datasets = [];
@@ -702,6 +718,17 @@ function updateSleepChart() {
       yAxisID: 'y1'
     });
   }
+  if (hasTimeInBedData && sleepLineToggles.timeInBed) {
+    datasets.push({
+      label: 'Time in Bed',
+      data: chartData.map(d => d.w),
+      borderColor: '#5E5CE6',
+      backgroundColor: 'rgba(94, 92, 230, 0.15)',
+      tension: 0.3,
+      fill: true,
+      yAxisID: 'y1'
+    });
+  }
   if (hasRestedData && sleepLineToggles.rested) {
     datasets.push({
       label: 'Restedness Score',
@@ -711,6 +738,17 @@ function updateSleepChart() {
       tension: 0.3,
       fill: true,
       yAxisID: 'y2'
+    });
+  }
+  if (hasEfficiencyData && sleepLineToggles.efficiency) {
+    datasets.push({
+      label: 'Sleep Efficiency %',
+      data: chartData.map(d => d.v),
+      borderColor: '#64D2FF',
+      backgroundColor: 'rgba(100, 210, 255, 0.15)',
+      tension: 0.3,
+      fill: true,
+      yAxisID: 'y3'
     });
   }
   if (sleepLineToggles.hoursAvg) {
@@ -745,6 +783,38 @@ function updateSleepChart() {
       yAxisID: 'y2'
     });
   }
+  if (hasTimeInBedData && sleepLineToggles.timeInBedAvg) {
+    datasets.push({
+      label: 'Time in Bed (7-day avg)',
+      data: maTimeInBed,
+      borderColor: '#BF5AF2',
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      fill: false,
+      pointRadius: 0,
+      borderWidth: 3,
+      borderDash: [6, 4],
+      segment: { borderDash: () => [6, 4] },
+      clip: false,
+      yAxisID: 'y1'
+    });
+  }
+  if (hasEfficiencyData && sleepLineToggles.efficiencyAvg) {
+    datasets.push({
+      label: 'Efficiency (7-day avg)',
+      data: maEfficiency,
+      borderColor: '#30B0C7',
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      fill: false,
+      pointRadius: 0,
+      borderWidth: 3,
+      borderDash: [6, 4],
+      segment: { borderDash: () => [6, 4] },
+      clip: false,
+      yAxisID: 'y3'
+    });
+  }
   const isMobile = window.innerWidth <= 768;
 
   scales.y1 = {
@@ -760,6 +830,17 @@ function updateSleepChart() {
       type: 'linear',
       position: 'right',
       ticks: { color: '#34C759', display: !isMobile },
+      grid: { display: false },
+      title: { display: false }
+    };
+  }
+  if (hasEfficiencyData && (sleepLineToggles.efficiency || sleepLineToggles.efficiencyAvg)) {
+    scales.y3 = {
+      type: 'linear',
+      position: 'right',
+      min: 0,
+      max: 100,
+      ticks: { color: '#64D2FF', display: !isMobile },
       grid: { display: false },
       title: { display: false }
     };

@@ -10,12 +10,13 @@ create table if not exists weight_logs (
 );
 
 create table if not exists sleep_logs (
-  id        uuid    default gen_random_uuid() primary key,
-  user_id   uuid    references auth.users not null,
-  date      text    not null,
-  hours     numeric not null,
-  rested    numeric,
-  timestamp bigint  not null,
+  id           uuid    default gen_random_uuid() primary key,
+  user_id      uuid    references auth.users not null,
+  date         text    not null,
+  hours        numeric not null,
+  rested       numeric,
+  time_in_bed  numeric,
+  timestamp    bigint  not null,
   unique (user_id, date)
 );
 
@@ -66,3 +67,6 @@ create policy "Own social logs" on social_logs for all using (auth.uid() = user_
 -- Migrations for existing workout_logs tables
 -- alter table workout_logs add column if not exists duration_minutes integer;
 -- alter table workout_logs add column if not exists plan_key text;
+
+-- Migration for existing sleep_logs tables (CBT-I: time in bed, for sleep efficiency)
+-- alter table sleep_logs add column if not exists time_in_bed numeric;
