@@ -180,12 +180,11 @@ async function loadData() {
     const chip = document.getElementById('sleepChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
-  if (psychData.some(e => e.date === today)) {
-    const chip = document.getElementById('signalsChip');
-    if (!chip.classList.contains('completed')) toggleTask(chip);
-  }
   // Codes is stored only in localStorage (no Supabase table)
   checkChipState('codesChip', 'codesLoggedDate');
+
+  updateMeditationCard();
+  updateSignalsChipState();
 
   const todaySocial = socialData.find(e => e.date === today);
   if (todaySocial && (todaySocial.no_stakes + todaySocial.low_stakes + todaySocial.med_stakes + todaySocial.high_stakes) > 0) {
@@ -885,9 +884,34 @@ async function logPsych() {
   psychData.push(entry);
   psychData.sort((a, b) => a.timestamp - b.timestamp);
 
-  const chip = document.getElementById('signalsChip');
-  if (!chip.classList.contains('completed')) toggleTask(chip);
+  updateSignalsChipState();
   updateSignalsChart();
+}
+
+// Meditation: a dismiss-on-done card on the Signals page, separate from the
+// psych-log form. The Signals nav chip only completes once BOTH are done today.
+function logMeditation() {
+  localStorage.setItem('meditationLoggedDate', getToday());
+  updateMeditationCard();
+  updateSignalsChipState();
+}
+
+function updateMeditationCard() {
+  const card = document.getElementById('meditationCard');
+  if (!card) return;
+  const done = localStorage.getItem('meditationLoggedDate') === getToday();
+  card.classList.toggle('hidden', done);
+}
+
+// Signals chip is only marked complete once today's psych log AND meditation
+// are both done; it un-completes if either isn't (e.g. on a fresh day).
+function updateSignalsChipState() {
+  const chip = document.getElementById('signalsChip');
+  const today = getToday();
+  const psychDone = psychData.some(e => e.date === today);
+  const meditationDone = localStorage.getItem('meditationLoggedDate') === today;
+  const shouldBeComplete = psychDone && meditationDone;
+  if (chip.classList.contains('completed') !== shouldBeComplete) toggleTask(chip);
 }
 
 // Toggles the "Released yesterday?" switch between Yes/No
