@@ -2011,7 +2011,7 @@ function updateStreaks() {
 
   const streaks = [
     { label: 'meditation',       count: calcDailyStreak(meditationDates), icon: 'self_improvement',      unit: ['day', 'days'] },
-    { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'] },
+    { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'], inlineUnit: true },
     { label: 'no release',       count: calcStreak(releaseDates),         icon: 'local_fire_department',  unit: ['day', 'days'] },
     { label: 'any interaction',  count: calcDailyStreak(socialDates),     icon: 'people',                 unit: ['day', 'days'] },
   ];
@@ -2019,11 +2019,12 @@ function updateStreaks() {
   container.innerHTML = streaks.map(s => {
     const hasValue = s.count != null;
     const unit = s.count === 1 ? s.unit[0] : s.unit[1];
+    const countText = hasValue ? (s.inlineUnit ? `${s.count}${unit}` : s.count) : '–';
     return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
-      <div class="streak-count${hasValue && s.count > 0 ? ' active' : ''}">${hasValue ? s.count : '–'}</div>
-      <div class="streak-unit">${unit}</div>
+      <div class="streak-count${hasValue && s.count > 0 ? ' active' : ''}">${countText}</div>
+      <div class="streak-unit">${s.inlineUnit ? '' : unit}</div>
       <div class="streak-label">${s.label}</div>
     </div>`;
   }).join('');
