@@ -891,9 +891,16 @@ async function logPsych() {
 // Meditation: a dismiss-on-done card on the Signals page, separate from the
 // psych-log form. The Signals nav chip only completes once BOTH are done today.
 function logMeditation() {
-  localStorage.setItem('meditationLoggedDate', getToday());
+  const today = getToday();
+  localStorage.setItem('meditationLoggedDate', today);
+  const dates = getMeditationDates();
+  if (!dates.includes(today)) {
+    dates.push(today);
+    localStorage.setItem('meditationDates', JSON.stringify(dates));
+  }
   updateMeditationCard();
   updateSignalsChipState();
+  updateStreaks();
 }
 
 function updateMeditationCard() {
@@ -901,6 +908,11 @@ function updateMeditationCard() {
   if (!card) return;
   const done = localStorage.getItem('meditationLoggedDate') === getToday();
   card.classList.toggle('hidden', done);
+}
+
+// All dates the user has ever meditated on, used to compute the home page streak
+function getMeditationDates() {
+  return JSON.parse(localStorage.getItem('meditationDates') || '[]');
 }
 
 // Signals chip is only marked complete once today's psych log AND meditation
@@ -1204,7 +1216,8 @@ function getPreviousWorkout(exercises) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
   const nameSet = new Set(exercises.map(e => e.name.toLowerCase()));
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort((a, b) => new Date(b) - new Date(a));
   for (const date of sorted) {
     if (workouts[date].some(ex => nameSet.has(ex.name.toLowerCase()))) {
       return { date, exercises: workouts[date] };
@@ -1217,7 +1230,8 @@ function getPreviousWorkout(exercises) {
 function getPrevSetsForExercise(name) {
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const today = getToday();
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort().reverse();
+  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
+  const sorted = Object.keys(workouts).filter(d => d !== today).sort((a, b) => new Date(b) - new Date(a));
   for (const date of sorted) {
     const found = workouts[date].find(e => e.name.toLowerCase() === name.toLowerCase());
     if (found) return found.sets;
@@ -1902,52 +1916,15 @@ function populateExerciseSelect() {
 // STREAKS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Counts consecutive calendar weeks (Mon–Sun) that contain 3+ workouts.
-// The current (in-progress) week is not penalized even if under 3 yet.
-function calcWorkoutWeekStreak(workoutDates) {
-  const dateSet = new Set(workoutDates);
-
-  function getMondayOf(date) {
-    const d = new Date(date);
-    d.setHours(12, 0, 0, 0);
-    const day = d.getDay(); // 0=Sun
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return d;
-  }
-
-  function workoutsInWeek(monday) {
-    let count = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(d.getDate() + i);
-      if (dateSet.has(d.toLocaleDateString())) count++;
-    }
-    return count;
-  }
-
-  const now = new Date();
-  now.setHours(12, 0, 0, 0);
-  const currentMonday = getMondayOf(now);
-
-  let streak = 0;
-  let monday = new Date(currentMonday);
-
-  for (let w = 0; w < 200; w++) {
-    const count = workoutsInWeek(monday);
-    const isCurrentWeek = monday.toLocaleDateString() === currentMonday.toLocaleDateString();
-
-    if (count >= 3) {
-      streak++;
-    } else if (isCurrentWeek) {
-      // Don't penalize the current week if still in progress
-    } else {
-      break;
-    }
-    monday.setDate(monday.getDate() - 7);
-  }
-
-  return streak;
+// Averages sleep efficiency (% of time in bed actually asleep) over the most
+// recent 7 logged nights. Entries without both hours and time_in_bed are skipped.
+function calcSleepEfficiencyAvg(entries) {
+  const recent = entries.slice(-7);
+  const values = recent
+    .filter(e => e.hours != null && e.time_in_bed)
+    .map(e => (e.hours / e.time_in_bed) * 100);
+  if (!values.length) return null;
+  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
 }
 
 // Counts consecutive calendar days with a log entry. No days are skipped.
@@ -2027,25 +2004,25 @@ function updateStreaks() {
   const container = document.getElementById('streaksGrid');
   if (!container) return;
 
-  const workoutDates  = workoutLogs.map(r => r.date);
-  const sleepOver7    = sleepData.filter(e => e.hours > 7).map(e => e.date);
-  const weightDates   = weightData.map(e => e.date);
-  const releaseDates  = psychData.filter(e => !e.released).map(e => e.date);
-  const socialDates   = socialData.map(e => e.date);
+  const meditationDates    = getMeditationDates();
+  const sleepEfficiencyAvg = calcSleepEfficiencyAvg(sleepData);
+  const releaseDates       = psychData.filter(e => !e.released).map(e => e.date);
+  const socialDates        = socialData.map(e => e.date);
 
   const streaks = [
-    { label: '3 workouts',     count: calcWorkoutWeekStreak(workoutDates), icon: 'fitness_center',        unit: ['week', 'weeks']  },
-    { label: '> 7 hrs sleep',  count: calcDailyStreak(sleepOver7),         icon: 'bedtime',               unit: ['night', 'nights'] },
-    { label: 'no release',     count: calcStreak(releaseDates),             icon: 'local_fire_department', unit: ['day', 'days']    },
-    { label: 'any interaction',count: calcDailyStreak(socialDates),         icon: 'people',                unit: ['day', 'days']    },
+    { label: 'meditation',       count: calcDailyStreak(meditationDates), icon: 'self_improvement',      unit: ['day', 'days'] },
+    { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'] },
+    { label: 'no release',       count: calcStreak(releaseDates),         icon: 'local_fire_department',  unit: ['day', 'days'] },
+    { label: 'any interaction',  count: calcDailyStreak(socialDates),     icon: 'people',                 unit: ['day', 'days'] },
   ];
 
   container.innerHTML = streaks.map(s => {
+    const hasValue = s.count != null;
     const unit = s.count === 1 ? s.unit[0] : s.unit[1];
     return `
     <div class="streak-item">
       <span class="material-icons streak-icon">${s.icon}</span>
-      <div class="streak-count${s.count > 0 ? ' active' : ''}">${s.count}</div>
+      <div class="streak-count${hasValue && s.count > 0 ? ' active' : ''}">${hasValue ? s.count : '–'}</div>
       <div class="streak-unit">${unit}</div>
       <div class="streak-label">${s.label}</div>
     </div>`;

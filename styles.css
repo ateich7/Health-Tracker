@@ -1228,22 +1228,6 @@ div {
     height: auto;
   }
 
-  /* Selector mode: card fills viewport, bottom cards hidden */
-  #page-workout.workout-selecting .wh-bottom-row {
-    display: none;
-  }
-
-  #page-workout.workout-selecting #workoutCard {
-    flex: 1;
-  }
-
-  #page-workout.workout-selecting #workout {
-    flex: 1;
-    max-height: none;
-    display: flex;
-    flex-direction: column;
-  }
-
   /* Workout selector: stack vertically on mobile, fill height */
   .workout-selector-row {
     flex-direction: column;
