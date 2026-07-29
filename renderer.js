@@ -10,6 +10,8 @@ let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 let socialData  = [];   // rows from social_logs
 
+const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes', 'extreme_stakes', 'real_stakes'];
+
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
 const sleepLineToggles = {
@@ -187,7 +189,7 @@ async function loadData() {
   updateSignalsChipState();
 
   const todaySocial = socialData.find(e => e.date === today);
-  if (todaySocial && (todaySocial.no_stakes + todaySocial.low_stakes + todaySocial.med_stakes + todaySocial.high_stakes) > 0) {
+  if (todaySocial && SOCIAL_CATEGORIES.some(cat => todaySocial[cat] > 0)) {
     const chip = document.getElementById('socialChip');
     if (chip && !chip.classList.contains('completed')) toggleTask(chip);
   }
@@ -2153,16 +2155,22 @@ const quotes = [
 function updateSocialUI() {
   const today = getToday();
   const row   = socialData.find(r => r.date === today) || {};
-  ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes'].forEach(cat => {
+  SOCIAL_CATEGORIES.forEach(cat => {
     const el = document.getElementById(`socialCount_${cat}`);
     if (el) el.textContent = row[cat] || 0;
   });
 }
 
+function socialCounts(row) {
+  const counts = {};
+  SOCIAL_CATEGORIES.forEach(cat => counts[cat] = (row && row[cat]) || 0);
+  return counts;
+}
+
 async function logSocial(category) {
   const today    = getToday();
-  const existing = socialData.find(e => e.date === today) || { no_stakes: 0, low_stakes: 0, med_stakes: 0, high_stakes: 0 };
-  const updated  = { no_stakes: existing.no_stakes || 0, low_stakes: existing.low_stakes || 0, med_stakes: existing.med_stakes || 0, high_stakes: existing.high_stakes || 0 };
+  const existing = socialData.find(e => e.date === today);
+  const updated  = socialCounts(existing);
   updated[category]++;
 
   await db.from('social_logs').upsert(
@@ -2170,8 +2178,7 @@ async function logSocial(category) {
     { onConflict: 'user_id,date' }
   );
 
-  const wasFirst = !socialData.some(e => e.date === today) ||
-    (existing.no_stakes + existing.low_stakes + existing.med_stakes + existing.high_stakes) === 0;
+  const wasFirst = !existing || SOCIAL_CATEGORIES.every(cat => !existing[cat]);
   socialData = socialData.filter(e => e.date !== today);
   socialData.push({ user_id: currentUser.id, date: today, ...updated });
 
@@ -2187,7 +2194,7 @@ async function unlogSocial(category) {
   const today    = getToday();
   const existing = socialData.find(e => e.date === today);
   if (!existing || !existing[category]) return;
-  const updated = { no_stakes: existing.no_stakes || 0, low_stakes: existing.low_stakes || 0, med_stakes: existing.med_stakes || 0, high_stakes: existing.high_stakes || 0 };
+  const updated = socialCounts(existing);
   updated[category] = Math.max(0, updated[category] - 1);
 
   await db.from('social_logs').upsert(
@@ -2212,8 +2219,8 @@ const socialIconPlugin = {
   id: 'socialIcons',
   afterDraw(chart) {
     const ctx = chart.ctx;
-    // Material Icons Unicode codepoints: chat, mood, bolt, whatshot
-    const glyphs = ['', '', '', ''];
+    // Material Icons Unicode codepoints: chat, mood, bolt, whatshot, favorite, send
+    const glyphs = ['', '', '', '', '', ''];
     chart.data.datasets.forEach((dataset, i) => {
       const meta = chart.getDatasetMeta(i);
       if (meta.hidden) return;
@@ -2240,7 +2247,8 @@ function updateSocialChart() {
   const canvas = document.getElementById('socialChart');
   if (!canvas) return;
 
-  const labels = [], noS = [], lowS = [], medS = [], highS = [];
+  const labels = [];
+  const series = SOCIAL_CATEGORIES.map(() => []);
 
   for (let i = socialDays - 1; i >= 0; i--) {
     const d = new Date();
@@ -2248,22 +2256,25 @@ function updateSocialChart() {
     const dateStr = d.toLocaleDateString();
     labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     const row = socialData.find(r => r.date === dateStr) || {};
-    noS.push(row.no_stakes   || 0);
-    lowS.push(row.low_stakes  || 0);
-    medS.push(row.med_stakes  || 0);
-    highS.push(row.high_stakes || 0);
+    SOCIAL_CATEGORIES.forEach((cat, catIdx) => series[catIdx].push(row[cat] || 0));
   }
+
+  const SOCIAL_DATASET_META = [
+    { label: 'No Stakes',    color: 'rgba(99,  102, 241, 0.60)' },
+    { label: 'Low Stakes',   color: 'rgba(56,  189, 248, 0.75)' },
+    { label: 'Mod Stakes',   color: 'rgba(251, 146, 60,  0.85)' },
+    { label: 'High Stakes',  color: 'rgba(250, 204, 21,  1.00)' },
+    { label: 'Extreme Stakes', color: 'rgba(244, 63,  94,  0.90)' },
+    { label: 'Real Stakes',  color: 'rgba(225, 29,  72,  1.00)' },
+  ];
 
   socialChart = new Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: {
       labels,
-      datasets: [
-        { label: 'No Stakes',   data: noS,   backgroundColor: 'rgba(99,  102, 241, 0.60)', stack: 'a' },
-        { label: 'Low Stakes',  data: lowS,  backgroundColor: 'rgba(56,  189, 248, 0.75)', stack: 'a' },
-        { label: 'Med Stakes',  data: medS,  backgroundColor: 'rgba(251, 146, 60,  0.85)', stack: 'a' },
-        { label: 'High Stakes', data: highS, backgroundColor: 'rgba(250, 204, 21,  1.00)', stack: 'a' },
-      ]
+      datasets: SOCIAL_DATASET_META.map((meta, i) => ({
+        label: meta.label, data: series[i], backgroundColor: meta.color, stack: 'a'
+      }))
     },
     options: {
       responsive: true,

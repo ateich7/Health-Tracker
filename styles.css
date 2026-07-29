@@ -1690,10 +1690,12 @@ div {
 }
 
 .social-cat-btn:hover { background: var(--objbghov); }
-.social-cat-btn[data-cat="no_stakes"]   { border-left-color: rgba(99, 102, 241, 0.65); }
-.social-cat-btn[data-cat="low_stakes"]  { border-left-color: rgba(56, 189, 248, 0.80); }
-.social-cat-btn[data-cat="med_stakes"]  { border-left-color: rgba(251, 146, 60, 0.90); }
-.social-cat-btn[data-cat="high_stakes"] { border-left-color: rgba(250, 204, 21, 1.00); }
+.social-cat-btn[data-cat="no_stakes"]      { border-left-color: rgba(99, 102, 241, 0.65); }
+.social-cat-btn[data-cat="low_stakes"]     { border-left-color: rgba(56, 189, 248, 0.80); }
+.social-cat-btn[data-cat="med_stakes"]     { border-left-color: rgba(251, 146, 60, 0.90); }
+.social-cat-btn[data-cat="high_stakes"]    { border-left-color: rgba(250, 204, 21, 1.00); }
+.social-cat-btn[data-cat="extreme_stakes"] { border-left-color: rgba(244, 63,  94, 0.90); }
+.social-cat-btn[data-cat="real_stakes"]    { border-left-color: rgba(225, 29,  72, 1.00); }
 
 .social-cat-icon {
   font-size: 22px;
@@ -1703,10 +1705,12 @@ div {
   opacity: 0.75;
 }
 
-.social-cat-btn[data-cat="no_stakes"]   .social-cat-icon { color: rgba(129, 140, 248, 1); }
-.social-cat-btn[data-cat="low_stakes"]  .social-cat-icon { color: rgba(56,  189, 248, 1); }
-.social-cat-btn[data-cat="med_stakes"]  .social-cat-icon { color: rgba(251, 146, 60,  1); }
-.social-cat-btn[data-cat="high_stakes"] .social-cat-icon { color: rgba(250, 204, 21,  1); }
+.social-cat-btn[data-cat="no_stakes"]      .social-cat-icon { color: rgba(129, 140, 248, 1); }
+.social-cat-btn[data-cat="low_stakes"]     .social-cat-icon { color: rgba(56,  189, 248, 1); }
+.social-cat-btn[data-cat="med_stakes"]     .social-cat-icon { color: rgba(251, 146, 60,  1); }
+.social-cat-btn[data-cat="high_stakes"]    .social-cat-icon { color: rgba(250, 204, 21,  1); }
+.social-cat-btn[data-cat="extreme_stakes"] .social-cat-icon { color: rgba(244, 63,  94,  1); }
+.social-cat-btn[data-cat="real_stakes"]    .social-cat-icon { color: rgba(225, 29,  72,  1); }
 
 .social-chart-header {
   display: flex;
@@ -1779,10 +1783,12 @@ div {
   text-align: center;
 }
 
-.social-cat-btn[data-cat="no_stakes"]   .social-cat-count { color: rgba(129, 140, 248, 0.75); }
-.social-cat-btn[data-cat="low_stakes"]  .social-cat-count { color: rgba(56,  189, 248, 0.90); }
-.social-cat-btn[data-cat="med_stakes"]  .social-cat-count { color: rgba(251, 146, 60,  0.95); }
-.social-cat-btn[data-cat="high_stakes"] .social-cat-count { color: rgba(250, 204, 21,  1.00); }
+.social-cat-btn[data-cat="no_stakes"]      .social-cat-count { color: rgba(129, 140, 248, 0.75); }
+.social-cat-btn[data-cat="low_stakes"]     .social-cat-count { color: rgba(56,  189, 248, 0.90); }
+.social-cat-btn[data-cat="med_stakes"]     .social-cat-count { color: rgba(251, 146, 60,  0.95); }
+.social-cat-btn[data-cat="high_stakes"]    .social-cat-count { color: rgba(250, 204, 21,  1.00); }
+.social-cat-btn[data-cat="extreme_stakes"] .social-cat-count { color: rgba(244, 63,  94,  0.90); }
+.social-cat-btn[data-cat="real_stakes"]    .social-cat-count { color: rgba(225, 29,  72,  1.00); }
 
 @media (max-width: 768px) {
   .social-layout { flex-direction: column; }

@@ -58,6 +58,8 @@ create table if not exists social_logs (
   low_stakes integer default 0,
   med_stakes integer default 0,
   high_stakes integer default 0,
+  extreme_stakes integer default 0,
+  real_stakes integer default 0,
   unique (user_id, date)
 );
 
@@ -70,3 +72,7 @@ create policy "Own social logs" on social_logs for all using (auth.uid() = user_
 
 -- Migration for existing sleep_logs tables (CBT-I: time in bed, for sleep efficiency)
 -- alter table sleep_logs add column if not exists time_in_bed numeric;
+
+-- Migration for existing social_logs tables (added tiers 5 & 6: extreme/real stakes)
+-- alter table social_logs add column if not exists extreme_stakes integer default 0;
+-- alter table social_logs add column if not exists real_stakes integer default 0;

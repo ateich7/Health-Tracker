@@ -302,8 +302,8 @@
                   <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
                     <span class="social-cat-icon material-icons">bolt</span>
                     <div class="social-cat-info">
-                      <span class="social-cat-name">Medium Stakes</span>
-                      <span class="social-cat-desc">Initiate conversation w/ attractive girl</span>
+                      <span class="social-cat-name">Moderate Stakes</span>
+                      <span class="social-cat-desc">Girl you're attracted to, not looking to date</span>
                     </div>
                     <span class="social-cat-count" id="socialCount_med_stakes">0</span>
                   </div>
@@ -314,11 +314,33 @@
                     <span class="social-cat-icon material-icons">whatshot</span>
                     <div class="social-cat-info">
                       <span class="social-cat-name">High Stakes</span>
-                      <span class="social-cat-desc">Make specific ask (date/number/etc.)</span>
+                      <span class="social-cat-desc">Asking her for a number, date, or plans</span>
                     </div>
                     <span class="social-cat-count" id="socialCount_high_stakes">0</span>
                   </div>
                   <button class="social-minus" data-cat="high_stakes" onclick="unlogSocial('high_stakes')">−</button>
+                </div>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="extreme_stakes" onclick="logSocial('extreme_stakes')">
+                    <span class="social-cat-icon material-icons">favorite</span>
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">Extreme Stakes</span>
+                      <span class="social-cat-desc">Girl you'd genuinely consider dating</span>
+                    </div>
+                    <span class="social-cat-count" id="socialCount_extreme_stakes">0</span>
+                  </div>
+                  <button class="social-minus" data-cat="extreme_stakes" onclick="unlogSocial('extreme_stakes')">−</button>
+                </div>
+                <div class="social-cat-row">
+                  <div class="social-cat-btn" data-cat="real_stakes" onclick="logSocial('real_stakes')">
+                    <span class="social-cat-icon material-icons">send</span>
+                    <div class="social-cat-info">
+                      <span class="social-cat-name">Real Stakes</span>
+                      <span class="social-cat-desc">Asking her for a number, date, or plans</span>
+                    </div>
+                    <span class="social-cat-count" id="socialCount_real_stakes">0</span>
+                  </div>
+                  <button class="social-minus" data-cat="real_stakes" onclick="unlogSocial('real_stakes')">−</button>
                 </div>
               </div>
             </div>
@@ -327,8 +349,10 @@
                 <div class="social-legend">
                   <span class="social-legend-item"><span class="material-icons" style="color:rgba(129,140,248,0.9)">chat</span>No Stakes</span>
                   <span class="social-legend-item"><span class="material-icons" style="color:rgba(56,189,248,0.9)">mood</span>Low</span>
-                  <span class="social-legend-item"><span class="material-icons" style="color:rgba(251,146,60,0.95)">bolt</span>Med</span>
+                  <span class="social-legend-item"><span class="material-icons" style="color:rgba(251,146,60,0.95)">bolt</span>Mod</span>
                   <span class="social-legend-item"><span class="material-icons" style="color:rgba(250,204,21,1)">whatshot</span>High</span>
+                  <span class="social-legend-item"><span class="material-icons" style="color:rgba(244,63,94,0.9)">favorite</span>Extreme</span>
+                  <span class="social-legend-item"><span class="material-icons" style="color:rgba(225,29,72,1)">send</span>Real</span>
                 </div>
                 <div class="weight-filter-row social-filter-row">
                   <button class="weight-filter-btn social-filter-btn active" onclick="setSocialPeriod(7,this)">Week</button>
