@@ -138,3 +138,36 @@ alter table device_activity_logs enable row level security;
 create policy "Own device sleep logs"    on device_sleep_logs    for all using (auth.uid() = user_id);
 create policy "Own device stress logs"   on device_stress_logs   for all using (auth.uid() = user_id);
 create policy "Own device activity logs" on device_activity_logs for all using (auth.uid() = user_id);
+
+-- Daily vitals rollup: everything the watch measures that isn't already covered
+-- above (sleep, stress index/HRV/resting-HR, steps/energy). Same source/pattern
+-- as the other device_* tables -- written by the healthypi-track sync tool only.
+create table if not exists device_vitals_logs (
+  id                uuid    default gen_random_uuid() primary key,
+  user_id           uuid    references auth.users not null,
+  date              text    not null,
+  date_ts           bigint  not null,
+  hr_avg            numeric,
+  hr_min            numeric,
+  hr_max            numeric,
+  spo2_avg          numeric,
+  spo2_min          numeric,
+  skin_temp_avg     numeric,
+  skin_temp_min     numeric,
+  skin_temp_max     numeric,
+  skin_temp_dev_avg numeric,
+  bp_systolic_avg   numeric,
+  bp_diastolic_avg  numeric,
+  bp_reading_count  integer,
+  ecg_hr_avg        numeric,
+  hrv_lfhf_avg      numeric,
+  hrv_mean_rr_avg   numeric,
+  hrv_coverage_avg  numeric,
+  eda_scl_avg       numeric,
+  eda_scr_rate_avg  numeric,
+  source            text default 'healthypi_move',
+  unique (user_id, date)
+);
+
+alter table device_vitals_logs enable row level security;
+create policy "Own device vitals logs" on device_vitals_logs for all using (auth.uid() = user_id);
