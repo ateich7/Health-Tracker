@@ -860,6 +860,31 @@ div {
   flex: none;
 }
 
+/* Device page: 9 cards (sleep/stress/activity + 6 vitals charts) can't each get
+   an equal 1/9th of a fixed viewport height (.page .card's default flex:1) --
+   that squeezes every chart below its chart-container's min-height, causing
+   the distorted/overlapping layout. Give cards their natural height instead,
+   same override already used for #page-home, and let the page grow + the
+   existing .page-content overflow-y:auto scroll it. flex:0 0 auto matches the
+   mobile breakpoint's own card override below, so it's safe unscoped; the
+   explicit chart-container height is desktop-only (min-width: 769px) so it
+   can't win over the mobile block's 220px via #id > .class specificity. */
+#page-device.active {
+  height: auto;
+  min-height: 100%;
+}
+
+#page-device .card {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 769px) {
+  #page-device .chart-container {
+    flex: none;
+    height: 280px;
+  }
+}
+
 .wh-bottom-row {
   display: flex;
   flex-direction: row;
