@@ -76,3 +76,65 @@ create policy "Own social logs" on social_logs for all using (auth.uid() = user_
 -- Migration for existing social_logs tables (added tiers 5 & 6: extreme/real stakes)
 -- alter table social_logs add column if not exists extreme_stakes integer default 0;
 -- alter table social_logs add column if not exists real_stakes integer default 0;
+
+-- Device sync tables (HealthyPi Move)
+-- These are populated by a separate Python sync tool that talks to the HealthyPi
+-- Move watch over Bluetooth, computes nightly sleep scores/stages, daily stress
+-- summaries, and daily activity rollups, and pushes them here. This app only
+-- reads from these tables (Device page) — there is no logging UI for them here.
+create table if not exists device_sleep_logs (
+  id                uuid    default gen_random_uuid() primary key,
+  user_id           uuid    references auth.users not null,
+  date              text    not null,
+  date_ts           bigint  not null,  -- local-midnight epoch seconds for `date`; sort/order by this, not `date` (text "M/D/YYYY" sorts lexicographically, not chronologically)
+  start_ts          bigint  not null,
+  end_ts            bigint  not null,
+  duration_minutes  numeric not null,
+  efficiency        numeric not null,
+  light_minutes     numeric not null,
+  deep_minutes      numeric not null,
+  rem_minutes       numeric not null,
+  wake_minutes      numeric not null,
+  score             numeric not null,
+  duration_score    numeric,
+  efficiency_score  numeric,
+  restorative_score numeric,
+  consistency_score numeric,
+  disturbance_score numeric,
+  source            text default 'healthypi_move',
+  unique (user_id, date)
+);
+
+create table if not exists device_stress_logs (
+  id            uuid    default gen_random_uuid() primary key,
+  user_id       uuid    references auth.users not null,
+  date          text    not null,
+  date_ts       bigint  not null,  -- see device_sleep_logs.date_ts comment
+  avg_stress    numeric,
+  max_stress    numeric,
+  avg_hrv_rmssd numeric,
+  avg_hrv_sdnn  numeric,
+  resting_hr    numeric,
+  sample_count  integer,
+  source        text default 'healthypi_move',
+  unique (user_id, date)
+);
+
+create table if not exists device_activity_logs (
+  id            uuid    default gen_random_uuid() primary key,
+  user_id       uuid    references auth.users not null,
+  date          text    not null,
+  date_ts       bigint  not null,  -- see device_sleep_logs.date_ts comment
+  steps         integer,
+  active_energy numeric,
+  source        text default 'healthypi_move',
+  unique (user_id, date)
+);
+
+alter table device_sleep_logs    enable row level security;
+alter table device_stress_logs   enable row level security;
+alter table device_activity_logs enable row level security;
+
+create policy "Own device sleep logs"    on device_sleep_logs    for all using (auth.uid() = user_id);
+create policy "Own device stress logs"   on device_stress_logs   for all using (auth.uid() = user_id);
+create policy "Own device activity logs" on device_activity_logs for all using (auth.uid() = user_id);

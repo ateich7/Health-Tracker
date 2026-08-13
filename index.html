@@ -87,6 +87,10 @@
           </div>
           <span>Social</span>
         </div>
+        <div class="nav-item" data-page="device" onclick="showPage('device')">
+          <span class="material-icons">watch</span>
+          <span>Device</span>
+        </div>
         <div class="nav-item nav-migrate" onclick="migrateLocalData()">
           <span class="material-icons">upload</span>
           <span>Migrate Data</span>
@@ -382,6 +386,31 @@
           </div>
         </div>
 
+        <!-- Device (read-only dashboard for data synced by the HealthyPi Move Python tool) -->
+        <div id="page-device" class="page">
+          <div class="card">
+            <h2>Device Sleep</h2>
+            <div class="chart-container">
+              <canvas id="deviceSleepChart"></canvas>
+              <p class="empty-state device-chart-empty" id="deviceSleepEmpty" style="display:none;">No device data synced yet.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Device Stress</h2>
+            <div class="chart-container">
+              <canvas id="deviceStressChart"></canvas>
+              <p class="empty-state device-chart-empty" id="deviceStressEmpty" style="display:none;">No device data synced yet.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Device Activity</h2>
+            <div class="chart-container">
+              <canvas id="deviceActivityChart"></canvas>
+              <p class="empty-state device-chart-empty" id="deviceActivityEmpty" style="display:none;">No device data synced yet.</p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -418,6 +447,10 @@
           <span class="task-dot"></span>
         </div>
         <span>Social</span>
+      </div>
+      <div class="bottom-nav-item" data-page="device" onclick="showPage('device')">
+        <span class="material-icons">watch</span>
+        <span>Device</span>
       </div>
     </nav>
   </div>

@@ -21,7 +21,7 @@ package.json        — scripts for building and deploying
 assets/             — app icons
 ```
 
-## Supabase schema (5 tables, all with RLS — users see only their own rows)
+## Supabase schema (9 tables, all with RLS — users see only their own rows)
 | Table | Key columns |
 |---|---|
 | `weight_logs` | `user_id, date, weight, timestamp` — unique on `(user_id, date)` |
@@ -29,8 +29,14 @@ assets/             — app icons
 | `workout_logs` | `user_id, date, exercises` (JSONB array) — unique on `(user_id, date)` |
 | `custom_exercises` | `user_id, name, is_lift, is_run` — unique on `(user_id, name)` |
 | `psych_logs` | `user_id, date, confidence, stress, low, release` — unique on `(user_id, date)` |
+| `social_logs` | `user_id, date`, one integer column per stakes tier — unique on `(user_id, date)` |
+| `device_sleep_logs` | `user_id, date, date_ts, start_ts, end_ts`, stage minutes, `score` + sub-scores — unique on `(user_id, date)` |
+| `device_stress_logs` | `user_id, date, date_ts, avg_stress, max_stress, avg_hrv_rmssd, avg_hrv_sdnn, resting_hr` — unique on `(user_id, date)` |
+| `device_activity_logs` | `user_id, date, date_ts, steps, active_energy` — unique on `(user_id, date)` |
 
 All upserts use `onConflict: 'user_id,date'` (or `user_id,name`) so re-logging a day overwrites rather than duplicates.
+
+The three `device_*` tables are **read-only from this app's perspective** — they're written by a separate Python BLE sync tool ([`healthypi-track`](../healthypi-track), for the ProtoCentral HealthyPi Move watch), not by any UI here. Their `date` column matches every other table's `M/D/YYYY` (`toLocaleDateString()`) text format, but ordering/sorting must use the numeric `date_ts` column instead — `date` sorts lexicographically, not chronologically, and none of these three tables has the `timestamp` bigint column other tables use for that purpose.
 
 ## Key architectural patterns
 
@@ -39,8 +45,11 @@ All upserts use `onConflict: 'user_id,date'` (or `user_id,name`) so re-logging a
 
 ### Data flow
 1. `initApp()` is called once (guarded by `appInitialized` flag) when Supabase auth state confirms a session
-2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `workoutData`, `psychData`, `customExercises`)
+2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `workoutData`, `psychData`, `customExercises`, `deviceSleepData`, `deviceStressData`, `deviceActivityData`)
 3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
+
+### Device page
+Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the three `device_*` tables — no logging UI, since an external tool writes them. Each of its three charts goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows.
 
 ### Chip / task-completion state
 Each tab (sleep, signals, workout, social — both sidebar `.nav-item` and mobile `.bottom-nav-item`) has a `.task-dot` on its icon that signals the task is *not yet* done today; it disappears once `toggleTask()` adds `.completed` to the chip. Workout is only needed Mon/Wed/Fri, so `loadData()` adds `.no-task-today` to the workout chip/tab on other days to hide its dot regardless of completion. The standalone Codes button (Signals page) is unrelated to tabs and still uses the old `.chip-check` checkmark, shown when logged.

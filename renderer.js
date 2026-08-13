@@ -10,6 +10,11 @@ let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 let socialData  = [];   // rows from social_logs
 
+// Read-only: written by the separate HealthyPi Move Python sync tool, never by this app
+let deviceSleepData    = []; // rows from device_sleep_logs
+let deviceStressData   = []; // rows from device_stress_logs
+let deviceActivityData = []; // rows from device_activity_logs
+
 const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes', 'extreme_stakes', 'real_stakes'];
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
@@ -30,6 +35,9 @@ let sleepChart          = null;
 let signalsChart        = null;
 let signalsReleaseChart = null;
 let socialChart         = null;
+let deviceSleepChart    = null;
+let deviceStressChart   = null;
+let deviceActivityChart = null;
 
 let currentUser        = null; // Supabase user object, set after sign-in
 let editingWorkoutDate = null; // non-null while editing a past workout; logWorkout() saves to this date
@@ -119,6 +127,7 @@ function showPage(name) {
   else if (name === 'workout') updateExerciseChart();
   else if (name === 'signals') updateSignalsChart();
   else if (name === 'social') updateSocialChart();
+  else if (name === 'device') updateDeviceCharts();
 }
 
 // Pure DOM page-switch: shows the right .page div and highlights the nav item.
@@ -147,19 +156,28 @@ async function deleteWorkoutEntry(date) {
 // Fetches all data from Supabase, rebuilds the localStorage workout cache,
 // marks today's chips complete, and triggers the initial UI render
 async function loadData() {
-  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes] = await Promise.all([
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes,
+         deviceSleepRes, deviceStressRes, deviceActivityRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('workout_logs').select('*').eq('user_id', currentUser.id),
     db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
     db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
-    db.from('social_logs').select('*').eq('user_id', currentUser.id)
+    db.from('social_logs').select('*').eq('user_id', currentUser.id),
+    // Read-only: populated by the separate HealthyPi Move sync tool, not by this app
+    db.from('device_sleep_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
+    db.from('device_stress_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
+    db.from('device_activity_logs').select('*').eq('user_id', currentUser.id).order('date_ts')
   ]);
 
   weightData = weightsRes.data || [];
   sleepData  = sleepsRes.data  || [];
   psychData  = psychRes.data   || [];
   socialData = socialRes.data  || [];
+
+  deviceSleepData    = deviceSleepRes.data    || [];
+  deviceStressData   = deviceStressRes.data   || [];
+  deviceActivityData = deviceActivityRes.data || [];
 
   workoutLogs = workoutsRes.data || [];
 
@@ -334,6 +352,7 @@ function updateUI() {
   else if (activePage === 'workout') updateExerciseChart();
   else if (activePage === 'signals') updateSignalsChart();
   else if (activePage === 'social') updateSocialChart();
+  else if (activePage === 'device') updateDeviceCharts();
 }
 
 // Updates the two weight stat boxes. Uses the same period slice as the chart so
@@ -2291,3 +2310,242 @@ function updateSocialChart() {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DEVICE (HealthyPi Move)
+// Read-only dashboard for device_sleep_logs / device_stress_logs / device_activity_logs,
+// which are written by a separate Python sync tool over Bluetooth — never by this app.
+// Each chart shows a small "no device data synced yet" message instead of an
+// empty canvas when its table has no rows for this user.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Shared helper: toggles the canvas/empty-state pair for a Device chart, then
+// (if there's data) hands off to buildFn to actually construct the Chart.js instance.
+function renderDeviceChart(dataArr, canvasId, emptyId, buildFn) {
+  const canvas  = document.getElementById(canvasId);
+  const emptyEl = document.getElementById(emptyId);
+  if (!canvas) return null;
+
+  if (!dataArr || dataArr.length === 0) {
+    canvas.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return null;
+  }
+
+  canvas.style.display = 'block';
+  if (emptyEl) emptyEl.style.display = 'none';
+  return buildFn();
+}
+
+function updateDeviceCharts() {
+  updateDeviceSleepChart();
+  updateDeviceStressChart();
+  updateDeviceActivityChart();
+}
+
+// Stacked bar of sleep stage minutes (light/deep/rem/wake) with the 0-100 sleep
+// score overlaid as a line on a secondary axis.
+function updateDeviceSleepChart() {
+  if (deviceSleepChart) { deviceSleepChart.destroy(); deviceSleepChart = null; }
+
+  deviceSleepChart = renderDeviceChart(deviceSleepData, 'deviceSleepChart', 'deviceSleepEmpty', () => {
+    const isMobile = window.innerWidth <= 768;
+    const chartData = [...deviceSleepData]
+      .sort((a, b) => a.date_ts - b.date_ts)
+      .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
+
+    const ctx = document.getElementById('deviceSleepChart').getContext('2d');
+    return new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(d => d.x),
+        datasets: [
+          {
+            label: 'Light', data: chartData.map(d => d.light_minutes),
+            backgroundColor: 'rgba(100, 210, 255, 0.75)', stack: 'sleep', yAxisID: 'y1'
+          },
+          {
+            label: 'Deep', data: chartData.map(d => d.deep_minutes),
+            backgroundColor: 'rgba(94, 92, 230, 0.85)', stack: 'sleep', yAxisID: 'y1'
+          },
+          {
+            label: 'REM', data: chartData.map(d => d.rem_minutes),
+            backgroundColor: 'rgba(52, 199, 89, 0.75)', stack: 'sleep', yAxisID: 'y1'
+          },
+          {
+            label: 'Wake', data: chartData.map(d => d.wake_minutes),
+            backgroundColor: 'rgba(255, 107, 107, 0.75)', stack: 'sleep', yAxisID: 'y1'
+          },
+          {
+            type: 'line',
+            label: 'Sleep Score',
+            data: chartData.map(d => d.score),
+            borderColor: '#FF9500',
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            fill: false,
+            pointRadius: 3,
+            borderWidth: 2,
+            yAxisID: 'y2'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: '#FFFFFF', display: !isMobile },
+            grid: { color: 'rgba(250,250,250,0.4)' }
+          },
+          y1: {
+            type: 'linear',
+            position: 'left',
+            stacked: true,
+            beginAtZero: true,
+            ticks: { color: '#c4cad4', display: !isMobile },
+            grid: { color: 'rgba(250,250,250,0.4)' },
+            title: { display: !isMobile, text: 'Minutes', color: '#c4cad4' }
+          },
+          y2: {
+            type: 'linear',
+            position: 'right',
+            min: 0,
+            max: 100,
+            ticks: { color: '#FF9500', display: !isMobile },
+            grid: { display: false },
+            title: { display: !isMobile, text: 'Score', color: '#FF9500' }
+          }
+        }
+      }
+    });
+  });
+}
+
+// Line chart of average (solid) and max (dashed, lighter) stress over time.
+function updateDeviceStressChart() {
+  if (deviceStressChart) { deviceStressChart.destroy(); deviceStressChart = null; }
+
+  deviceStressChart = renderDeviceChart(deviceStressData, 'deviceStressChart', 'deviceStressEmpty', () => {
+    const isMobile = window.innerWidth <= 768;
+    const chartData = [...deviceStressData]
+      .sort((a, b) => a.date_ts - b.date_ts)
+      .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
+
+    const hasMax = chartData.some(d => d.max_stress != null);
+    const datasets = [{
+      label: 'Avg Stress',
+      data: chartData.map(d => d.avg_stress),
+      borderColor: '#FF6B6B',
+      backgroundColor: 'rgba(255, 107, 107, 0.15)',
+      tension: 0.3,
+      fill: true
+    }];
+    if (hasMax) {
+      datasets.push({
+        label: 'Max Stress',
+        data: chartData.map(d => d.max_stress),
+        borderColor: 'rgba(255, 107, 107, 0.5)',
+        backgroundColor: 'transparent',
+        borderDash: [5, 4],
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false
+      });
+    }
+
+    const ctx = document.getElementById('deviceStressChart').getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: { labels: chartData.map(d => d.x), datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#FFFFFF', display: !isMobile },
+            grid: { color: 'rgba(250,250,250,0.4)' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#c4cad4' },
+            grid: { color: 'rgba(250,250,250,0.4)' }
+          }
+        }
+      }
+    });
+  });
+}
+
+// Bar chart of daily steps with a 7-day moving average overlay (same convention
+// used for weight/sleep/signals elsewhere in the app).
+function updateDeviceActivityChart() {
+  if (deviceActivityChart) { deviceActivityChart.destroy(); deviceActivityChart = null; }
+
+  deviceActivityChart = renderDeviceChart(deviceActivityData, 'deviceActivityChart', 'deviceActivityEmpty', () => {
+    const isMobile = window.innerWidth <= 768;
+    const chartData = [...deviceActivityData]
+      .sort((a, b) => a.date_ts - b.date_ts)
+      .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), steps: e.steps }));
+
+    const windowSize = 7;
+    const maSteps = chartData.map((_, i) => {
+      const slice = chartData.slice(Math.max(0, i - windowSize + 1), i + 1).filter(p => p.steps != null);
+      if (!slice.length) return null;
+      return Math.round(slice.reduce((s, p) => s + p.steps, 0) / slice.length);
+    });
+
+    const ctx = document.getElementById('deviceActivityChart').getContext('2d');
+    return new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(d => d.x),
+        datasets: [
+          {
+            label: 'Steps',
+            data: chartData.map(d => d.steps),
+            backgroundColor: 'rgba(0, 136, 255, 0.6)'
+          },
+          {
+            type: 'line',
+            label: 'Steps (7-day avg)',
+            data: maSteps,
+            borderColor: '#FF9500',
+            backgroundColor: 'transparent',
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0,
+            borderWidth: 3,
+            borderDash: [6, 4],
+            clip: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#FFFFFF', display: !isMobile },
+            grid: { color: 'rgba(250,250,250,0.4)' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#c4cad4' },
+            grid: { color: 'rgba(250,250,250,0.4)' }
+          }
+        }
+      }
+    });
+  });
+}
