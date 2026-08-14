@@ -2596,12 +2596,13 @@ function deviceVitalsChartData() {
     .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
 }
 
-// Epoch-seconds cutoff for deviceHrRange's sub-day options; 'week' doesn't call
-// this -- it stays on deviceVitalsData's daily rollup, already loaded.
+// Epoch-seconds cutoff for deviceHrRange's intraday options; 'week' doesn't
+// call this -- it stays on deviceVitalsData's daily rollup, already loaded.
 function deviceHrRangeCutoff(range) {
   const now = new Date();
   if (range === 'hour') return Math.floor(now.getTime() / 1000) - 3600;
   if (range === '5h')   return Math.floor(now.getTime() / 1000) - 5 * 3600;
+  if (range === '24h')  return Math.floor(now.getTime() / 1000) - 24 * 3600;
   if (range === 'today') {
     const midnight = new Date(now);
     midnight.setHours(0, 0, 0, 0);
