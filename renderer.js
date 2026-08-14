@@ -22,6 +22,9 @@ let deviceVitalsData   = []; // rows from device_vitals_logs (HR, SpO2, skin tem
 // other three ranges only ever need a slice of the last day.
 let deviceHrRange = 'week';
 
+// Same pattern as deviceHrRange, backed by device_skin_temp_samples instead.
+let deviceSkinTempRange = 'week';
+
 const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes', 'extreme_stakes', 'real_stakes'];
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
@@ -403,6 +406,13 @@ function setDeviceHrRange(range, btn) {
   document.querySelectorAll('.hr-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   updateDeviceHrChart();
+}
+
+function setDeviceSkinTempRange(range, btn) {
+  deviceSkinTempRange = range;
+  document.querySelectorAll('.skin-temp-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateDeviceSkinTempChart();
 }
 
 function setSleepPeriod(days, btn) {
@@ -2596,9 +2606,10 @@ function deviceVitalsChartData() {
     .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
 }
 
-// Epoch-seconds cutoff for deviceHrRange's intraday options; 'week' doesn't
-// call this -- it stays on deviceVitalsData's daily rollup, already loaded.
-function deviceHrRangeCutoff(range) {
+// Epoch-seconds cutoff for the Device page's intraday range filters (HR, skin
+// temp); 'week' doesn't call this -- it stays on deviceVitalsData's daily
+// rollup, already loaded.
+function deviceIntradayRangeCutoff(range) {
   const now = new Date();
   if (range === 'hour') return Math.floor(now.getTime() / 1000) - 3600;
   if (range === '5h')   return Math.floor(now.getTime() / 1000) - 5 * 3600;
@@ -2611,17 +2622,18 @@ function deviceHrRangeCutoff(range) {
   return null;
 }
 
-// device_hr_samples isn't in the eager loadData() fetch (a week of 1-minute
-// epochs is ~10k rows, and only this chart needs it) -- fetched on demand each
-// time a sub-day range is selected.
-async function fetchDeviceHrSamples(cutoffTs) {
-  const { data, error } = await db.from('device_hr_samples')
+// The intraday sample tables (device_hr_samples, device_skin_temp_samples)
+// aren't in the eager loadData() fetch (a week of samples is thousands of
+// rows, and only these two charts need them) -- fetched on demand each time a
+// sub-day range is selected.
+async function fetchDeviceIntradaySamples(table, cutoffTs) {
+  const { data, error } = await db.from(table)
     .select('*')
     .eq('user_id', currentUser.id)
     .gte('ts', cutoffTs)
     .order('ts');
   if (error) {
-    console.error('device_hr_samples fetch failed:', error);
+    console.error(`${table} fetch failed:`, error);
     return [];
   }
   return data || [];
@@ -2640,7 +2652,7 @@ async function updateDeviceHrChart() {
 
   let chartData;
   if (isIntraday) {
-    const rows = await fetchDeviceHrSamples(deviceHrRangeCutoff(deviceHrRange));
+    const rows = await fetchDeviceIntradaySamples('device_hr_samples', deviceIntradayRangeCutoff(deviceHrRange));
     chartData = [...rows]
       .sort((a, b) => a.ts - b.ts)
       .map(e => ({
@@ -2768,13 +2780,38 @@ function updateDeviceSpo2Chart() {
 }
 
 // Line chart of avg skin temp with a shaded min–max band, same treatment as
-// the Heart Rate chart above.
-function updateDeviceSkinTempChart() {
+// the Heart Rate chart above. 'week' plots deviceVitalsData's daily rollup
+// (min/max band included); the finer ranges plot intraday
+// device_skin_temp_samples instead, which only has one value per epoch (no
+// min/max pair), so the band is naturally absent there -- hasRange below
+// only turns on when min/max fields actually exist in chartData.
+async function updateDeviceSkinTempChart() {
   if (deviceSkinTempChart) { deviceSkinTempChart.destroy(); deviceSkinTempChart = null; }
 
-  deviceSkinTempChart = renderDeviceChart(deviceVitalsData, 'deviceSkinTempChart', 'deviceSkinTempEmpty', () => {
+  const isIntraday = deviceSkinTempRange !== 'week';
+  const emptyEl = document.getElementById('deviceSkinTempEmpty');
+
+  let chartData;
+  if (isIntraday) {
+    const rows = await fetchDeviceIntradaySamples('device_skin_temp_samples', deviceIntradayRangeCutoff(deviceSkinTempRange));
+    chartData = [...rows]
+      .sort((a, b) => a.ts - b.ts)
+      .map(e => ({
+        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        skin_temp_avg: e.skin_temp
+      }));
+    if (emptyEl) {
+      emptyEl.textContent = deviceVitalsData.length > 0
+        ? 'No skin temperature samples in this window yet.'
+        : 'No device data synced yet.';
+    }
+  } else {
+    chartData = deviceVitalsChartData();
+    if (emptyEl) emptyEl.textContent = 'No device data synced yet.';
+  }
+
+  deviceSkinTempChart = renderDeviceChart(chartData, 'deviceSkinTempChart', 'deviceSkinTempEmpty', () => {
     const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
 
     const hasRange = chartData.some(d => d.skin_temp_min != null || d.skin_temp_max != null);
     const datasets = [];
@@ -2793,7 +2830,9 @@ function updateDeviceSkinTempChart() {
     datasets.push({
       label: 'Avg Temp', data: chartData.map(d => d.skin_temp_avg),
       borderColor: '#FF9500', backgroundColor: 'transparent',
-      tension: 0.3, fill: false, pointRadius: 3, borderWidth: 2
+      tension: 0.3, fill: false,
+      pointRadius: isIntraday ? 0 : 3,
+      borderWidth: 2
     });
 
     const ctx = document.getElementById('deviceSkinTempChart').getContext('2d');
@@ -2808,7 +2847,7 @@ function updateDeviceSkinTempChart() {
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
+            ticks: { color: '#FFFFFF', display: !isMobile, maxRotation: 0, autoSkip: true },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {

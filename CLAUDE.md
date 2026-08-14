@@ -21,7 +21,7 @@ package.json        — scripts for building and deploying
 assets/             — app icons
 ```
 
-## Supabase schema (11 tables, all with RLS — users see only their own rows)
+## Supabase schema (12 tables, all with RLS — users see only their own rows)
 | Table | Key columns |
 |---|---|
 | `weight_logs` | `user_id, date, weight, timestamp` — unique on `(user_id, date)` |
@@ -34,11 +34,12 @@ assets/             — app icons
 | `device_stress_logs` | `user_id, date, date_ts, avg_stress, max_stress, avg_hrv_rmssd, avg_hrv_sdnn, resting_hr` — unique on `(user_id, date)` |
 | `device_activity_logs` | `user_id, date, date_ts, steps, active_energy` — unique on `(user_id, date)` |
 | `device_vitals_logs` | `user_id, date, date_ts`, HR range, SpO2, skin temp, BP, ECG HR, HRV extras, EDA (all nullable) — unique on `(user_id, date)` |
-| `device_hr_samples` | `user_id, ts, hr, hr_min, hr_max` — intraday (~1/min) HR epochs, not a daily rollup — unique on `(user_id, ts)`; powers the Device page HR chart's past-hour/5-hour/today filters |
+| `device_hr_samples` | `user_id, ts, hr, hr_min, hr_max` — intraday (~1/min) HR epochs, not a daily rollup — unique on `(user_id, ts)`; powers the Device page HR chart's past-hour/5-hour/today/24-hour filters |
+| `device_skin_temp_samples` | `user_id, ts, skin_temp` — intraday (~5/min) skin temp epochs, no min/max pair (one value per epoch) — unique on `(user_id, ts)`; same purpose as `device_hr_samples`, for the Skin Temperature chart |
 
 All upserts use `onConflict: 'user_id,date'` (or `user_id,name`) so re-logging a day overwrites rather than duplicates.
 
-The `device_*` tables are **read-only from this app's perspective** — they're written by a separate Python BLE sync tool ([`healthypi-track`](../healthypi-track), for the ProtoCentral HealthyPi Move watch), not by any UI here. The four daily-rollup tables' `date` column matches every other table's `M/D/YYYY` (`toLocaleDateString()`) text format, but ordering/sorting must use the numeric `date_ts` column instead — `date` sorts lexicographically, not chronologically, and none of these tables has the `timestamp` bigint column other tables use for that purpose. `device_hr_samples` is the one exception to the daily-rollup pattern: it's intraday (`ts`, raw epoch seconds, no `date`/`date_ts` at all), fetched on demand by the Device page's HR chart rather than eagerly in `loadData()`.
+The `device_*` tables are **read-only from this app's perspective** — they're written by a separate Python BLE sync tool ([`healthypi-track`](../healthypi-track), for the ProtoCentral HealthyPi Move watch), not by any UI here. The four daily-rollup tables' `date` column matches every other table's `M/D/YYYY` (`toLocaleDateString()`) text format, but ordering/sorting must use the numeric `date_ts` column instead — `date` sorts lexicographically, not chronologically, and none of these tables has the `timestamp` bigint column other tables use for that purpose. `device_hr_samples` and `device_skin_temp_samples` are the exceptions to the daily-rollup pattern: both are intraday (`ts`, raw epoch seconds, no `date`/`date_ts` at all), fetched on demand by their respective Device page charts rather than eagerly in `loadData()`.
 
 ## Key architectural patterns
 
@@ -51,7 +52,7 @@ The `device_*` tables are **read-only from this app's perspective** — they're 
 3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
 
 ### Device page
-Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the `device_*` tables — no logging UI, since an external tool writes them. Each chart goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows. The Heart Rate chart is the one exception with range filters (Past Hour / Past 5 Hours / Today / This Week, `setDeviceHrRange()`): "This Week" plots the eagerly-loaded `deviceVitalsData` daily rollup like every other chart, but the three sub-day ranges `await fetchDeviceHrSamples()` against `device_hr_samples` on click instead, since a day only has one rollup point to plot.
+Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the `device_*` tables — no logging UI, since an external tool writes them. Each chart goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows. Heart Rate and Skin Temperature are the two exceptions with range filters (Past Hour / Past 5 Hours / Today / Last 24 Hours / This Week, `setDeviceHrRange()` / `setDeviceSkinTempRange()`): "This Week" plots the eagerly-loaded `deviceVitalsData` daily rollup like every other chart, but the four intraday ranges `await fetchDeviceIntradaySamples(table, cutoffTs)` (shared helper, table name + `deviceIntradayRangeCutoff()` passed in) against `device_hr_samples` / `device_skin_temp_samples` on click instead, since a day only has one rollup point to plot. SpO2/BP/ECG/HRV/EDA/stress don't get this treatment — they're manual spot-checks or (for HRV/stress) currently produce zero samples, so there's no continuous stream to filter into sub-day ranges.
 
 ### Chip / task-completion state
 Each tab (sleep, signals, workout, social — both sidebar `.nav-item` and mobile `.bottom-nav-item`) has a `.task-dot` on its icon that signals the task is *not yet* done today; it disappears once `toggleTask()` adds `.completed` to the chip. Workout is only needed Mon/Wed/Fri, so `loadData()` adds `.no-task-today` to the workout chip/tab on other days to hide its dot regardless of completion. The standalone Codes button (Signals page) is unrelated to tabs and still uses the old `.chip-check` checkmark, shown when logged.

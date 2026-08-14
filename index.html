@@ -432,6 +432,13 @@
           </div>
           <div class="card">
             <h2>Device Skin Temperature</h2>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('hour', this)">Past Hour</button>
+              <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('5h', this)">Past 5 Hours</button>
+              <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('today', this)">Today</button>
+              <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('24h', this)">Last 24 Hours</button>
+              <button class="weight-filter-btn skin-temp-filter-btn active" onclick="setDeviceSkinTempRange('week', this)">This Week</button>
+            </div>
             <div class="chart-container">
               <canvas id="deviceSkinTempChart"></canvas>
               <p class="empty-state device-chart-empty" id="deviceSkinTempEmpty" style="display:none;">No device data synced yet.</p>
