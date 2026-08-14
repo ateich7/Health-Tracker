@@ -411,6 +411,12 @@
           </div>
           <div class="card">
             <h2>Device Heart Rate</h2>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('hour', this)">Past Hour</button>
+              <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('5h', this)">Past 5 Hours</button>
+              <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('today', this)">Today</button>
+              <button class="weight-filter-btn hr-filter-btn active" onclick="setDeviceHrRange('week', this)">This Week</button>
+            </div>
             <div class="chart-container">
               <canvas id="deviceHrChart"></canvas>
               <p class="empty-state device-chart-empty" id="deviceHrEmpty" style="display:none;">No device data synced yet.</p>

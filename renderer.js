@@ -16,6 +16,12 @@ let deviceStressData   = []; // rows from device_stress_logs
 let deviceActivityData = []; // rows from device_activity_logs
 let deviceVitalsData   = []; // rows from device_vitals_logs (HR, SpO2, skin temp, BP, ECG HR, HRV, EDA)
 
+// 'week' plots deviceVitalsData's daily rollup (already loaded above); the
+// finer ranges query device_hr_samples (~1/min HR epochs) on demand instead of
+// loading it eagerly, since a week of 1-minute samples is ~10k rows and the
+// other three ranges only ever need a slice of the last day.
+let deviceHrRange = 'week';
+
 const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes', 'extreme_stakes', 'real_stakes'];
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
@@ -390,6 +396,13 @@ function setWeightPeriod(days, btn) {
   btn.classList.add('active');
   updateWeightChart();
   updateStats();
+}
+
+function setDeviceHrRange(range, btn) {
+  deviceHrRange = range;
+  document.querySelectorAll('.hr-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateDeviceHrChart();
 }
 
 function setSleepPeriod(days, btn) {
@@ -2583,14 +2596,68 @@ function deviceVitalsChartData() {
     .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
 }
 
+// Epoch-seconds cutoff for deviceHrRange's sub-day options; 'week' doesn't call
+// this -- it stays on deviceVitalsData's daily rollup, already loaded.
+function deviceHrRangeCutoff(range) {
+  const now = new Date();
+  if (range === 'hour') return Math.floor(now.getTime() / 1000) - 3600;
+  if (range === '5h')   return Math.floor(now.getTime() / 1000) - 5 * 3600;
+  if (range === 'today') {
+    const midnight = new Date(now);
+    midnight.setHours(0, 0, 0, 0);
+    return Math.floor(midnight.getTime() / 1000);
+  }
+  return null;
+}
+
+// device_hr_samples isn't in the eager loadData() fetch (a week of 1-minute
+// epochs is ~10k rows, and only this chart needs it) -- fetched on demand each
+// time a sub-day range is selected.
+async function fetchDeviceHrSamples(cutoffTs) {
+  const { data, error } = await db.from('device_hr_samples')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .gte('ts', cutoffTs)
+    .order('ts');
+  if (error) {
+    console.error('device_hr_samples fetch failed:', error);
+    return [];
+  }
+  return data || [];
+}
+
 // Line chart of avg heart rate with a shaded min–max band (same "band + solid
-// avg line on top" treatment used for skin temp below).
-function updateDeviceHrChart() {
+// avg line on top" treatment used for skin temp below). 'week' plots
+// deviceVitalsData's daily rollup (one point/day, matching every other Device
+// chart); the finer ranges plot intraday device_hr_samples instead, since a
+// day only has one rollup point to show.
+async function updateDeviceHrChart() {
   if (deviceHrChart) { deviceHrChart.destroy(); deviceHrChart = null; }
 
-  deviceHrChart = renderDeviceChart(deviceVitalsData, 'deviceHrChart', 'deviceHrEmpty', () => {
+  const isIntraday = deviceHrRange !== 'week';
+  const emptyEl = document.getElementById('deviceHrEmpty');
+
+  let chartData;
+  if (isIntraday) {
+    const rows = await fetchDeviceHrSamples(deviceHrRangeCutoff(deviceHrRange));
+    chartData = [...rows]
+      .sort((a, b) => a.ts - b.ts)
+      .map(e => ({
+        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        hr_avg: e.hr, hr_min: e.hr_min, hr_max: e.hr_max
+      }));
+    if (emptyEl) {
+      emptyEl.textContent = deviceVitalsData.length > 0
+        ? 'No heart rate samples in this window yet.'
+        : 'No device data synced yet.';
+    }
+  } else {
+    chartData = deviceVitalsChartData();
+    if (emptyEl) emptyEl.textContent = 'No device data synced yet.';
+  }
+
+  deviceHrChart = renderDeviceChart(chartData, 'deviceHrChart', 'deviceHrEmpty', () => {
     const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
 
     const hasRange = chartData.some(d => d.hr_min != null || d.hr_max != null);
     const datasets = [];
@@ -2609,7 +2676,9 @@ function updateDeviceHrChart() {
     datasets.push({
       label: 'Avg HR', data: chartData.map(d => d.hr_avg),
       borderColor: '#FF6B6B', backgroundColor: 'transparent',
-      tension: 0.3, fill: false, pointRadius: 3, borderWidth: 2
+      tension: 0.3, fill: false,
+      pointRadius: isIntraday ? 0 : 3,
+      borderWidth: 2
     });
 
     const ctx = document.getElementById('deviceHrChart').getContext('2d');
@@ -2624,7 +2693,7 @@ function updateDeviceHrChart() {
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
+            ticks: { color: '#FFFFFF', display: !isMobile, maxRotation: 0, autoSkip: true },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {

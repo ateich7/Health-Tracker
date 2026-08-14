@@ -21,7 +21,7 @@ package.json        — scripts for building and deploying
 assets/             — app icons
 ```
 
-## Supabase schema (9 tables, all with RLS — users see only their own rows)
+## Supabase schema (11 tables, all with RLS — users see only their own rows)
 | Table | Key columns |
 |---|---|
 | `weight_logs` | `user_id, date, weight, timestamp` — unique on `(user_id, date)` |
@@ -33,10 +33,12 @@ assets/             — app icons
 | `device_sleep_logs` | `user_id, date, date_ts, start_ts, end_ts`, stage minutes, `score` + sub-scores — unique on `(user_id, date)` |
 | `device_stress_logs` | `user_id, date, date_ts, avg_stress, max_stress, avg_hrv_rmssd, avg_hrv_sdnn, resting_hr` — unique on `(user_id, date)` |
 | `device_activity_logs` | `user_id, date, date_ts, steps, active_energy` — unique on `(user_id, date)` |
+| `device_vitals_logs` | `user_id, date, date_ts`, HR range, SpO2, skin temp, BP, ECG HR, HRV extras, EDA (all nullable) — unique on `(user_id, date)` |
+| `device_hr_samples` | `user_id, ts, hr, hr_min, hr_max` — intraday (~1/min) HR epochs, not a daily rollup — unique on `(user_id, ts)`; powers the Device page HR chart's past-hour/5-hour/today filters |
 
 All upserts use `onConflict: 'user_id,date'` (or `user_id,name`) so re-logging a day overwrites rather than duplicates.
 
-The three `device_*` tables are **read-only from this app's perspective** — they're written by a separate Python BLE sync tool ([`healthypi-track`](../healthypi-track), for the ProtoCentral HealthyPi Move watch), not by any UI here. Their `date` column matches every other table's `M/D/YYYY` (`toLocaleDateString()`) text format, but ordering/sorting must use the numeric `date_ts` column instead — `date` sorts lexicographically, not chronologically, and none of these three tables has the `timestamp` bigint column other tables use for that purpose.
+The `device_*` tables are **read-only from this app's perspective** — they're written by a separate Python BLE sync tool ([`healthypi-track`](../healthypi-track), for the ProtoCentral HealthyPi Move watch), not by any UI here. The four daily-rollup tables' `date` column matches every other table's `M/D/YYYY` (`toLocaleDateString()`) text format, but ordering/sorting must use the numeric `date_ts` column instead — `date` sorts lexicographically, not chronologically, and none of these tables has the `timestamp` bigint column other tables use for that purpose. `device_hr_samples` is the one exception to the daily-rollup pattern: it's intraday (`ts`, raw epoch seconds, no `date`/`date_ts` at all), fetched on demand by the Device page's HR chart rather than eagerly in `loadData()`.
 
 ## Key architectural patterns
 
@@ -49,7 +51,7 @@ The three `device_*` tables are **read-only from this app's perspective** — th
 3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
 
 ### Device page
-Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the three `device_*` tables — no logging UI, since an external tool writes them. Each of its three charts goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows.
+Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the `device_*` tables — no logging UI, since an external tool writes them. Each chart goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows. The Heart Rate chart is the one exception with range filters (Past Hour / Past 5 Hours / Today / This Week, `setDeviceHrRange()`): "This Week" plots the eagerly-loaded `deviceVitalsData` daily rollup like every other chart, but the three sub-day ranges `await fetchDeviceHrSamples()` against `device_hr_samples` on click instead, since a day only has one rollup point to plot.
 
 ### Chip / task-completion state
 Each tab (sleep, signals, workout, social — both sidebar `.nav-item` and mobile `.bottom-nav-item`) has a `.task-dot` on its icon that signals the task is *not yet* done today; it disappears once `toggleTask()` adds `.completed` to the chip. Workout is only needed Mon/Wed/Fri, so `loadData()` adds `.no-task-today` to the workout chip/tab on other days to hide its dot regardless of completion. The standalone Codes button (Signals page) is unrelated to tabs and still uses the old `.chip-check` checkmark, shown when logged.
