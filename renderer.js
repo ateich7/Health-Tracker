@@ -38,6 +38,7 @@ const sleepLineToggles = {
 let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
+let exercisePeriodDays = 30; // how many logged entries the exercise chart shows; 0 = all time
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
@@ -138,8 +139,7 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); }
-  else if (name === 'workout') updateExerciseChart();
+  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); }
   else if (name === 'social') updateSocialChart();
   else if (name === 'device') updateDeviceCharts();
 }
@@ -371,8 +371,7 @@ function updateUI() {
   updateStats();
   updateStreaks();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); }
-  else if (activePage === 'workout') updateExerciseChart();
+  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); }
   else if (activePage === 'social') updateSocialChart();
   else if (activePage === 'device') updateDeviceCharts();
 }
@@ -424,6 +423,13 @@ function setSleepPeriod(days, btn) {
   document.querySelectorAll('.sleep-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   updateSleepChart();
+}
+
+function setExercisePeriod(days, btn) {
+  exercisePeriodDays = days;
+  document.querySelectorAll('.exercise-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateExerciseChart();
 }
 
 function toggleSleepLine(key, btn) {
@@ -564,30 +570,34 @@ function updateExerciseChart() {
       if (!exercise) return null;
 
       const [month, day] = date.split('/');
+      // workout_logs has no timestamp column (only the M/D/YYYY date string), so
+      // fullDate is kept around purely to sort chronologically below
+      const entry = { date: `${month}/${day}`, fullDate: new Date(date) };
 
       if (exerciseInfo?.isRun) {
         // For runs: distance and time
-        const totalDistance = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
-        const totalTime = exercise.sets.reduce((sum, set) => sum + (set[1] + (set[2] / 100) || 0), 0);
-        return { date: `${month}/${day}`, value1: totalDistance, value2: totalTime };
+        entry.value1 = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
+        entry.value2 = exercise.sets.reduce((sum, set) => sum + (set[1] + (set[2] / 100) || 0), 0);
       } else if (exerciseInfo?.isLift) {
         // For lifts: reps and weight
-        const totalReps = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
+        entry.value1 = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
         const weightSets = exercise.sets.filter(set => set[1] != null);
-        const avgWeight = weightSets.length > 0
+        entry.value2 = weightSets.length > 0
           ? weightSets.reduce((sum, set) => sum + (set[1] || 0), 0) / weightSets.length
           : 0;
-        return { date: `${month}/${day}`, value1: totalReps, value2: avgWeight };
       } else {
         // For bodyweight: just reps
-        const totalReps = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
-        return { date: `${month}/${day}`, value1: totalReps, value2: null };
+        entry.value1 = exercise.sets.reduce((sum, set) => sum + (set[0] || 0), 0);
+        entry.value2 = null;
       }
+      return entry;
     })
     .filter(Boolean)
-    .slice(-30);
+    .sort((a, b) => a.fullDate - b.fullDate);
 
-  if (chartData.length === 0) return;
+  const slicedData = exercisePeriodDays === 0 ? chartData : chartData.slice(-exercisePeriodDays);
+
+  if (slicedData.length === 0) return;
 
   const ctx = document.getElementById('exerciseChart').getContext('2d');
   const exerciseName = selectedExercise.charAt(0).toUpperCase() + selectedExercise.slice(1);
@@ -605,7 +615,7 @@ function updateExerciseChart() {
     // Distance and Time
     datasets.push({
       label: 'Distance (miles)',
-      data: chartData.map(d => d.value1),
+      data: slicedData.map(d => d.value1),
       borderColor: '#0088FF',
       backgroundColor: 'rgba(0, 136, 255, 0.2)',
       tension: 0.3,
@@ -614,7 +624,7 @@ function updateExerciseChart() {
     });
     datasets.push({
       label: 'Time (min.sec)',
-      data: chartData.map(d => d.value2),
+      data: slicedData.map(d => d.value2),
       borderColor: '#34C759',
       backgroundColor: 'rgba(52, 199, 89, 0.2)',
       tension: 0.3,
@@ -633,7 +643,7 @@ function updateExerciseChart() {
       type: 'linear',
       position: 'right',
       min: 0,
-      max: Math.max(...chartData.map(d => d.value2)) * 1.2,
+      max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
       ticks: { color: '#34C759' },
       grid: { display: false },
       title: { display: true, text: 'Time (min.sec)', color: '#34C759' }
@@ -642,7 +652,7 @@ function updateExerciseChart() {
     // Reps and Weight
     datasets.push({
       label: 'Total Reps',
-      data: chartData.map(d => d.value1),
+      data: slicedData.map(d => d.value1),
       borderColor: '#0088FF',
       backgroundColor: 'rgba(0, 136, 255, 0.2)',
       tension: 0.3,
@@ -651,7 +661,7 @@ function updateExerciseChart() {
     });
     datasets.push({
       label: 'Avg Weight (lbs)',
-      data: chartData.map(d => d.value2),
+      data: slicedData.map(d => d.value2),
       borderColor: '#34C759',
       backgroundColor: 'rgba(52, 199, 89, 0.2)',
       tension: 0.3,
@@ -670,7 +680,7 @@ function updateExerciseChart() {
       type: 'linear',
       position: 'right',
       min: 0,
-      max: Math.max(...chartData.map(d => d.value2)) * 1.2,
+      max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
       ticks: { color: '#34C759' },
       grid: { display: false },
       title: { display: true, text: 'Avg Weight (lbs)', color: '#34C759' }
@@ -679,7 +689,7 @@ function updateExerciseChart() {
     // Bodyweight only - single axis
     datasets.push({
       label: 'Total Reps',
-      data: chartData.map(d => d.value1),
+      data: slicedData.map(d => d.value1),
       borderColor: '#0088FF',
       backgroundColor: 'rgba(0, 136, 255, 0.2)',
       tension: 0.3,
@@ -695,7 +705,7 @@ function updateExerciseChart() {
   exerciseChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: chartData.map(d => d.date),
+      labels: slicedData.map(d => d.date),
       datasets: datasets
     },
     options: {

@@ -296,6 +296,23 @@
               <canvas id="signalsChart"></canvas>
             </div>
           </div>
+
+          <div class="card">
+            <h2 id="exName">Exercise Progress</h2>
+            <div class="input-group" style="margin-bottom: 1rem;">
+              <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
+              </select>
+            </div>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(7, this)">Week</button>
+              <button class="weight-filter-btn exercise-filter-btn active" onclick="setExercisePeriod(30, this)">Month</button>
+              <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(90, this)">3 Months</button>
+              <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(0, this)">All Time</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="exerciseChart"></canvas>
+            </div>
+          </div>
         </div>
 
         <!-- Social -->
@@ -399,16 +416,6 @@
             <div class="card" id="workoutHistoryCard">
               <h2>Workout History</h2>
               <div id="workoutHistory"></div>
-            </div>
-            <div class="card">
-              <h2 id="exName">Exercise Progress</h2>
-              <div class="input-group" style="margin-bottom: 1rem;">
-                <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
-                </select>
-              </div>
-              <div class="chart-container">
-                <canvas id="exerciseChart"></canvas>
-              </div>
             </div>
           </div>
         </div>
