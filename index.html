@@ -42,10 +42,27 @@
     <div class="app-header">
       <div class="stretcher">
         <h5 id="dateToday"></h5>
-        <div id="weather">
-          <p id="temp"></p>
-          <p id="desc"></p>
-          <p id="location"></p>
+        <div class="header-right">
+          <div id="weather">
+            <p id="temp"></p>
+            <p id="desc"></p>
+            <p id="location"></p>
+          </div>
+          <div class="header-menu">
+            <button class="header-menu-btn" onclick="toggleHeaderMenu()" title="Menu" aria-label="Menu">
+              <span class="material-icons">menu</span>
+            </button>
+            <div class="header-menu-dropdown" id="headerMenuDropdown">
+              <button class="header-menu-item" onclick="closeHeaderMenu(); migrateLocalData();">
+                <span class="material-icons">upload</span>
+                <span>Migrate Data</span>
+              </button>
+              <button class="header-menu-item" onclick="closeHeaderMenu(); signOut();">
+                <span class="material-icons">logout</span>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -81,14 +98,6 @@
           <span class="material-icons">watch</span>
           <span>Device</span>
         </div>
-        <div class="nav-item nav-migrate" onclick="migrateLocalData()">
-          <span class="material-icons">upload</span>
-          <span>Migrate Data</span>
-        </div>
-        <div class="nav-item nav-signout" onclick="signOut()">
-          <span class="material-icons">logout</span>
-          <span>Sign Out</span>
-        </div>
       </nav>
 
       <!-- Pages -->
@@ -109,7 +118,13 @@
           <div class="home-log-list">
             <div class="card home-log-card" id="weightChip">
               <h2>
-                <span class="material-icons log-card-icon" title="Weight">scale</span>
+                <svg class="log-card-icon" width="22" height="22" viewBox="0 0 24 24" title="Weight">
+                  <mask id="weightScaleMask">
+                    <rect x="3" y="3" width="18" height="18" rx="3" fill="white"/>
+                    <rect x="8" y="7" width="8" height="4" rx="1.5" fill="black"/>
+                  </mask>
+                  <rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" mask="url(#weightScaleMask)"/>
+                </svg>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
               <div class="input-group">
@@ -186,11 +201,6 @@
                 <button class="btn-primary inline-log-btn" onclick="logPsych()">Log</button>
               </div>
             </div>
-          </div>
-
-          <div class="mobile-only" style="gap:10px;">
-            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
-            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
           </div>
         </div>
 

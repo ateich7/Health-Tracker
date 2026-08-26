@@ -1204,6 +1204,18 @@ function openTaskLink(element) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HEADER MENU (Migrate Data / Sign Out) — hamburger dropdown, top-right of header
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toggleHeaderMenu() {
+  document.getElementById('headerMenuDropdown').classList.toggle('open');
+}
+
+function closeHeaderMenu() {
+  document.getElementById('headerMenuDropdown').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BOOTSTRAP — runs after DOM is ready
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1230,6 +1242,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('authScreen').style.display = 'flex';
   }
+
+  // Close the header menu on any click outside of it
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('headerMenuDropdown');
+    if (menu.classList.contains('open') && !e.target.closest('.header-menu')) {
+      menu.classList.remove('open');
+    }
+  });
 });
 
 

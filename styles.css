@@ -643,11 +643,6 @@ canvas {
   margin-bottom: 2px;
 }
 
-/* ─── Mobile-only elements (hidden on desktop) ───────────────────────────────── */
-.mobile-only {
-  display: none;
-}
-
 /* ── Bottom nav (hidden on desktop) ── */
 .bottom-nav {
   display: none;
@@ -713,6 +708,79 @@ canvas {
 #weather {
   display: flex;
   gap: var(--space8)
+}
+
+/* ─── Header menu (Migrate Data / Sign Out) ──────────────────────────────────── */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-menu {
+  position: relative;
+}
+
+.header-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--br);
+  background: var(--objbg);
+  color: var(--b);
+  cursor: pointer;
+}
+
+.header-menu-btn:hover {
+  background: var(--objbghov);
+}
+
+.header-menu-btn .material-icons {
+  font-size: 22px;
+}
+
+.header-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  flex-direction: column;
+  background: rgba(4, 14, 26, 0.97);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--br);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.header-menu-dropdown.open {
+  display: flex;
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+  color: var(--b);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header-menu-item:hover {
+  background: var(--objbghov);
+}
+
+.header-menu-item .material-icons {
+  font-size: 18px;
+  color: var(--bb);
 }
 
 div {
@@ -813,11 +881,6 @@ div {
 
 .nav-item .material-icons {
   font-size: 20px;
-}
-
-.nav-signout {
-  margin-top: auto;
-  color: var(--bb);
 }
 
 /* ─── Page content area ──────────────────────────────────────────────────────── */
@@ -1377,11 +1440,6 @@ div {
 
   .label-full { display: none; }
   .label-short { display: inline; }
-
-  /* Mobile-only elements */
-  .mobile-only {
-    display: flex !important;
-  }
 
   /* ── Workout form ── */
   .exercise {
