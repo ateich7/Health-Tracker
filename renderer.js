@@ -44,7 +44,6 @@ let weightChart         = null; // Chart.js instances — destroyed & rebuilt on
 let exerciseChart       = null;
 let sleepChart          = null;
 let signalsChart        = null;
-let signalsReleaseChart = null;
 let socialChart         = null;
 let deviceSleepChart    = null;
 let deviceStressChart   = null;
@@ -1016,11 +1015,10 @@ function togglePsychSick() {
   btn.classList.toggle('inactive', !nowActive);
 }
 
-// Signals: two charts — line chart for confidence/stress/low with 7-day MAs,
-// and a bar chart showing release/no-release days (green = released, red = no release)
+// Signals: a line chart for confidence/stress/low with 7-day MAs, plus a
+// left-to-right row of release-day dots (see renderReleaseDots)
 function updateSignalsChart() {
   if (signalsChart) signalsChart.destroy();
-  if (signalsReleaseChart) signalsReleaseChart.destroy();
 
   const chartData = psychData.slice(-signalsPeriodDays).map(e => ({
     x: e.date.split('/').slice(0, 2).join('/'),
@@ -1128,35 +1126,21 @@ function updateSignalsChart() {
     }
   });
 
-  const ctx2 = document.getElementById('signalsReleaseChart').getContext('2d');
-  signalsReleaseChart = new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'No Release',
-        data: chartData.map(d => d.released ? 0 : 1),
-        backgroundColor: chartData.map(d => d.released ? 'rgba(250,80,80,0.4)' : 'rgba(52,199,89,0.6)'),
-        borderColor: chartData.map(d => d.released ? 'rgba(250,80,80,0.6)' : '#34C759'),
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          display: false
-        },
-        y: {
-          min: 0, max: 1,
-          ticks: { color: '#c4cad4', stepSize: 1, callback: v => v === 1 ? 'No' : 'Yes', font: { size: 10 } },
-          grid: { color: 'rgba(250,250,250,0.2)' }
-        }
-      }
-    }
-  });
+  renderReleaseDots(chartData);
+}
+
+// Release days as a compact left-to-right row of dots instead of a chart —
+// filled green = no release that day, hollow red outline = released. Runs in
+// the same chronological (oldest→newest) order as every other chart's x-axis;
+// the row scrolls horizontally rather than growing taller when there are more
+// dots than fit (e.g. the 3 Months / All Time signals period filters).
+function renderReleaseDots(chartData) {
+  const row = document.getElementById('releaseDotRow');
+  if (!row) return;
+  row.innerHTML = chartData.map(d => {
+    const status = d.released ? 'Released' : 'No release';
+    return `<span class="release-dot${d.released ? ' released' : ''}" title="${d.x}: ${status}"></span>`;
+  }).join('');
 }
 
 // Marks a chip element (nav-item or home log card) as completed (or toggles it back)

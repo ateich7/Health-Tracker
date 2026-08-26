@@ -1587,17 +1587,31 @@ div {
 }
 
 /* ─── Signals (Home logging card + Data page charts) ────────────────────────── */
-.signals-release-chart-wrap {
-  flex: 1;
-  position: relative;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
+/* Release-day dots: left-to-right like every other chart's x-axis, but a
+   plain flex row of circles instead of a chart — much shorter than the bar
+   chart it replaced, and scrolls instead of growing taller when a wider
+   period filter (3 Months / All Time) puts more dots than fit on screen. */
+.release-dot-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
 }
 
-.signals-release-chart-wrap canvas {
-  width: 100% !important;
-  height: 100% !important;
+.release-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #34C759;
+  border: 2px solid #34C759;
+  flex-shrink: 0;
+}
+
+.release-dot.released {
+  background: transparent;
+  border-color: rgba(250, 80, 80, 0.8);
 }
 
 .page .signals-entry-card {
@@ -1764,12 +1778,6 @@ div {
 }
 
 #page-data .stats-grid {
-  margin-bottom: 16px;
-}
-
-#page-data .signals-release-chart-wrap {
-  flex: none;
-  height: 130px;
   margin-bottom: 16px;
 }
 
