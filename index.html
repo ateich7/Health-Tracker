@@ -59,19 +59,9 @@
           <span class="material-icons">home</span>
           <span>Home</span>
         </div>
-<div class="nav-item" id="sleepChip" data-page="sleep" onclick="showPage('sleep')">
-          <div class="icon-wrap">
-            <span class="material-icons">bedtime</span>
-            <span class="task-dot"></span>
-          </div>
-          <span>Sleep</span>
-        </div>
-        <div class="nav-item" id="signalsChip" data-page="signals" onclick="showPage('signals')">
-          <div class="icon-wrap">
-            <span class="material-icons">self_improvement</span>
-            <span class="task-dot"></span>
-          </div>
-          <span>Signals</span>
+        <div class="nav-item" data-page="data" onclick="showPage('data')">
+          <span class="material-icons">insights</span>
+          <span>Data</span>
         </div>
         <div class="nav-item" id="workoutChip" data-page="workout" onclick="showPage('workout')">
           <div class="icon-wrap">
@@ -118,50 +108,97 @@
               <div id="author"></div>
             </div>
           </div>
-          <div class="card home-weight-card">
-            <h2>Weight</h2>
-            <div class="weight-controls-row">
-              <div class="input-group">
-                <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
-                <button class="btn-primary" onclick="logWeight()">Log</button>
-              </div>
-              <div class="stats-grid">
-                <div class="stat-box blue">
-                  <div class="stat-label"><span class="label-full">Current</span><span class="label-short">Cur</span></div>
-                  <div class="stat-value blue" id="avgWeight">--</div>
-                </div>
-                <div class="stat-box blue">
-                  <div class="stat-label"><span class="label-full">Change</span><span class="label-short">Chg</span></div>
-                  <div class="stat-value blue" id="weightChange">--</div>
-                </div>
-              </div>
-              <div class="weight-filter-row">
-                <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
-                <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
-                <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
-                <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
-              </div>
-            </div>
-            <div class="chart-container">
-              <canvas id="weightChart"></canvas>
-            </div>
-          </div>
-          <div class="mobile-only" style="gap:10px;">
-            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
-            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
-          </div>
-        </div>
-
-        <!-- Sleep -->
-        <div id="page-sleep" class="page">
           <div class="card">
-            <h2>Sleep</h2>
+            <h2>Weight</h2>
+            <div class="input-group">
+              <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
+              <button class="btn-primary" onclick="logWeight()">Log</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 id="sleepChip">Sleep <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
             <div class="input-group" style="flex-wrap:wrap;">
               <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
               <input type="number" id="sleepTimeInBedInput" step="0.1" placeholder="Hours in Bed" onkeydown="if(event.key==='Enter')logSleep()">
               <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
               <button class="btn-primary" onclick="logSleep()">Log</button>
             </div>
+          </div>
+
+          <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
+            <span class="material-icons">notes</span>
+            <span>Codes</span>
+            <span class="chip-check material-icons" style="display:none;">check_circle</span>
+          </button>
+
+          <div class="card signals-entry-card">
+            <h2 id="signalsChip">Signals <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+            <div class="signals-inline-form">
+              <div class="signal-field">
+                <span class="signal-label">Confidence</span>
+                <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Stress</span>
+                <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Low</span>
+                <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
+              </div>
+              <div class="signal-field">
+                <span class="signal-label">Released</span>
+                <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
+                  <span class="switch-opt switch-no">No</span>
+                  <span class="switch-opt switch-yes">Yes</span>
+                </div>
+              </div>
+              <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
+            </div>
+          </div>
+
+          <div class="card meditation-card" id="meditationCard">
+            <div class="meditation-card-label">
+              <span class="material-icons">self_improvement</span>
+              <span>Meditation</span>
+            </div>
+            <button class="btn-primary meditation-done-btn" onclick="logMeditation()">Done</button>
+          </div>
+
+          <div class="mobile-only" style="gap:10px;">
+            <button class="btn-primary" style="flex:1;" onclick="migrateLocalData()">Migrate Data</button>
+            <button class="btn-primary" style="flex:1;" onclick="signOut()">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- Data (analysis dashboard: all charts, no logging UI) -->
+        <div id="page-data" class="page">
+          <div class="card">
+            <h2>Weight</h2>
+            <div class="stats-grid">
+              <div class="stat-box blue">
+                <div class="stat-label"><span class="label-full">Current</span><span class="label-short">Cur</span></div>
+                <div class="stat-value blue" id="avgWeight">--</div>
+              </div>
+              <div class="stat-box blue">
+                <div class="stat-label"><span class="label-full">Change</span><span class="label-short">Chg</span></div>
+                <div class="stat-value blue" id="weightChange">--</div>
+              </div>
+            </div>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="weightChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Sleep</h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn sleep-filter-btn" data-days="7" onclick="setSleepPeriod(7, this)">Week</button>
               <button class="weight-filter-btn sleep-filter-btn" data-days="14" onclick="setSleepPeriod(14, this)">2 Weeks</button>
@@ -198,55 +235,13 @@
               <canvas id="sleepChart"></canvas>
             </div>
           </div>
-        </div>
 
-        <!-- Signals -->
-        <div id="page-signals" class="page">
-          <div class="signals-top-bar">
-            <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
-              <span class="material-icons">notes</span>
-              <span>Codes</span>
-              <span class="chip-check material-icons" style="display:none;">check_circle</span>
-            </button>
-            <div class="card signals-release-card">
-              <p class="signals-chart-label">No-release days (last 30)</p>
-              <div class="signals-release-chart-wrap">
-                <canvas id="signalsReleaseChart"></canvas>
-              </div>
+          <div class="card">
+            <h2>Signals</h2>
+            <p class="signals-chart-label">No-release days (last 30)</p>
+            <div class="signals-release-chart-wrap">
+              <canvas id="signalsReleaseChart"></canvas>
             </div>
-          </div>
-          <div class="card signals-entry-card">
-            <div class="signals-inline-form">
-              <div class="signal-field">
-                <span class="signal-label">Confidence</span>
-                <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Stress</span>
-                <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Low</span>
-                <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Released</span>
-                <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
-                  <span class="switch-opt switch-no">No</span>
-                  <span class="switch-opt switch-yes">Yes</span>
-                </div>
-              </div>
-              <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
-            </div>
-          </div>
-          <div class="card meditation-card" id="meditationCard">
-            <div class="meditation-card-label">
-              <span class="material-icons">self_improvement</span>
-              <span>Meditation</span>
-            </div>
-            <button class="btn-primary meditation-done-btn" onclick="logMeditation()">Done</button>
-          </div>
-          <div class="card signals-chart-main">
             <p class="signals-chart-label">Scores</p>
             <div class="weight-filter-row signals-filter-row">
               <button class="weight-filter-btn signals-filter-btn" data-days="7" onclick="setSignalsPeriod(7, this)">Week</button>
@@ -476,12 +471,9 @@
         <span class="material-icons">home</span>
         <span>Home</span>
       </div>
-<div class="bottom-nav-item" data-page="sleep" onclick="showPage('sleep')">
-        <div class="icon-wrap">
-          <span class="material-icons">bedtime</span>
-          <span class="task-dot"></span>
-        </div>
-        <span>Sleep</span>
+      <div class="bottom-nav-item" data-page="data" onclick="showPage('data')">
+        <span class="material-icons">insights</span>
+        <span>Data</span>
       </div>
       <div class="bottom-nav-item" data-page="workout" onclick="showPage('workout')">
         <div class="icon-wrap">
@@ -489,13 +481,6 @@
           <span class="task-dot"></span>
         </div>
         <span>Workout</span>
-      </div>
-      <div class="bottom-nav-item" data-page="signals" onclick="showPage('signals')">
-        <div class="icon-wrap">
-          <span class="material-icons">self_improvement</span>
-          <span class="task-dot"></span>
-        </div>
-        <span>Signals</span>
       </div>
       <div class="bottom-nav-item" data-page="social" onclick="showPage('social')">
         <div class="icon-wrap">

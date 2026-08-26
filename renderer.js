@@ -138,10 +138,8 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'home') updateWeightChart();
-  else if (name === 'sleep') updateSleepChart();
+  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); }
   else if (name === 'workout') updateExerciseChart();
-  else if (name === 'signals') updateSignalsChart();
   else if (name === 'social') updateSocialChart();
   else if (name === 'device') updateDeviceCharts();
 }
@@ -365,10 +363,8 @@ function updateUI() {
   updateStats();
   updateStreaks();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'home') updateWeightChart();
-  else if (activePage === 'sleep') updateSleepChart();
+  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); }
   else if (activePage === 'workout') updateExerciseChart();
-  else if (activePage === 'signals') updateSignalsChart();
   else if (activePage === 'social') updateSocialChart();
   else if (activePage === 'device') updateDeviceCharts();
 }
@@ -938,7 +934,7 @@ async function logPsych() {
   psychData.sort((a, b) => a.timestamp - b.timestamp);
 
   updateSignalsChipState();
-  updateSignalsChart();
+  updateUI();
 }
 
 // Meditation: a dismiss-on-done card on the Signals page, separate from the
