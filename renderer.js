@@ -922,15 +922,16 @@ function updateSleepChart() {
   });
 }
 
-// Logs the psychological signals (confidence, stress, low mood, release toggle)
+// Logs the psychological signals (confidence, stress, low mood, release/sick toggles)
 async function logPsych() {
   const confidence = parseInt(document.getElementById('psychConfidence').value);
   const stress     = parseInt(document.getElementById('psychStress').value);
   const low        = parseInt(document.getElementById('psychLow').value);
   const released   = document.getElementById('psychRelease').classList.contains('active');
+  const sick       = document.getElementById('psychSick').classList.contains('active');
 
   const today = getToday();
-  const entry = { date: today, confidence, stress, low, released, timestamp: Date.now() };
+  const entry = { date: today, confidence, stress, low, released, sick, timestamp: Date.now() };
 
   await db.from('psych_logs').upsert(
     { user_id: currentUser.id, ...entry },
@@ -985,6 +986,14 @@ function updateSignalsChipState() {
 // Toggles the "Released yesterday?" switch between Yes/No
 function togglePsychRelease() {
   const btn = document.getElementById('psychRelease');
+  const nowActive = !btn.classList.contains('active');
+  btn.classList.toggle('active', nowActive);
+  btn.classList.toggle('inactive', !nowActive);
+}
+
+// Toggles the "Sick yesterday?" switch between Yes/No
+function togglePsychSick() {
+  const btn = document.getElementById('psychSick');
   const nowActive = !btn.classList.contains('active');
   btn.classList.toggle('active', nowActive);
   btn.classList.toggle('inactive', !nowActive);

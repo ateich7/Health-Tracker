@@ -1120,11 +1120,6 @@ div {
   padding: 16px 20px;
 }
 
-.home-top-row .card h2 {
-  margin-bottom: 10px;
-  font-size: 1.1em;
-}
-
 .home-top-row .streak-grid {
   grid-template-columns: repeat(4, 1fr);
 }

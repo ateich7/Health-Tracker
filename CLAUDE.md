@@ -28,7 +28,7 @@ assets/             — app icons
 | `sleep_logs` | `user_id, date, hours, rested, timestamp` — unique on `(user_id, date)` |
 | `workout_logs` | `user_id, date, exercises` (JSONB array) — unique on `(user_id, date)` |
 | `custom_exercises` | `user_id, name, is_lift, is_run` — unique on `(user_id, name)` |
-| `psych_logs` | `user_id, date, confidence, stress, low, release` — unique on `(user_id, date)` |
+| `psych_logs` | `user_id, date, confidence, stress, low, released, sick` — unique on `(user_id, date)` |
 | `social_logs` | `user_id, date`, one integer column per stakes tier — unique on `(user_id, date)` |
 | `device_sleep_logs` | `user_id, date, date_ts, start_ts, end_ts`, stage minutes, `score` + sub-scores — unique on `(user_id, date)` |
 | `device_stress_logs` | `user_id, date, date_ts, avg_stress, max_stress, avg_hrv_rmssd, avg_hrv_sdnn, resting_hr` — unique on `(user_id, date)` |

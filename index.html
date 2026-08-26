@@ -98,11 +98,9 @@
         <div id="page-home" class="page">
           <div class="home-top-row">
             <div class="card" id="streaksCard">
-              <h2>Streaks</h2>
               <div class="streak-grid" id="streaksGrid"></div>
             </div>
             <div class="card" id="quoteCard">
-              <h2>Quote</h2>
               <h5 id="quote"></h5>
               <div class="spacer"></div>
               <div id="author"></div>
@@ -148,7 +146,7 @@
 
             <div class="card signals-entry-card" id="signalsChip">
               <h2>
-                <span class="material-icons log-card-icon">psychology</span>
+                <span class="material-icons log-card-icon">sensors</span>
                 <span class="log-card-label">Signals</span>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
@@ -168,6 +166,13 @@
                 <div class="signal-field">
                   <span class="signal-label">Released</span>
                   <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
+                    <span class="switch-opt switch-no">No</span>
+                    <span class="switch-opt switch-yes">Yes</span>
+                  </div>
+                </div>
+                <div class="signal-field">
+                  <span class="signal-label">Sick</span>
+                  <div class="signal-switch inactive" id="psychSick" onclick="togglePsychSick()">
                     <span class="switch-opt switch-no">No</span>
                     <span class="switch-opt switch-yes">Yes</span>
                   </div>
