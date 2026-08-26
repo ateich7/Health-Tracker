@@ -929,18 +929,25 @@ div {
 
 /* ─── Sidebar navigation (desktop only; hidden on mobile) ────────────────────── */
 .sidebar {
-  width: 160px;
+  width: 64px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* Icon-only: no room for a text label at this width, so the label span (the
+   last direct child in every item — see markup) is hidden here rather than
+   removed, keeping the same nav-item markup mobile's bottom-nav also reuses. */
+.nav-item > span:last-child {
+  display: none;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
+  justify-content: center;
+  padding: 12px;
   border-radius: var(--br);
   background: var(--objbg);
   cursor: pointer;
@@ -1934,6 +1941,25 @@ div {
     grid-template-columns: repeat(2, 1fr);
     align-items: start;
     gap: 20px;
+  }
+
+  /* Weight and Sleep are the only two cards guaranteed to share a row (row 1) —
+     stretch just those to match the row's tallest so they read as a matched
+     pair, without affecting Signals/Exercise Progress below (see comment above:
+     Signals' extra stacked chart would otherwise force Exercise to stretch into
+     wasted whitespace). */
+  #page-data.active .card:nth-child(1),
+  #page-data.active .card:nth-child(2) {
+    align-self: stretch;
+  }
+
+  /* Let the extra stretched height become a taller chart instead of dead
+     whitespace below a fixed-height one (#page-data .chart-container is
+     flex:none/420px by default so charts read consistently everywhere else). */
+  #page-data.active .card:nth-child(1) .chart-container,
+  #page-data.active .card:nth-child(2) .chart-container {
+    flex: 1;
+    height: auto;
   }
 }
 

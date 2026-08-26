@@ -2474,12 +2474,23 @@ function updateSocialChart() {
   const labels = [];
   const series = SOCIAL_CATEGORIES.map(() => []);
 
+  // Index by calendar-day components (not the raw `date` string) so the lookup
+  // doesn't depend on this device's Intl locale matching the locale that wrote
+  // the row — a bare `toLocaleDateString()` string compare went blank on any
+  // phone whose default locale formats dates differently than the desktop that
+  // logged them (e.g. "26/8/2026" vs "8/26/2026" never matching).
+  const byDay = new Map();
+  socialData.forEach(row => {
+    const d = new Date(row.date);
+    if (isNaN(d)) return;
+    byDay.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, row);
+  });
+
   for (let i = socialDays - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString();
     labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    const row = socialData.find(r => r.date === dateStr) || {};
+    const row = byDay.get(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`) || {};
     SOCIAL_CATEGORIES.forEach((cat, catIdx) => series[catIdx].push(row[cat] || 0));
   }
 
