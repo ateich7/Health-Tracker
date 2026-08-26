@@ -143,6 +143,12 @@ function showPage(name) {
   // Refresh the chart(s) that just became visible
   if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); updateSocialChart(); }
   else if (name === 'device') updateDeviceCharts();
+  // #workoutHistory is 0-height while the page is hidden, so the fit-to-height
+  // pass renderWorkoutHistory() ran while loading data (before any page was
+  // switched to) measured nothing — ResizeObserver doesn't reliably catch an
+  // ancestor's display:none→flex transition, so re-run it explicitly now that
+  // activatePage() above has made the page's real height measurable.
+  else if (name === 'workout') fitWorkoutHistoryRows();
 }
 
 // Pure DOM page-switch: shows the right .page div and highlights the nav item.
@@ -1863,6 +1869,8 @@ function exerciseDefsFromHistory(historyExercises) {
 // WORKOUT HISTORY
 // ─────────────────────────────────────────────────────────────────────────────
 
+let workoutHistoryResizeObserver = null;
+
 // Renders the collapsible workout history list below the form
 function renderWorkoutHistory() {
   const container = document.getElementById('workoutHistory');
@@ -1901,20 +1909,79 @@ function renderWorkoutHistory() {
 
   const isDesktop = window.innerWidth > 768;
 
-  let html;
   if (isDesktop) {
-    html = sorted.map(renderRow).join('');
+    // Desktop: the card has a real flex-bound height (fills the row next to
+    // the workout form), so render every row and then measure how many
+    // actually fit — rather than either scrolling immediately (all rows) or
+    // leaving blank space below a short list. Whatever doesn't fit hides
+    // behind "Show More" instead.
+    container.innerHTML = sorted.map(renderRow).join('');
+    if (!workoutHistoryResizeObserver) {
+      workoutHistoryResizeObserver = new ResizeObserver(() => fitWorkoutHistoryRows());
+      workoutHistoryResizeObserver.observe(container);
+    }
+    fitWorkoutHistoryRows();
   } else {
+    // Mobile: the card is auto-height (the whole page scrolls, not the
+    // card), so "fill the available height" isn't a meaningful measurement
+    // here — keep the simple fixed preview-count pagination instead.
     const LIMIT   = 5;
     const preview = sorted.slice(0, LIMIT);
     const rest    = sorted.slice(LIMIT);
-    html = preview.map(renderRow).join('');
+    let html = preview.map(renderRow).join('');
     if (rest.length) {
       html += `<div id="whExtra" style="display:none;">${rest.map(renderRow).join('')}</div>`;
       html += `<button class="btn-primary wh-see-all-btn" onclick="toggleWorkoutHistoryAll(this)">See All</button>`;
     }
+    container.innerHTML = html;
   }
-  container.innerHTML = html;
+}
+
+// Hides whichever trailing .wh-row elements don't fit #workoutHistory's
+// actual (flex-bound) height and appends a "Show More" button reserving
+// space for itself — so the card fills with rows instead of scrolling or
+// sitting with blank space below a short list. Re-run by a ResizeObserver
+// whenever the container's size changes (window resize, layout reflow).
+function fitWorkoutHistoryRows() {
+  if (window.innerWidth <= 768) return; // mobile uses its own fixed-preview pagination
+  const container = document.getElementById('workoutHistory');
+  if (!container) return;
+
+  const oldBtn = container.querySelector('.wh-see-all-btn');
+  if (oldBtn) oldBtn.remove();
+
+  const rows = [...container.querySelectorAll(':scope > .wh-row')];
+  if (!rows.length) return;
+  rows.forEach(r => { r.style.display = ''; });
+
+  const available   = container.clientHeight;
+  const totalHeight = rows.reduce((sum, r) => sum + r.offsetHeight, 0);
+  if (totalHeight <= available) return; // everything already fits
+
+  // Add the button before measuring so its real rendered height (not a
+  // guess) is what gets reserved against the available space.
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary wh-see-all-btn';
+  btn.textContent = 'Show More';
+  container.appendChild(btn);
+  const btnStyle  = getComputedStyle(btn);
+  const btnHeight = btn.offsetHeight + parseFloat(btnStyle.marginTop || 0);
+
+  let used = 0;
+  let fitCount = 0;
+  for (const row of rows) {
+    if (used + row.offsetHeight + btnHeight > available) break;
+    used += row.offsetHeight;
+    fitCount++;
+  }
+  fitCount = Math.max(fitCount, 1); // always show at least one row
+
+  rows.slice(fitCount).forEach(r => { r.style.display = 'none'; });
+
+  btn.onclick = () => {
+    rows.slice(fitCount).forEach(r => { r.style.display = ''; });
+    btn.remove();
+  };
 }
 
 // Deletes a logged workout from history after confirmation, then syncs
