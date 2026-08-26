@@ -31,8 +31,28 @@
 
   <!-- Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <div class="loading-text">Loading your data...</div>
+    <div class="loading-scene">
+      <div class="loading-rings">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div class="loading-wordmark">Health Tracker</div>
+      <div class="loading-ecg-wrap">
+        <svg class="loading-ecg" viewBox="0 0 900 120" preserveAspectRatio="none" aria-hidden="true">
+          <g class="loading-ecg-group">
+            <path fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+              d="M0,60 L40,60 L55,45 L65,60 L75,60 L85,65 L95,10 L105,100 L115,60 L130,40 L145,60
+                 L190,60 L205,45 L215,60 L225,60 L235,65 L245,10 L255,100 L265,60 L280,40 L295,60
+                 L340,60 L355,45 L365,60 L375,60 L385,65 L395,10 L405,100 L415,60 L430,40 L445,60
+                 L490,60 L505,45 L515,60 L525,60 L535,65 L545,10 L555,100 L565,60 L580,40 L595,60
+                 L640,60 L655,45 L665,60 L675,60 L685,65 L695,10 L705,100 L715,60 L730,40 L745,60
+                 L900,60"/>
+          </g>
+        </svg>
+      </div>
+      <div class="loading-text">Loading your data<span class="loading-dots"><i></i><i></i><i></i></span></div>
+    </div>
   </div>
 
   <!-- Main Content -->
