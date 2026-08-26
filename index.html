@@ -108,62 +108,65 @@
               <div id="author"></div>
             </div>
           </div>
-          <div class="card">
-            <h2>Weight</h2>
-            <div class="input-group">
-              <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
-              <button class="btn-primary" onclick="logWeight()">Log</button>
+          <div class="home-log-list">
+            <div class="card home-log-card" id="weightChip">
+              <h2>Weight <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <div class="input-group">
+                <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
+                <button class="btn-primary" onclick="logWeight()">Log</button>
+              </div>
             </div>
-          </div>
 
-          <div class="card">
-            <h2 id="sleepChip">Sleep <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
-            <div class="input-group" style="flex-wrap:wrap;">
-              <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
-              <input type="number" id="sleepTimeInBedInput" step="0.1" placeholder="Hours in Bed" onkeydown="if(event.key==='Enter')logSleep()">
-              <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
-              <button class="btn-primary" onclick="logSleep()">Log</button>
+            <div class="card home-log-card" id="sleepChip">
+              <h2>Sleep <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <div class="input-group">
+                <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
+                <input type="number" id="sleepTimeInBedInput" step="0.1" placeholder="Hours in Bed" onkeydown="if(event.key==='Enter')logSleep()">
+                <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
+                <button class="btn-primary" onclick="logSleep()">Log</button>
+              </div>
             </div>
-          </div>
 
-          <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
-            <span class="material-icons">notes</span>
-            <span>Codes</span>
-            <span class="chip-check material-icons" style="display:none;">check_circle</span>
-          </button>
+            <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
+              <span class="material-icons">notes</span>
+              <span>Codes</span>
+              <span class="chip-check material-icons" style="display:none;">check_circle</span>
+            </button>
 
-          <div class="card signals-entry-card">
-            <h2 id="signalsChip">Signals <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
-            <div class="signals-inline-form">
-              <div class="signal-field">
-                <span class="signal-label">Confidence</span>
-                <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Stress</span>
-                <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Low</span>
-                <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
-              </div>
-              <div class="signal-field">
-                <span class="signal-label">Released</span>
-                <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
-                  <span class="switch-opt switch-no">No</span>
-                  <span class="switch-opt switch-yes">Yes</span>
+            <div class="card signals-entry-card" id="signalsChip">
+              <h2>Signals <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <div class="signals-inline-form">
+                <div class="signal-field">
+                  <span class="signal-label">Confidence</span>
+                  <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
                 </div>
+                <div class="signal-field">
+                  <span class="signal-label">Stress</span>
+                  <input type="number" class="signal-input" id="psychStress" min="0" max="10" value="5">
+                </div>
+                <div class="signal-field">
+                  <span class="signal-label">Low</span>
+                  <input type="number" class="signal-input" id="psychLow" min="0" max="10" value="5">
+                </div>
+                <div class="signal-field">
+                  <span class="signal-label">Released</span>
+                  <div class="signal-switch inactive" id="psychRelease" onclick="togglePsychRelease()">
+                    <span class="switch-opt switch-no">No</span>
+                    <span class="switch-opt switch-yes">Yes</span>
+                  </div>
+                </div>
+                <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
               </div>
-              <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
             </div>
-          </div>
 
-          <div class="card meditation-card" id="meditationCard">
-            <div class="meditation-card-label">
-              <span class="material-icons">self_improvement</span>
-              <span>Meditation</span>
+            <div class="card meditation-card" id="meditationCard">
+              <div class="meditation-card-label">
+                <span class="material-icons">self_improvement</span>
+                <span>Meditation</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </div>
+              <button class="btn-primary meditation-done-btn" onclick="logMeditation()">Done</button>
             </div>
-            <button class="btn-primary meditation-done-btn" onclick="logMeditation()">Done</button>
           </div>
 
           <div class="mobile-only" style="gap:10px;">

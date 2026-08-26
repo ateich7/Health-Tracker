@@ -212,6 +212,10 @@ async function loadData() {
   // Mark nav chips as complete for activities already logged today
   const today = getToday();
 
+  if (weightData.some(e => e.date === today)) {
+    const chip = document.getElementById('weightChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
   if (sleepData.some(e => e.date === today)) {
     const chip = document.getElementById('sleepChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
@@ -280,6 +284,8 @@ async function logWeight() {
   weightData.sort((a, b) => a.timestamp - b.timestamp);
 
   input.value = '';
+  const chip = document.getElementById('weightChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
   updateUI();
 }
 
@@ -314,8 +320,10 @@ async function logSleep() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHIP / TASK STATE
-// Nav items double as completion chips. toggleTask() flips the completed class
-// and syncs the green dot on the matching bottom-nav item (mobile).
+// Nav items (Workout, Social) and home log cards (Weight, Sleep, Codes, Signals,
+// Meditation) both double as completion chips. toggleTask() flips the completed
+// class, which syncs the matching bottom-nav dot (nav items) and, for home log
+// cards, sinks the card to the bottom of #page-home .home-log-list via CSS order.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // If localStorage records that this chip was already logged today, mark it complete
@@ -937,8 +945,9 @@ async function logPsych() {
   updateUI();
 }
 
-// Meditation: a dismiss-on-done card on the Signals page, separate from the
-// psych-log form. The Signals nav chip only completes once BOTH are done today.
+// Meditation: its own home card, separate from the psych-log form. Marking it
+// done today toggles the card to "completed" (same chip pattern as the other
+// home log cards), which sinks it to the bottom of the home log list.
 function logMeditation() {
   const today = getToday();
   localStorage.setItem('meditationLoggedDate', today);
@@ -948,7 +957,6 @@ function logMeditation() {
     localStorage.setItem('meditationDates', JSON.stringify(dates));
   }
   updateMeditationCard();
-  updateSignalsChipState();
   updateStreaks();
 }
 
@@ -956,7 +964,7 @@ function updateMeditationCard() {
   const card = document.getElementById('meditationCard');
   if (!card) return;
   const done = localStorage.getItem('meditationLoggedDate') === getToday();
-  card.classList.toggle('hidden', done);
+  if (card.classList.contains('completed') !== done) toggleTask(card);
 }
 
 // All dates the user has ever meditated on, used to compute the home page streak
@@ -964,15 +972,13 @@ function getMeditationDates() {
   return JSON.parse(localStorage.getItem('meditationDates') || '[]');
 }
 
-// Signals chip is only marked complete once today's psych log AND meditation
-// are both done; it un-completes if either isn't (e.g. on a fresh day).
+// Signals chip completes once today's psych log (confidence/stress/low) is
+// logged; it un-completes if it isn't (e.g. on a fresh day).
 function updateSignalsChipState() {
   const chip = document.getElementById('signalsChip');
   const today = getToday();
   const psychDone = psychData.some(e => e.date === today);
-  const meditationDone = localStorage.getItem('meditationLoggedDate') === today;
-  const shouldBeComplete = psychDone && meditationDone;
-  if (chip.classList.contains('completed') !== shouldBeComplete) toggleTask(chip);
+  if (chip.classList.contains('completed') !== psychDone) toggleTask(chip);
 }
 
 // Toggles the "Released yesterday?" switch between Yes/No
@@ -1126,7 +1132,7 @@ function updateSignalsChart() {
   });
 }
 
-// Marks a nav-item chip as completed (or toggles it back)
+// Marks a chip element (nav-item or home log card) as completed (or toggles it back)
 function toggleTask(chip) {
   const check = chip.querySelector('.chip-check');
   chip.classList.toggle('completed');

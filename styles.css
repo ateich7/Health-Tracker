@@ -1012,6 +1012,53 @@ div {
   max-width: none;
 }
 
+/* Log list: each card is a "chip" (see toggleTask) that logs one thing.
+   Completed cards sink to the bottom via flex order so only what's still
+   outstanding today floats to the top. */
+.home-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-log-list > .completed {
+  order: 1;
+  background: var(--s900);
+}
+
+.home-log-list > * {
+  transition: background 0.2s ease;
+}
+
+/* Card header inline with its input row, to keep each log card as short as
+   possible — headers sized down to match the streaks/quote card headers. */
+#page-home .home-log-card,
+#page-home .signals-entry-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+}
+
+#page-home .home-log-card h2,
+#page-home .signals-entry-card h2 {
+  margin-bottom: 0;
+  font-size: 1.1em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#page-home .home-log-card .input-group {
+  margin-bottom: 0;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+#page-home .signals-entry-card .signals-inline-form {
+  margin-bottom: 0;
+  flex: 1;
+}
+
 .home-top-row {
   display: flex;
   flex-direction: row;
@@ -1248,6 +1295,20 @@ div {
     max-width: 100%;
   }
 
+  /* Stack header above inputs again on narrow screens — inline only pays off
+     once there's room beside the field row */
+  #page-home .home-log-card,
+  #page-home .signals-entry-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  #page-home .home-log-card h2,
+  #page-home .signals-entry-card h2 {
+    white-space: normal;
+  }
+
   .home-top-row {
     flex-direction: column;
   }
@@ -1413,7 +1474,6 @@ div {
 
 .page .signals-entry-card {
   flex: 0 0 auto;
-  padding: 10px 20px;
 }
 
 .page .meditation-card {
@@ -1423,10 +1483,6 @@ div {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 20px;
-}
-
-.meditation-card.hidden {
-  display: none;
 }
 
 .meditation-card-label {
