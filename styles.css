@@ -1799,9 +1799,11 @@ div {
 }
 
 /* ─── Data page ──────────────────────────────────────────────────────────────
-   Like Device, a Data-page card can't each get an equal fraction of viewport
-   height (three full chart cards squeezed that way would be unreadable) — give
-   cards their natural height and let .page-content's overflow-y:auto scroll. */
+   Below the two-column grid breakpoint (see min-width:1200px further down),
+   cards stack in a single flex column — give them natural height here and let
+   .page-content's overflow-y:auto scroll, same as Device. The grid breakpoint
+   overrides both of these rules to force uniform, viewport-scale row heights
+   instead. */
 #page-data.active {
   height: auto;
   min-height: 100%;
@@ -1932,34 +1934,35 @@ div {
 }
 
 /* Desktop: two columns so Weight/Sleep/Signals/Exercise can be scanned and
-   compared without a long single-column scroll; each card sizes to its own
-   content (align-items:start) so the taller Signals card (two stacked charts)
-   doesn't stretch its shorter row partner. */
+   compared without a long single-column scroll. Every row is forced to the
+   same height — close to the full page-content viewport — regardless of a
+   card's own content, and align-items' default (stretch) makes each card
+   fill that row; grid-auto-rows needs the container's own height to be
+   definite for the percentage to resolve, hence height:100% below (this
+   intentionally overflows .page-content's box across multiple rows — that's
+   fine, .page-content's overflow-y:auto is what turns "row 2" etc into a
+   scroll rather than a squeeze). */
 @media (min-width: 1200px) {
   #page-data.active {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    align-items: start;
+    grid-auto-rows: 100%;
+    height: 100%;
     gap: 20px;
   }
 
-  /* Weight and Sleep are the only two cards guaranteed to share a row (row 1) —
-     stretch just those to match the row's tallest so they read as a matched
-     pair, without affecting Signals/Exercise Progress below (see comment above:
-     Signals' extra stacked chart would otherwise force Exercise to stretch into
-     wasted whitespace). */
-  #page-data.active .card:nth-child(1),
-  #page-data.active .card:nth-child(2) {
-    align-self: stretch;
-  }
+  /* Grid items ignore `flex`, so #page-data .card's flex:0 0 auto (which
+     correctly keeps cards natural-height in the <1200px single-column flex
+     layout) has no effect here — the stretch comes from align-items above.
+     min-height:0 (inherited from .page .card) is what lets the card actually
+     shrink/grow to the row track instead of floor-ing at its content size. */
 
-  /* Let the extra stretched height become a taller chart instead of dead
-     whitespace below a fixed-height one (#page-data .chart-container is
-     flex:none/420px by default so charts read consistently everywhere else). */
-  #page-data.active .card:nth-child(1) .chart-container,
-  #page-data.active .card:nth-child(2) .chart-container {
+  /* Charts fill whatever room is left in the stretched card after its header/
+     filter row, instead of the fixed 420px every other breakpoint uses. */
+  #page-data.active .chart-container {
     flex: 1;
     height: auto;
+    min-height: 200px;
   }
 }
 
