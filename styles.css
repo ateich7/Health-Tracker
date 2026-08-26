@@ -1645,9 +1645,11 @@ div {
   white-space: nowrap;
 }
 
+/* Sub-section label inside a Data-page card (e.g. "Scores" under the Signals
+   h2) — intentionally smaller than the card's own h2 so hierarchy reads clearly */
 .signals-chart-label {
   color: var(--h);
-  font-size: 1.5em;
+  font-size: 1em;
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -1665,16 +1667,68 @@ div {
   flex: 0 0 auto;
 }
 
+/* Tighter than the default .card's 30px, but only above the mobile breakpoint
+   — on mobile the shared .page .card{padding:16px} mobile rule (higher up in
+   this file) already handles it, and being an ID selector this would beat
+   it regardless of source order if left unscoped. */
+@media (min-width: 769px) {
+  #page-data .card {
+    padding: 24px;
+  }
+}
+
+/* Icon + title header, sized down from the default .card h2 to match Home's
+   icon-first header language instead of the generic oversized page title */
+#page-data h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25em;
+  margin-bottom: 16px;
+}
+
+.data-card-icon {
+  font-size: 20px;
+  color: var(--h);
+}
+
+#page-data .stats-grid {
+  margin-bottom: 16px;
+}
+
 #page-data .signals-release-chart-wrap {
   flex: none;
   height: 130px;
   margin-bottom: 16px;
 }
 
-@media (min-width: 769px) {
+/* Charts default to their natural (mobile) size; both breakpoints below size
+   them up so there's real room to read dense/all-time data, per card padding
+   tightened above to make room without growing the card itself as much */
+@media (min-width: 481px) {
   #page-data .chart-container {
     flex: none;
     height: 320px;
+  }
+}
+
+@media (min-width: 769px) {
+  #page-data .chart-container {
+    flex: none;
+    height: 420px;
+  }
+}
+
+/* Desktop: two columns so Weight/Sleep/Signals/Exercise can be scanned and
+   compared without a long single-column scroll; each card sizes to its own
+   content (align-items:start) so the taller Signals card (two stacked charts)
+   doesn't stretch its shorter row partner. */
+@media (min-width: 1200px) {
+  #page-data.active {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-items: start;
+    gap: 20px;
   }
 }
 
