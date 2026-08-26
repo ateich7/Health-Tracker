@@ -1290,10 +1290,6 @@ div {
     display: none;
   }
 
-  .chart-filter-btn {
-    display: flex;
-  }
-
   body {
     padding: 0;
     height: 100dvh;
@@ -1472,6 +1468,17 @@ div {
 
   .label-full { display: none; }
   .label-short { display: inline; }
+
+  /* Stat boxes (Weight card's Current/Change) are narrow on mobile (2-column
+     grid inside a card with limited width) — shrink the value text so e.g.
+     "178.8 lbs" fits on one line instead of wrapping */
+  .stat-box {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 19px;
+  }
 
   /* ── Workout form ── */
   .exercise {
@@ -1745,6 +1752,15 @@ div {
 
 .chart-filter-btn .material-icons {
   font-size: 18px;
+}
+
+/* Must come after the base .chart-filter-btn rule above (equal specificity —
+   whichever is later in the file wins, regardless of the media query) or the
+   button never actually shows on mobile despite this looking like it should. */
+@media (max-width: 768px) {
+  .chart-filter-btn {
+    display: flex;
+  }
 }
 
 #page-data .stats-grid {
