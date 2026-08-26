@@ -141,8 +141,7 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); }
-  else if (name === 'social') updateSocialChart();
+  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); updateSocialChart(); }
   else if (name === 'device') updateDeviceCharts();
 }
 
@@ -1956,9 +1955,9 @@ function renderWorkoutSelector() {
   const container = document.getElementById('workout');
 
   const plans = [
-    { key: 'mon', label: 'Fullbody Calisthenics', icon: 'accessibility_new' },
-    { key: 'wed', label: 'Cardio + Lowerbody', icon: 'directions_run' },
-    { key: 'fri', label: 'Upperbody', icon: 'fitness_center' },
+    { key: 'mon', label: 'Monday', icon: 'accessibility_new' },
+    { key: 'wed', label: 'Wednesday', icon: 'directions_run' },
+    { key: 'fri', label: 'Friday', icon: 'fitness_center' },
   ];
 
   container.innerHTML = `

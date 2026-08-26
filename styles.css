@@ -1464,28 +1464,31 @@ div {
     height: auto;
   }
 
-  /* Workout selector: stack vertically on mobile, fill height */
+  /* Workout selector: day buttons stay in a horizontal row on mobile too
+     (wrapping only if they truly don't fit) — Start Workout gets its own
+     full-width row below since it's a distinct action, not another day */
   .workout-selector-row {
-    flex-direction: column;
-    flex: 1;
-    gap: 10px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .workout-selector-row .workout-plan-option {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 90px;
     justify-content: center;
     align-items: center;
-    padding: 1.5rem;
+    padding: 0.85rem 0.5rem;
   }
 
   .workout-selector-row .plan-name {
-    font-size: 1.25rem;
+    font-size: 0.85rem;
     text-align: center;
   }
 
   .workout-selector-row .workout-start-btn {
-    flex: none;
-    margin-top: 10px;
+    flex: 1 1 100%;
+    margin-top: 4px;
   }
 
   .workout-start-btn {
@@ -1919,19 +1922,6 @@ div {
 }
 
 /* ─── Social page ─────────────────────────────────────────────────────────── */
-.social-layout {
-  display: flex;
-  flex: 1;
-  gap: 20px;
-  align-items: stretch;
-  width: 100%;
-  min-height: 0;
-}
-
-.social-entry-card {
-  width: 300px;
-  flex-shrink: 0;
-}
 
 .social-card-header {
   display: flex;
@@ -2008,19 +1998,6 @@ div {
 .social-cat-btn[data-cat="extreme_stakes"] .social-cat-icon { color: rgba(244, 63,  94,  1); }
 .social-cat-btn[data-cat="real_stakes"]    .social-cat-icon { color: rgba(225, 29,  72,  1); }
 
-.social-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.social-filter-row {
-  margin-bottom: 0;
-}
-
 .social-cat-info {
   display: flex;
   flex-direction: column;
@@ -2068,7 +2045,3 @@ div {
 .social-cat-btn[data-cat="extreme_stakes"] .social-cat-count { color: rgba(244, 63,  94,  0.90); }
 .social-cat-btn[data-cat="real_stakes"]    .social-cat-count { color: rgba(225, 29,  72,  1.00); }
 
-@media (max-width: 768px) {
-  .social-layout { flex-direction: column; }
-  .social-entry-card { width: 100%; }
-}

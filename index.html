@@ -356,17 +356,31 @@
               <canvas id="exerciseChart"></canvas>
             </div>
           </div>
+
+          <div class="card">
+            <h2>
+              <span class="material-icons data-card-icon" title="Social">people</span>
+              <span class="data-card-label">Social</span>
+            </h2>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn social-filter-btn active" onclick="setSocialPeriod(7,this)">Week</button>
+              <button class="weight-filter-btn social-filter-btn" onclick="setSocialPeriod(14,this)">2 Weeks</button>
+              <button class="weight-filter-btn social-filter-btn" onclick="setSocialPeriod(30,this)">Month</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="socialChart"></canvas>
+            </div>
+          </div>
         </div>
 
         <!-- Social -->
         <div id="page-social" class="page">
-          <div class="social-layout">
-            <div class="card social-entry-card">
-              <div class="social-card-header">
-                <h2>Social</h2>
-                <p class="social-date-label">Tap to log interaction you started</p>
-              </div>
-              <div class="social-categories">
+          <div class="card social-entry-card">
+            <div class="social-card-header">
+              <h2>Social</h2>
+              <p class="social-date-label">Tap to log interaction you started</p>
+            </div>
+            <div class="social-categories">
                 <div class="social-cat-row">
                   <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
                     <span class="social-cat-icon material-icons">chat</span>
@@ -433,19 +447,6 @@
                   </div>
                   <button class="social-minus" data-cat="real_stakes" onclick="unlogSocial('real_stakes')">−</button>
                 </div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="social-chart-header">
-                <div class="weight-filter-row social-filter-row">
-                  <button class="weight-filter-btn social-filter-btn active" onclick="setSocialPeriod(7,this)">Week</button>
-                  <button class="weight-filter-btn social-filter-btn" onclick="setSocialPeriod(14,this)">2 Weeks</button>
-                  <button class="weight-filter-btn social-filter-btn" onclick="setSocialPeriod(30,this)">Month</button>
-                </div>
-              </div>
-              <div class="chart-container">
-                <canvas id="socialChart"></canvas>
-              </div>
             </div>
           </div>
         </div>
@@ -457,7 +458,6 @@
           </div>
           <div class="wh-bottom-row">
             <div class="card" id="workoutHistoryCard">
-              <h2>Workout History</h2>
               <div id="workoutHistory"></div>
             </div>
           </div>
