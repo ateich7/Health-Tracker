@@ -945,9 +945,9 @@ async function logPsych() {
   updateUI();
 }
 
-// Meditation: its own home card, separate from the psych-log form. Marking it
-// done today toggles the card to "completed" (same chip pattern as the other
-// home log cards), which sinks it to the bottom of the home log list.
+// Meditation: an icon in the Home icons row (shared with Codes), separate from
+// the psych-log form. Marking it done today toggles it to "completed" (same
+// chip pattern as the other home log cards/icons).
 function logMeditation() {
   const today = getToday();
   localStorage.setItem('meditationLoggedDate', today);
@@ -965,6 +965,7 @@ function updateMeditationCard() {
   if (!card) return;
   const done = localStorage.getItem('meditationLoggedDate') === getToday();
   if (card.classList.contains('completed') !== done) toggleTask(card);
+  syncHomeIconsRow();
 }
 
 // All dates the user has ever meditated on, used to compute the home page streak
@@ -1153,6 +1154,18 @@ function toggleOnClick(element) {
   toggleTask(element.parentElement);
 }
 
+// Codes and Meditation share one icon-only row on Home (#homeIconsRow) to save
+// vertical space. Each icon shows its own completed state, but the row only
+// sinks to the bottom of the home log list once BOTH are done today.
+function syncHomeIconsRow() {
+  const row = document.getElementById('homeIconsRow');
+  const codes = document.getElementById('codesChip');
+  const meditation = document.getElementById('meditationCard');
+  if (!row || !codes || !meditation) return;
+  const bothDone = codes.classList.contains('completed') && meditation.classList.contains('completed');
+  row.classList.toggle('completed', bothDone);
+}
+
 // Codes chip is one-way: once marked done today it can't be undone until tomorrow
 function toggleCodes(chip) {
   const today = getToday();
@@ -1167,6 +1180,7 @@ function toggleCodes(chip) {
     localStorage.setItem('codesLog', JSON.stringify(codesLog));
   }
   toggleTask(chip);
+  syncHomeIconsRow();
   updateStreaks();
 }
 

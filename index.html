@@ -110,7 +110,11 @@
           </div>
           <div class="home-log-list">
             <div class="card home-log-card" id="weightChip">
-              <h2>Weight <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <h2>
+                <span class="material-icons log-card-icon">scale</span>
+                <span class="log-card-label">Weight</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
               <div class="input-group">
                 <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
                 <button class="btn-primary" onclick="logWeight()">Log</button>
@@ -118,7 +122,11 @@
             </div>
 
             <div class="card home-log-card" id="sleepChip">
-              <h2>Sleep <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <h2>
+                <span class="material-icons log-card-icon">bedtime</span>
+                <span class="log-card-label">Sleep</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
               <div class="input-group">
                 <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
                 <input type="number" id="sleepTimeInBedInput" step="0.1" placeholder="Hours in Bed" onkeydown="if(event.key==='Enter')logSleep()">
@@ -127,14 +135,23 @@
               </div>
             </div>
 
-            <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)">
-              <span class="material-icons">notes</span>
-              <span>Codes</span>
-              <span class="chip-check material-icons" style="display:none;">check_circle</span>
-            </button>
+            <div class="home-log-icons" id="homeIconsRow">
+              <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)" title="Codes" aria-label="Codes">
+                <span class="material-icons">notes</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </button>
+              <button class="codes-btn" id="meditationCard" onclick="logMeditation()" title="Meditation" aria-label="Meditation">
+                <span class="material-icons">self_improvement</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </button>
+            </div>
 
             <div class="card signals-entry-card" id="signalsChip">
-              <h2>Signals <span class="chip-check material-icons" style="display:none;">check_circle</span></h2>
+              <h2>
+                <span class="material-icons log-card-icon">psychology</span>
+                <span class="log-card-label">Signals</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
               <div class="signals-inline-form">
                 <div class="signal-field">
                   <span class="signal-label">Confidence</span>
@@ -157,15 +174,6 @@
                 </div>
                 <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
               </div>
-            </div>
-
-            <div class="card meditation-card" id="meditationCard">
-              <div class="meditation-card-label">
-                <span class="material-icons">self_improvement</span>
-                <span>Meditation</span>
-                <span class="chip-check material-icons" style="display:none;">check_circle</span>
-              </div>
-              <button class="btn-primary meditation-done-btn" onclick="logMeditation()">Done</button>
             </div>
           </div>
 

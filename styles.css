@@ -1030,8 +1030,25 @@ div {
   transition: background 0.2s ease;
 }
 
+/* Codes + Meditation: icon-only, side by side, in one row (see #homeIconsRow
+   in JS — the row itself only completes, and sinks, once both icons are). */
+.home-log-icons {
+  display: flex;
+  gap: 10px;
+}
+
+.home-log-icons .codes-btn {
+  width: auto;
+  flex: 1;
+  justify-content: center;
+}
+
+.home-log-list > .home-log-icons.completed {
+  background: transparent;
+}
+
 /* Card header inline with its input row, to keep each log card as short as
-   possible — headers sized down to match the streaks/quote card headers. */
+   possible — headers are an icon (not text) while the card still needs input. */
 #page-home .home-log-card,
 #page-home .signals-entry-card {
   flex-direction: row;
@@ -1042,10 +1059,24 @@ div {
 
 #page-home .home-log-card h2,
 #page-home .signals-entry-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 0;
   font-size: 1.1em;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+#page-home .home-log-card .log-card-icon,
+#page-home .signals-entry-card .log-card-icon {
+  font-size: 22px;
+  color: var(--h);
+}
+
+#page-home .home-log-card .log-card-label,
+#page-home .signals-entry-card .log-card-label {
+  display: none;
 }
 
 #page-home .home-log-card .input-group {
@@ -1057,6 +1088,22 @@ div {
 #page-home .signals-entry-card .signals-inline-form {
   margin-bottom: 0;
   flex: 1;
+}
+
+/* Completed: collapse down to just the checkmark + label — no icon, no inputs */
+#page-home .home-log-card.completed .log-card-icon,
+#page-home .signals-entry-card.completed .log-card-icon {
+  display: none;
+}
+
+#page-home .home-log-card.completed .log-card-label,
+#page-home .signals-entry-card.completed .log-card-label {
+  display: inline;
+}
+
+#page-home .home-log-card.completed .input-group,
+#page-home .signals-entry-card.completed .signals-inline-form {
+  display: none;
 }
 
 .home-top-row {
@@ -1474,30 +1521,6 @@ div {
 
 .page .signals-entry-card {
   flex: 0 0 auto;
-}
-
-.page .meditation-card {
-  flex: 0 0 auto;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 20px;
-}
-
-.meditation-card-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--b);
-}
-
-.meditation-done-btn {
-  margin-left: 0;
-  padding: 8px 20px;
-  flex-shrink: 0;
 }
 
 .signals-inline-form {
