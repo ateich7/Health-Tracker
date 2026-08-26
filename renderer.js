@@ -39,6 +39,9 @@ let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
 let exercisePeriodDays = 30; // how many logged entries the exercise chart shows; 0 = all time
+// value1/value2 are generic since their meaning depends on exercise type (see
+// updateExerciseChart): reps/weight for lifts, distance/time for runs
+const exerciseLineToggles = { value1: true, value2: true };
 
 let weightChart         = null; // Chart.js instances — destroyed & rebuilt on each render
 let exerciseChart       = null;
@@ -431,6 +434,43 @@ function setExercisePeriod(days, btn) {
   updateExerciseChart();
 }
 
+function toggleExerciseLine(key, btn) {
+  exerciseLineToggles[key] = !exerciseLineToggles[key];
+  btn.classList.toggle('active', exerciseLineToggles[key]);
+  updateExerciseChart();
+}
+
+// The two toggleable lines mean different things depending on exercise type
+// (reps/weight for lifts, distance/time for runs), so the row is rebuilt with
+// the right labels on every render instead of being static HTML like Sleep's.
+// Bodyweight exercises have only one line (nothing to toggle), so the filter
+// button hides entirely rather than offering a toggle that could zero out the
+// only line on the chart.
+function renderExerciseToggleRow(exerciseInfo) {
+  const row = document.getElementById('exerciseToggleRow');
+  const btn = document.getElementById('exerciseFilterBtn');
+  if (!row || !btn) return;
+
+  if (!exerciseInfo?.isRun && !exerciseInfo?.isLift) {
+    row.innerHTML = '';
+    row.classList.remove('open');
+    btn.style.display = 'none';
+    return;
+  }
+
+  btn.style.display = '';
+  const label1 = exerciseInfo.isRun ? 'Distance' : 'Total Reps';
+  const label2 = exerciseInfo.isRun ? 'Time' : 'Avg Weight';
+  row.innerHTML = `
+    <button class="sleep-toggle-btn${exerciseLineToggles.value1 ? ' active' : ''}" onclick="toggleExerciseLine('value1', this)">
+      <span class="sleep-toggle-dot" style="background:#0088FF"></span>${label1}
+    </button>
+    <button class="sleep-toggle-btn${exerciseLineToggles.value2 ? ' active' : ''}" onclick="toggleExerciseLine('value2', this)">
+      <span class="sleep-toggle-dot" style="background:#34C759"></span>${label2}
+    </button>
+  `;
+}
+
 function toggleSleepLine(key, btn) {
   sleepLineToggles[key] = !sleepLineToggles[key];
   btn.classList.toggle('active', sleepLineToggles[key]);
@@ -608,6 +648,7 @@ function updateExerciseChart() {
   const ctx = document.getElementById('exerciseChart').getContext('2d');
   const exerciseName = selectedExercise.charAt(0).toUpperCase() + selectedExercise.slice(1);
   document.getElementById('exName').innerText = exerciseName;
+  renderExerciseToggleRow(exerciseInfo);
 
   const datasets = [];
   const scales = {
@@ -619,80 +660,88 @@ function updateExerciseChart() {
 
   if (exerciseInfo?.isRun) {
     // Distance and Time
-    datasets.push({
-      label: 'Distance (miles)',
-      data: slicedData.map(d => d.value1),
-      borderColor: '#0088FF',
-      backgroundColor: 'rgba(0, 136, 255, 0.2)',
-      tension: 0.3,
-      fill: true,
-      yAxisID: 'y1'
-    });
-    datasets.push({
-      label: 'Time (min.sec)',
-      data: slicedData.map(d => d.value2),
-      borderColor: '#34C759',
-      backgroundColor: 'rgba(52, 199, 89, 0.2)',
-      tension: 0.3,
-      fill: true,
-      yAxisID: 'y2'
-    });
-    scales.y1 = {
-      type: 'linear',
-      position: 'left',
-      beginAtZero: true,
-      ticks: { color: '#0088FF' },
-      grid: { color: 'rgba(250,250,250,0.4)' },
-      title: { display: true, text: 'Distance (miles)', color: '#0088FF' }
-    };
-    scales.y2 = {
-      type: 'linear',
-      position: 'right',
-      min: 0,
-      max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
-      ticks: { color: '#34C759' },
-      grid: { display: false },
-      title: { display: true, text: 'Time (min.sec)', color: '#34C759' }
-    };
+    if (exerciseLineToggles.value1) {
+      datasets.push({
+        label: 'Distance (miles)',
+        data: slicedData.map(d => d.value1),
+        borderColor: '#0088FF',
+        backgroundColor: 'rgba(0, 136, 255, 0.2)',
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'y1'
+      });
+      scales.y1 = {
+        type: 'linear',
+        position: 'left',
+        beginAtZero: true,
+        ticks: { color: '#0088FF' },
+        grid: { color: 'rgba(250,250,250,0.4)' },
+        title: { display: true, text: 'Distance (miles)', color: '#0088FF' }
+      };
+    }
+    if (exerciseLineToggles.value2) {
+      datasets.push({
+        label: 'Time (min.sec)',
+        data: slicedData.map(d => d.value2),
+        borderColor: '#34C759',
+        backgroundColor: 'rgba(52, 199, 89, 0.2)',
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'y2'
+      });
+      scales.y2 = {
+        type: 'linear',
+        position: 'right',
+        min: 0,
+        max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
+        ticks: { color: '#34C759' },
+        grid: { display: false },
+        title: { display: true, text: 'Time (min.sec)', color: '#34C759' }
+      };
+    }
   } else if (exerciseInfo?.isLift) {
     // Reps and Weight
-    datasets.push({
-      label: 'Total Reps',
-      data: slicedData.map(d => d.value1),
-      borderColor: '#0088FF',
-      backgroundColor: 'rgba(0, 136, 255, 0.2)',
-      tension: 0.3,
-      fill: true,
-      yAxisID: 'y1'
-    });
-    datasets.push({
-      label: 'Avg Weight (lbs)',
-      data: slicedData.map(d => d.value2),
-      borderColor: '#34C759',
-      backgroundColor: 'rgba(52, 199, 89, 0.2)',
-      tension: 0.3,
-      fill: true,
-      yAxisID: 'y2'
-    });
-    scales.y1 = {
-      type: 'linear',
-      position: 'left',
-      beginAtZero: true,
-      ticks: { color: '#0088FF' },
-      grid: { color: 'rgba(250,250,250,0.4)' },
-      title: { display: true, text: 'Total Reps', color: '#0088FF' }
-    };
-    scales.y2 = {
-      type: 'linear',
-      position: 'right',
-      min: 0,
-      max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
-      ticks: { color: '#34C759' },
-      grid: { display: false },
-      title: { display: true, text: 'Avg Weight (lbs)', color: '#34C759' }
-    };
+    if (exerciseLineToggles.value1) {
+      datasets.push({
+        label: 'Total Reps',
+        data: slicedData.map(d => d.value1),
+        borderColor: '#0088FF',
+        backgroundColor: 'rgba(0, 136, 255, 0.2)',
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'y1'
+      });
+      scales.y1 = {
+        type: 'linear',
+        position: 'left',
+        beginAtZero: true,
+        ticks: { color: '#0088FF' },
+        grid: { color: 'rgba(250,250,250,0.4)' },
+        title: { display: true, text: 'Total Reps', color: '#0088FF' }
+      };
+    }
+    if (exerciseLineToggles.value2) {
+      datasets.push({
+        label: 'Avg Weight (lbs)',
+        data: slicedData.map(d => d.value2),
+        borderColor: '#34C759',
+        backgroundColor: 'rgba(52, 199, 89, 0.2)',
+        tension: 0.3,
+        fill: true,
+        yAxisID: 'y2'
+      });
+      scales.y2 = {
+        type: 'linear',
+        position: 'right',
+        min: 0,
+        max: Math.max(...slicedData.map(d => d.value2)) * 1.2,
+        ticks: { color: '#34C759' },
+        grid: { display: false },
+        title: { display: true, text: 'Avg Weight (lbs)', color: '#34C759' }
+      };
+    }
   } else {
-    // Bodyweight only - single axis
+    // Bodyweight only - single axis, no toggle (renderExerciseToggleRow hides the button)
     datasets.push({
       label: 'Total Reps',
       data: slicedData.map(d => d.value1),
@@ -1126,20 +1175,33 @@ function updateSignalsChart() {
     }
   });
 
-  renderReleaseDots(chartData);
+  renderReleaseDots();
 }
 
 // Release days as a compact left-to-right row of dots instead of a chart —
 // filled green = no release that day, hollow red outline = released. Runs in
-// the same chronological (oldest→newest) order as every other chart's x-axis;
-// the row scrolls horizontally rather than growing taller when there are more
-// dots than fit (e.g. the 3 Months / All Time signals period filters).
-function renderReleaseDots(chartData) {
+// the same chronological (oldest→newest) order as every other chart's x-axis.
+// Deliberately independent of the Scores chart's period filter (signalsPeriodDays)
+// — dots are cheap, so instead it fills however many fit across the card's
+// actual width, recomputing whenever that width changes (ResizeObserver).
+const RELEASE_DOT_SPACING = 18; // .release-dot width (12px) + .release-dot-row gap (6px)
+let releaseDotsResizeObserver = null;
+
+function renderReleaseDots() {
   const row = document.getElementById('releaseDotRow');
   if (!row) return;
-  row.innerHTML = chartData.map(d => {
-    const status = d.released ? 'Released' : 'No release';
-    return `<span class="release-dot${d.released ? ' released' : ''}" title="${d.x}: ${status}"></span>`;
+
+  if (!releaseDotsResizeObserver) {
+    releaseDotsResizeObserver = new ResizeObserver(() => renderReleaseDots());
+    releaseDotsResizeObserver.observe(row);
+  }
+
+  const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
+  const entries = psychData.slice(-maxDots);
+  row.innerHTML = entries.map(e => {
+    const x = e.date.split('/').slice(0, 2).join('/');
+    const status = e.released ? 'Released' : 'No release';
+    return `<span class="release-dot${e.released ? ' released' : ''}" title="${x}: ${status}"></span>`;
   }).join('');
 }
 

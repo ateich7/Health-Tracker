@@ -319,7 +319,13 @@
           </div>
 
           <div class="card">
-            <h2><span class="material-icons data-card-icon" title="Exercise Progress">fitness_center</span><span class="data-card-label" id="exName">Exercise Progress</span></h2>
+            <h2>
+              <span class="material-icons data-card-icon" title="Exercise Progress">fitness_center</span>
+              <span class="data-card-label" id="exName">Exercise Progress</span>
+              <button class="chart-filter-btn" id="exerciseFilterBtn" onclick="toggleChartFilterPanel('exerciseToggleRow')" title="Choose lines shown" aria-label="Choose lines shown">
+                <span class="material-icons">tune</span>
+              </button>
+            </h2>
             <div class="input-group" style="margin-bottom: 1rem;">
               <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
               </select>
@@ -330,6 +336,7 @@
               <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(90, this)">3 Months</button>
               <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(0, this)">All Time</button>
             </div>
+            <div class="sleep-toggle-row" id="exerciseToggleRow"></div>
             <div class="chart-container">
               <canvas id="exerciseChart"></canvas>
             </div>
