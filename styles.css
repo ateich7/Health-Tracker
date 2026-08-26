@@ -1003,9 +1003,21 @@ div {
   min-height: 150px;
 }
 
-/* Workout page: create card full-width on top, history + chart side by side below */
+/* Workout page: create card full-width on top, history + chart side by side below.
+   height/min-height are ID-scoped (not media-gated) so they also beat the
+   mobile block's .page.active{height:auto} — on mobile the page otherwise
+   grows with content and lets .page-content scroll, but this page wants a
+   bounded height so #workoutHistory can fit-and-"Show More" instead. The
+   overflow-y:auto is a safety net for the active-workout-form state (#workout
+   can be much taller than the viewport with many exercises/sets) — bounding
+   the page and letting IT scroll in that case, rather than letting content
+   spill past the viewport uncontained, matches the old "page scrolls" mobile
+   behavior for that one case while the common day-picker case now fits. */
 #page-workout.active {
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 #workoutCard {
@@ -1050,9 +1062,13 @@ div {
   min-height: 0;
 }
 
-/* History card */
+/* History card. min-height is ID-scoped (not media-gated) so it beats the
+   mobile block's .page .card{min-height:unset} — needed for this card to
+   actually shrink to the space #page-workout gives it instead of growing to
+   fit however many rows got rendered. */
 #workoutHistoryCard {
   flex: 1;
+  min-height: 0;
 }
 
 #workoutHistory {

@@ -1450,6 +1450,9 @@ function toggleExerciseCollapse(exEl) {
   } else {
     exEl.classList.add('ex-collapsed');
   }
+  // Expanding/collapsing an exercise resizes #workoutCard, which resizes
+  // #workoutHistory's flex-allocated space — see the note in renderWorkoutSelector().
+  fitWorkoutHistoryRows();
 }
 
 // Reads the current input values for one exercise, grouped by set.
@@ -1790,6 +1793,11 @@ function renderWorkoutForm(exercises, savedData) {
   // Collapse any exercise that's already fully filled in (e.g. editing a past
   // workout) and expand only the first one still needing input.
   initExerciseCollapseState(container);
+
+  // #workoutCard just grew from the compact picker to a (often much taller)
+  // form, resizing #workoutHistory's flex-allocated space — see the same
+  // note in renderWorkoutSelector().
+  fitWorkoutHistoryRows();
 }
 
 // Pre-fills all set inputs from saved exercise data (used by editWorkout)
@@ -1907,43 +1915,26 @@ function renderWorkoutHistory() {
       </div>`;
   }
 
-  const isDesktop = window.innerWidth > 768;
-
-  if (isDesktop) {
-    // Desktop: the card has a real flex-bound height (fills the row next to
-    // the workout form), so render every row and then measure how many
-    // actually fit — rather than either scrolling immediately (all rows) or
-    // leaving blank space below a short list. Whatever doesn't fit hides
-    // behind "Show More" instead.
-    container.innerHTML = sorted.map(renderRow).join('');
-    if (!workoutHistoryResizeObserver) {
-      workoutHistoryResizeObserver = new ResizeObserver(() => fitWorkoutHistoryRows());
-      workoutHistoryResizeObserver.observe(container);
-    }
-    fitWorkoutHistoryRows();
-  } else {
-    // Mobile: the card is auto-height (the whole page scrolls, not the
-    // card), so "fill the available height" isn't a meaningful measurement
-    // here — keep the simple fixed preview-count pagination instead.
-    const LIMIT   = 5;
-    const preview = sorted.slice(0, LIMIT);
-    const rest    = sorted.slice(LIMIT);
-    let html = preview.map(renderRow).join('');
-    if (rest.length) {
-      html += `<div id="whExtra" style="display:none;">${rest.map(renderRow).join('')}</div>`;
-      html += `<button class="btn-primary wh-see-all-btn" onclick="toggleWorkoutHistoryAll(this)">See All</button>`;
-    }
-    container.innerHTML = html;
+  // Both desktop and mobile now give #workoutHistoryCard a real flex-bound
+  // height (see #page-workout.active in styles.css), so render every row and
+  // measure how many actually fit — rather than either scrolling immediately
+  // (all rows) or leaving blank space below a short list. Whatever doesn't
+  // fit hides behind "Show More" instead.
+  container.innerHTML = sorted.map(renderRow).join('');
+  if (!workoutHistoryResizeObserver) {
+    workoutHistoryResizeObserver = new ResizeObserver(() => fitWorkoutHistoryRows());
+    workoutHistoryResizeObserver.observe(container);
   }
+  fitWorkoutHistoryRows();
 }
 
 // Hides whichever trailing .wh-row elements don't fit #workoutHistory's
 // actual (flex-bound) height and appends a "Show More" button reserving
 // space for itself — so the card fills with rows instead of scrolling or
 // sitting with blank space below a short list. Re-run by a ResizeObserver
-// whenever the container's size changes (window resize, layout reflow).
+// whenever the container's size changes (window resize, layout reflow, the
+// active-workout-form collapsing back to the day picker on mobile, etc).
 function fitWorkoutHistoryRows() {
-  if (window.innerWidth <= 768) return; // mobile uses its own fixed-preview pagination
   const container = document.getElementById('workoutHistory');
   if (!container) return;
 
@@ -2008,13 +1999,6 @@ async function deleteWorkoutRow(date) {
   updateUI();
 }
 
-function toggleWorkoutHistoryAll(btn) {
-  const extra    = document.getElementById('whExtra');
-  const expanded = extra.style.display !== 'none';
-  extra.style.display = expanded ? 'none' : 'block';
-  btn.textContent     = expanded ? 'See All' : 'Show Less';
-}
-
 // Show the Mon/Wed/Fri plan picker (initial state of the workout page)
 function renderWorkoutSelector() {
   document.getElementById('page-workout').classList.remove('workout-logged');
@@ -2042,6 +2026,12 @@ function renderWorkoutSelector() {
       </button>
     </div>
   `;
+
+  // #workoutCard's height just changed (form → compact picker, or vice versa
+  // on the way in), which resizes #workoutHistory's flex-allocated space —
+  // ResizeObserver doesn't reliably catch every one of these transitions, so
+  // re-fit explicitly rather than risk history staying stuck on a stale count.
+  fitWorkoutHistoryRows();
 }
 
 // Highlights the clicked plan option
