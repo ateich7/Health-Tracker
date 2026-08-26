@@ -1648,15 +1648,6 @@ div {
   white-space: nowrap;
 }
 
-/* Sub-section label inside a Data-page card (e.g. "Scores" under the Signals
-   h2) — intentionally smaller than the card's own h2 so hierarchy reads clearly */
-.signals-chart-label {
-  color: var(--h);
-  font-size: 1em;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
 /* ─── Data page ──────────────────────────────────────────────────────────────
    Like Device, a Data-page card can't each get an equal fraction of viewport
    height (three full chart cards squeezed that way would be unreadable) — give
