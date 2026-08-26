@@ -252,46 +252,7 @@ button {
   flex-shrink: 0;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  margin-bottom: 25px;
-}
-
-.stat-box {
-  padding: 20px;
-  border-radius: var(--br);
-}
-
-.stat-box.blue {
-  background: var(--p900);
-}
-
-.stat-box.green {
-  background: var(--s900);
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--h);
-  margin-bottom: 5px;
-}
-
 .label-short { display: none; }
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.stat-value.blue {
-  color: var(--p300);
-}
-
-.stat-value.green {
-  color: var(--s600);
-}
 
 .chart-container {
   height: 250px;
@@ -1469,17 +1430,6 @@ div {
   .label-full { display: none; }
   .label-short { display: inline; }
 
-  /* Stat boxes (Weight card's Current/Change) are narrow on mobile (2-column
-     grid inside a card with limited width) — shrink the value text so e.g.
-     "178.8 lbs" fits on one line instead of wrapping */
-  .stat-box {
-    padding: 12px;
-  }
-
-  .stat-value {
-    font-size: 19px;
-  }
-
   /* ── Workout form ── */
   .exercise {
     padding: 14px 0;
@@ -1731,10 +1681,13 @@ div {
 }
 
 /* Icon + title header, sized down from the default .card h2 to match Home's
-   icon-first header language instead of the generic oversized page title */
+   icon-first header language instead of the generic oversized page title.
+   flex-wrap so a narrow card (mobile) drops trailing controls to a second
+   line instead of overflowing, rather than needing them hidden outright. */
 #page-data h2 {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   font-size: 1.25em;
   margin-bottom: 16px;
@@ -1743,6 +1696,49 @@ div {
 .data-card-icon {
   font-size: 20px;
   color: var(--h);
+}
+
+/* Weight card: Current/Change inline in the header instead of a stats-grid
+   block below it, so the card is shorter overall */
+.data-card-stats {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.data-card-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--br);
+  background: var(--p900);
+  white-space: nowrap;
+}
+
+.data-card-stat-label {
+  font-size: 11px;
+  color: var(--h);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.data-card-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--p300);
+}
+
+/* Exercise Progress card: the exercise picker inline in the header (between
+   the icon and the "tune" filter button) instead of its own row below */
+#page-data .data-card-select {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 90px;
+  max-width: 220px;
+  padding: 6px 12px;
+  border-width: 1px;
+  font-size: 14px;
 }
 
 /* "Tune" button that opens the line-toggle panel on mobile — desktop already
@@ -1775,10 +1771,6 @@ div {
   .chart-filter-btn {
     display: flex;
   }
-}
-
-#page-data .stats-grid {
-  margin-bottom: 16px;
 }
 
 /* Charts default to their natural (mobile) size; both breakpoints below size

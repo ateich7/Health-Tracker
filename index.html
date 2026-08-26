@@ -216,17 +216,17 @@
                 <rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" mask="url(#weightScaleMaskData)"/>
               </svg>
               <span class="data-card-label">Weight</span>
+              <div class="data-card-stats">
+                <span class="data-card-stat">
+                  <span class="data-card-stat-label"><span class="label-full">Current</span><span class="label-short">Cur</span></span>
+                  <span class="data-card-stat-value" id="avgWeight">--</span>
+                </span>
+                <span class="data-card-stat">
+                  <span class="data-card-stat-label"><span class="label-full">Change</span><span class="label-short">Chg</span></span>
+                  <span class="data-card-stat-value" id="weightChange">--</span>
+                </span>
+              </div>
             </h2>
-            <div class="stats-grid">
-              <div class="stat-box blue">
-                <div class="stat-label"><span class="label-full">Current</span><span class="label-short">Cur</span></div>
-                <div class="stat-value blue" id="avgWeight">--</div>
-              </div>
-              <div class="stat-box blue">
-                <div class="stat-label"><span class="label-full">Change</span><span class="label-short">Chg</span></div>
-                <div class="stat-value blue" id="weightChange">--</div>
-              </div>
-            </div>
             <div class="weight-filter-row">
               <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
               <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
@@ -321,15 +321,12 @@
           <div class="card">
             <h2>
               <span class="material-icons data-card-icon" title="Exercise Progress">fitness_center</span>
-              <span class="data-card-label" id="exName">Exercise Progress</span>
+              <select id="exerciseSelect" class="exercise-select data-card-select" onchange="updateExerciseChart()">
+              </select>
               <button class="chart-filter-btn" id="exerciseFilterBtn" onclick="toggleChartFilterPanel('exerciseToggleRow')" title="Choose lines shown" aria-label="Choose lines shown">
                 <span class="material-icons">tune</span>
               </button>
             </h2>
-            <div class="input-group" style="margin-bottom: 1rem;">
-              <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
-              </select>
-            </div>
             <div class="weight-filter-row">
               <button class="weight-filter-btn exercise-filter-btn" onclick="setExercisePeriod(7, this)">Week</button>
               <button class="weight-filter-btn exercise-filter-btn active" onclick="setExercisePeriod(30, this)">Month</button>

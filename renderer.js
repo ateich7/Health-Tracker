@@ -646,8 +646,6 @@ function updateExerciseChart() {
   if (slicedData.length === 0) return;
 
   const ctx = document.getElementById('exerciseChart').getContext('2d');
-  const exerciseName = selectedExercise.charAt(0).toUpperCase() + selectedExercise.slice(1);
-  document.getElementById('exName').innerText = exerciseName;
   renderExerciseToggleRow(exerciseInfo);
 
   const datasets = [];
