@@ -451,6 +451,13 @@ function toggleSignalLine(key, btn) {
   updateSignalsChart();
 }
 
+// Mobile only: the line-toggle row (which lines a chart plots) is always
+// visible on desktop, but doesn't fit on a phone screen — the "tune" button
+// in the card header expands/collapses it in place instead of a modal.
+function toggleChartFilterPanel(rowId) {
+  document.getElementById(rowId).classList.toggle('open');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CHARTS
 // Each chart function destroys any existing Chart.js instance before building

@@ -1260,7 +1260,39 @@ div {
    ───────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
 
+  /* Hidden by default on mobile (no room to show it inline like desktop does)
+     — the chart-filter-btn "tune" button in the card header expands it here */
   .sleep-toggle-row { display: none; }
+
+  .sleep-toggle-row.open {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: var(--br);
+    margin-bottom: 12px;
+  }
+
+  /* Filter-row buttons (date ranges) can outnumber what fits on a phone width
+     (e.g. 5 buttons on Sleep/Signals) — scroll horizontally within the row
+     instead of overflowing past the card/page edge */
+  .weight-filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .weight-filter-btn {
+    flex-shrink: 0;
+  }
+
+  /* Data-page card headers: icon only on mobile, matching Home's log cards */
+  .data-card-label {
+    display: none;
+  }
+
+  .chart-filter-btn {
+    display: flex;
+  }
 
   body {
     padding: 0;
@@ -1690,6 +1722,29 @@ div {
 .data-card-icon {
   font-size: 20px;
   color: var(--h);
+}
+
+/* "Tune" button that opens the line-toggle panel on mobile — desktop already
+   shows the toggle row inline (see .sleep-toggle-row) so it stays hidden there */
+.chart-filter-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border-radius: var(--br);
+  background: var(--objbg);
+  color: var(--b);
+}
+
+.chart-filter-btn:hover {
+  background: var(--objbghov);
+}
+
+.chart-filter-btn .material-icons {
+  font-size: 18px;
 }
 
 #page-data .stats-grid {

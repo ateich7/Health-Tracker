@@ -215,7 +215,7 @@
                 </mask>
                 <rect x="3" y="3" width="18" height="18" rx="3" fill="currentColor" mask="url(#weightScaleMaskData)"/>
               </svg>
-              Weight
+              <span class="data-card-label">Weight</span>
             </h2>
             <div class="stats-grid">
               <div class="stat-box blue">
@@ -239,7 +239,13 @@
           </div>
 
           <div class="card">
-            <h2><span class="material-icons data-card-icon">bedtime</span>Sleep</h2>
+            <h2>
+              <span class="material-icons data-card-icon" title="Sleep">bedtime</span>
+              <span class="data-card-label">Sleep</span>
+              <button class="chart-filter-btn" onclick="toggleChartFilterPanel('sleepToggleRow')" title="Choose lines shown" aria-label="Choose lines shown">
+                <span class="material-icons">tune</span>
+              </button>
+            </h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn sleep-filter-btn" data-days="7" onclick="setSleepPeriod(7, this)">Week</button>
               <button class="weight-filter-btn sleep-filter-btn" data-days="14" onclick="setSleepPeriod(14, this)">2 Weeks</button>
@@ -247,7 +253,7 @@
               <button class="weight-filter-btn sleep-filter-btn" data-days="90" onclick="setSleepPeriod(90, this)">3 Months</button>
               <button class="weight-filter-btn sleep-filter-btn" data-days="0" onclick="setSleepPeriod(0, this)">All Time</button>
             </div>
-            <div class="sleep-toggle-row">
+            <div class="sleep-toggle-row" id="sleepToggleRow">
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('hours', this)">
                 <span class="sleep-toggle-dot" style="background:#0088FF"></span>Hours
               </button>
@@ -279,7 +285,13 @@
           </div>
 
           <div class="card">
-            <h2><span class="material-icons data-card-icon">sensors</span>Signals</h2>
+            <h2>
+              <span class="material-icons data-card-icon" title="Signals">sensors</span>
+              <span class="data-card-label">Signals</span>
+              <button class="chart-filter-btn" onclick="toggleChartFilterPanel('signalsToggleRow')" title="Choose lines shown" aria-label="Choose lines shown">
+                <span class="material-icons">tune</span>
+              </button>
+            </h2>
             <p class="signals-chart-label">No-release days (last 30)</p>
             <div class="signals-release-chart-wrap">
               <canvas id="signalsReleaseChart"></canvas>
@@ -292,7 +304,7 @@
               <button class="weight-filter-btn signals-filter-btn" data-days="90" onclick="setSignalsPeriod(90, this)">3 Months</button>
               <button class="weight-filter-btn signals-filter-btn" data-days="0" onclick="setSignalsPeriod(0, this)">All Time</button>
             </div>
-            <div class="sleep-toggle-row">
+            <div class="sleep-toggle-row" id="signalsToggleRow">
               <button class="sleep-toggle-btn active" onclick="toggleSignalLine('confidence', this)">
                 <span class="sleep-toggle-dot" style="background:#0088FF"></span>Confidence
               </button>
@@ -309,7 +321,7 @@
           </div>
 
           <div class="card">
-            <h2><span class="material-icons data-card-icon">fitness_center</span><span id="exName">Exercise Progress</span></h2>
+            <h2><span class="material-icons data-card-icon" title="Exercise Progress">fitness_center</span><span class="data-card-label" id="exName">Exercise Progress</span></h2>
             <div class="input-group" style="margin-bottom: 1rem;">
               <select id="exerciseSelect" class="exercise-select" onchange="updateExerciseChart()">
               </select>
