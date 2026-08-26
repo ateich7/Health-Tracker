@@ -369,12 +369,16 @@ canvas {
   opacity: 1;
 }
 
-/* .chip-check is the green checkmark icon shown when the Codes task is logged today */
+/* .chip-check is the green checkmark icon shown when a task is logged today.
+   No font-size override here — it always also carries .material-icons, whose
+   Google Fonts stylesheet (loaded after this one, so it wins the cascade tie)
+   sets a fixed 24px, which is what keeps every chip-check the same size
+   regardless of which element it's nested in (nav item, card header, icon
+   button). Do not add a font-size here without !important, or it's a no-op. */
 .chip-check {
   margin-left: var(--space4);
   color: var(--s600);
   font-weight: bold;
-  font-size: 1.2em;
 }
 
 .set {
@@ -1074,35 +1078,22 @@ div {
   color: var(--h);
 }
 
-#page-home .home-log-card .log-card-label,
-#page-home .signals-entry-card .log-card-label {
-  display: none;
-}
-
-#page-home .home-log-card .input-group {
+#page-home .home-log-card .input-group,
+#page-home .home-log-card .inline-field-row {
   margin-bottom: 0;
   flex: 1;
   flex-wrap: wrap;
 }
 
-#page-home .signals-entry-card .signals-inline-form {
+#page-home .signals-entry-card .inline-field-row {
   margin-bottom: 0;
   flex: 1;
 }
 
-/* Completed: collapse down to just the checkmark + label — no icon, no inputs */
-#page-home .home-log-card.completed .log-card-icon,
-#page-home .signals-entry-card.completed .log-card-icon {
-  display: none;
-}
-
-#page-home .home-log-card.completed .log-card-label,
-#page-home .signals-entry-card.completed .log-card-label {
-  display: inline;
-}
-
+/* Completed: collapse down to just the icon + checkmark — no input fields */
 #page-home .home-log-card.completed .input-group,
-#page-home .signals-entry-card.completed .signals-inline-form {
+#page-home .home-log-card.completed .inline-field-row,
+#page-home .signals-entry-card.completed .inline-field-row {
   display: none;
 }
 
@@ -1457,11 +1448,11 @@ div {
     margin: 16px;
   }
 
-  .signals-inline-form {
+  .inline-field-row {
     flex-wrap: wrap;
     gap: 16px;
   }
-  .signals-log-btn {
+  .inline-log-btn {
     margin-left: 0;
     width: 100%;
   }
@@ -1496,8 +1487,6 @@ div {
 
 .codes-btn .chip-check {
   margin-left: auto;
-  font-size: 18px !important;
-  color: var(--s600);
 }
 
 /* ─── Signals (Home logging card + Data page charts) ────────────────────────── */
@@ -1518,7 +1507,7 @@ div {
   flex: 0 0 auto;
 }
 
-.signals-inline-form {
+.inline-field-row {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
@@ -1591,7 +1580,7 @@ div {
   color: var(--s600);
 }
 
-.signals-log-btn {
+.inline-log-btn {
   align-self: flex-end;
   margin-left: auto;
   padding: 10px 28px;

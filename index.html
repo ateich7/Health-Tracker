@@ -109,8 +109,7 @@
           <div class="home-log-list">
             <div class="card home-log-card" id="weightChip">
               <h2>
-                <span class="material-icons log-card-icon">scale</span>
-                <span class="log-card-label">Weight</span>
+                <span class="material-icons log-card-icon" title="Weight">scale</span>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
               <div class="input-group">
@@ -121,15 +120,23 @@
 
             <div class="card home-log-card" id="sleepChip">
               <h2>
-                <span class="material-icons log-card-icon">bedtime</span>
-                <span class="log-card-label">Sleep</span>
+                <span class="material-icons log-card-icon" title="Sleep">bedtime</span>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
-              <div class="input-group">
-                <input type="number" id="sleepHoursInput" step="0.1" placeholder="Hours Slept" onkeydown="if(event.key==='Enter')logSleep()">
-                <input type="number" id="sleepTimeInBedInput" step="0.1" placeholder="Hours in Bed" onkeydown="if(event.key==='Enter')logSleep()">
-                <input type="number" id="sleepRestedInput" step="0.5" placeholder="Restedness Score (1-10)" onkeydown="if(event.key==='Enter')logSleep()">
-                <button class="btn-primary" onclick="logSleep()">Log</button>
+              <div class="inline-field-row">
+                <div class="signal-field">
+                  <span class="signal-label">Hours Slept</span>
+                  <input type="number" class="signal-input" id="sleepHoursInput" step="0.1" onkeydown="if(event.key==='Enter')logSleep()">
+                </div>
+                <div class="signal-field">
+                  <span class="signal-label">Hours in Bed</span>
+                  <input type="number" class="signal-input" id="sleepTimeInBedInput" step="0.1" onkeydown="if(event.key==='Enter')logSleep()">
+                </div>
+                <div class="signal-field">
+                  <span class="signal-label">Restedness</span>
+                  <input type="number" class="signal-input" id="sleepRestedInput" step="0.5" onkeydown="if(event.key==='Enter')logSleep()">
+                </div>
+                <button class="btn-primary inline-log-btn" onclick="logSleep()">Log</button>
               </div>
             </div>
 
@@ -146,11 +153,10 @@
 
             <div class="card signals-entry-card" id="signalsChip">
               <h2>
-                <span class="material-icons log-card-icon">sensors</span>
-                <span class="log-card-label">Signals</span>
+                <span class="material-icons log-card-icon" title="Signals">sensors</span>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
-              <div class="signals-inline-form">
+              <div class="inline-field-row">
                 <div class="signal-field">
                   <span class="signal-label">Confidence</span>
                   <input type="number" class="signal-input" id="psychConfidence" min="0" max="10" value="5">
@@ -177,7 +183,7 @@
                     <span class="switch-opt switch-yes">Yes</span>
                   </div>
                 </div>
-                <button class="btn-primary signals-log-btn" onclick="logPsych()">Log</button>
+                <button class="btn-primary inline-log-btn" onclick="logPsych()">Log</button>
               </div>
             </div>
           </div>
