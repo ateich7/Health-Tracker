@@ -2118,9 +2118,17 @@ function calcDailyStreak(loggedDateStrings) {
 // Rules:
 //   - Saturdays are always skipped (not expected)
 //   - workoutMode = true: only Mon/Wed/Fri are expected
-//   - Today is never penalized (the day may not be over yet)
-function calcStreak(loggedDateStrings, workoutMode = false) {
+//   - Today is never penalized for having no entry yet (the day may not be
+//     over yet) — but this is distinct from today having an entry that
+//     simply doesn't qualify (e.g. released=true), which DOES break the
+//     streak same as any other day. loggedDateStrings is the qualifying set
+//     (e.g. "no release" days); allLoggedDateStrings (defaults to the same
+//     set when the two coincide, as for callers with no such distinction) is
+//     every date that has ANY entry at all, used only to tell those two
+//     "today" cases apart.
+function calcStreak(loggedDateStrings, workoutMode = false, allLoggedDateStrings = loggedDateStrings) {
   const dateSet = new Set(loggedDateStrings);
+  const allSet = new Set(allLoggedDateStrings);
 
   const now = new Date();
   now.setHours(12, 0, 0, 0);
@@ -2143,8 +2151,10 @@ function calcStreak(loggedDateStrings, workoutMode = false) {
 
     const isLogged = dateSet.has(dateStr);
 
-    // Don't penalize for today not being logged yet
-    if (dateStr === todayStr && !isLogged) {
+    // Don't penalize today for having no entry at all yet. If today DOES
+    // have an entry but it's not in the qualifying set (e.g. released=true),
+    // fall through to the normal break below instead of skipping it.
+    if (dateStr === todayStr && !isLogged && !allSet.has(dateStr)) {
       d.setDate(d.getDate() - 1);
       continue;
     }
@@ -2168,12 +2178,13 @@ function updateStreaks() {
   const meditationDates    = getMeditationDates();
   const sleepEfficiencyAvg = calcSleepEfficiencyAvg(sleepData);
   const releaseDates       = psychData.filter(e => !e.released).map(e => e.date);
+  const allPsychDates      = psychData.map(e => e.date);
   const socialDates        = socialData.map(e => e.date);
 
   const streaks = [
     { label: 'meditation',       count: calcDailyStreak(meditationDates), icon: 'self_improvement',      unit: ['day', 'days'] },
     { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'], inlineUnit: true },
-    { label: 'no release',       count: calcStreak(releaseDates),         icon: 'local_fire_department',  unit: ['day', 'days'] },
+    { label: 'no release',       count: calcStreak(releaseDates, false, allPsychDates), icon: 'local_fire_department',  unit: ['day', 'days'] },
     { label: 'any interaction',  count: calcDailyStreak(socialDates),     icon: 'people',                 unit: ['day', 'days'] },
   ];
 
