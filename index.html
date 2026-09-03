@@ -466,27 +466,6 @@
         <!-- Device (read-only dashboard for data synced by the HealthyPi Move Python tool) -->
         <div id="page-device" class="page">
           <div class="card">
-            <h2>Device Sleep</h2>
-            <div class="chart-container">
-              <canvas id="deviceSleepChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceSleepEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Device Stress</h2>
-            <div class="chart-container">
-              <canvas id="deviceStressChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceStressEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Device Activity</h2>
-            <div class="chart-container">
-              <canvas id="deviceActivityChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceActivityEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
             <h2>Device Heart Rate</h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('hour', this)">Past Hour</button>
@@ -501,10 +480,10 @@
             </div>
           </div>
           <div class="card">
-            <h2>Device SpO2</h2>
+            <h2>Device Steps</h2>
             <div class="chart-container">
-              <canvas id="deviceSpo2Chart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceSpo2Empty" style="display:none;">No device data synced yet.</p>
+              <canvas id="deviceActivityChart"></canvas>
+              <p class="empty-state device-chart-empty" id="deviceActivityEmpty" style="display:none;">No device data synced yet.</p>
             </div>
           </div>
           <div class="card">
@@ -519,27 +498,6 @@
             <div class="chart-container">
               <canvas id="deviceSkinTempChart"></canvas>
               <p class="empty-state device-chart-empty" id="deviceSkinTempEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Device HRV</h2>
-            <div class="chart-container">
-              <canvas id="deviceHrvChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceHrvEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Device EDA</h2>
-            <div class="chart-container">
-              <canvas id="deviceEdaChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceEdaEmpty" style="display:none;">No device data synced yet.</p>
-            </div>
-          </div>
-          <div class="card">
-            <h2>Device Blood Pressure</h2>
-            <div class="chart-container">
-              <canvas id="deviceBpChart"></canvas>
-              <p class="empty-state device-chart-empty" id="deviceBpEmpty" style="display:none;">No device data synced yet.</p>
             </div>
           </div>
         </div>

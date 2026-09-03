@@ -11,10 +11,8 @@ let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 let socialData  = [];   // rows from social_logs
 
 // Read-only: written by the separate HealthyPi Move Python sync tool, never by this app
-let deviceSleepData    = []; // rows from device_sleep_logs
-let deviceStressData   = []; // rows from device_stress_logs
-let deviceActivityData = []; // rows from device_activity_logs
-let deviceVitalsData   = []; // rows from device_vitals_logs (HR, SpO2, skin temp, BP, ECG HR, HRV, EDA)
+let deviceActivityData = []; // rows from device_activity_logs (steps)
+let deviceVitalsData   = []; // rows from device_vitals_logs (HR, skin temp, + other unused fields)
 
 // 'week' plots deviceVitalsData's daily rollup (already loaded above); the
 // finer ranges query device_hr_samples (~1/min HR epochs) on demand instead of
@@ -48,15 +46,9 @@ let exerciseChart       = null;
 let sleepChart          = null;
 let signalsChart        = null;
 let socialChart         = null;
-let deviceSleepChart    = null;
-let deviceStressChart   = null;
 let deviceActivityChart = null;
 let deviceHrChart       = null;
-let deviceSpo2Chart     = null;
 let deviceSkinTempChart = null;
-let deviceHrvChart      = null;
-let deviceEdaChart      = null;
-let deviceBpChart       = null;
 
 let currentUser        = null; // Supabase user object, set after sign-in
 let editingWorkoutDate = null; // non-null while editing a past workout; logWorkout() saves to this date
@@ -178,7 +170,7 @@ async function deleteWorkoutEntry(date) {
 // marks today's chips complete, and triggers the initial UI render
 async function loadData() {
   const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes,
-         deviceSleepRes, deviceStressRes, deviceActivityRes, deviceVitalsRes] = await Promise.all([
+         deviceActivityRes, deviceVitalsRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('workout_logs').select('*').eq('user_id', currentUser.id),
@@ -186,8 +178,6 @@ async function loadData() {
     db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('social_logs').select('*').eq('user_id', currentUser.id),
     // Read-only: populated by the separate HealthyPi Move sync tool, not by this app
-    db.from('device_sleep_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
-    db.from('device_stress_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
     db.from('device_activity_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
     db.from('device_vitals_logs').select('*').eq('user_id', currentUser.id).order('date_ts')
   ]);
@@ -197,8 +187,6 @@ async function loadData() {
   psychData  = psychRes.data   || [];
   socialData = socialRes.data  || [];
 
-  deviceSleepData    = deviceSleepRes.data    || [];
-  deviceStressData   = deviceStressRes.data   || [];
   deviceActivityData = deviceActivityRes.data || [];
   deviceVitalsData   = deviceVitalsRes.data   || [];
 
@@ -2528,10 +2516,10 @@ function updateSocialChart() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEVICE (HealthyPi Move)
-// Read-only dashboard for device_sleep_logs / device_stress_logs / device_activity_logs,
-// which are written by a separate Python sync tool over Bluetooth — never by this app.
-// Each chart shows a small "no device data synced yet" message instead of an
-// empty canvas when its table has no rows for this user.
+// Read-only dashboard for device_activity_logs / device_vitals_logs (HR, skin
+// temp), which are written by a separate Python sync tool over Bluetooth —
+// never by this app. Each chart shows a small "no device data synced yet"
+// message instead of an empty canvas when its table has no rows for this user.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Shared helper: toggles the canvas/empty-state pair for a Device chart, then
@@ -2553,157 +2541,9 @@ function renderDeviceChart(dataArr, canvasId, emptyId, buildFn) {
 }
 
 function updateDeviceCharts() {
-  updateDeviceSleepChart();
-  updateDeviceStressChart();
   updateDeviceActivityChart();
   updateDeviceHrChart();
-  updateDeviceSpo2Chart();
   updateDeviceSkinTempChart();
-  updateDeviceHrvChart();
-  updateDeviceEdaChart();
-  updateDeviceBpChart();
-}
-
-// Stacked bar of sleep stage minutes (light/deep/rem/wake) with the 0-100 sleep
-// score overlaid as a line on a secondary axis.
-function updateDeviceSleepChart() {
-  if (deviceSleepChart) { deviceSleepChart.destroy(); deviceSleepChart = null; }
-
-  deviceSleepChart = renderDeviceChart(deviceSleepData, 'deviceSleepChart', 'deviceSleepEmpty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = [...deviceSleepData]
-      .sort((a, b) => a.date_ts - b.date_ts)
-      .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
-
-    const ctx = document.getElementById('deviceSleepChart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.map(d => d.x),
-        datasets: [
-          {
-            label: 'Light', data: chartData.map(d => d.light_minutes),
-            backgroundColor: 'rgba(100, 210, 255, 0.75)', stack: 'sleep', yAxisID: 'y1'
-          },
-          {
-            label: 'Deep', data: chartData.map(d => d.deep_minutes),
-            backgroundColor: 'rgba(94, 92, 230, 0.85)', stack: 'sleep', yAxisID: 'y1'
-          },
-          {
-            label: 'REM', data: chartData.map(d => d.rem_minutes),
-            backgroundColor: 'rgba(52, 199, 89, 0.75)', stack: 'sleep', yAxisID: 'y1'
-          },
-          {
-            label: 'Wake', data: chartData.map(d => d.wake_minutes),
-            backgroundColor: 'rgba(255, 107, 107, 0.75)', stack: 'sleep', yAxisID: 'y1'
-          },
-          {
-            type: 'line',
-            label: 'Sleep Score',
-            data: chartData.map(d => d.score),
-            borderColor: '#FF9500',
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            fill: false,
-            pointRadius: 3,
-            borderWidth: 2,
-            yAxisID: 'y2'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y1: {
-            type: 'linear',
-            position: 'left',
-            stacked: true,
-            beginAtZero: true,
-            ticks: { color: '#c4cad4', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' },
-            title: { display: !isMobile, text: 'Minutes', color: '#c4cad4' }
-          },
-          y2: {
-            type: 'linear',
-            position: 'right',
-            min: 0,
-            max: 100,
-            ticks: { color: '#FF9500', display: !isMobile },
-            grid: { display: false },
-            title: { display: !isMobile, text: 'Score', color: '#FF9500' }
-          }
-        }
-      }
-    });
-  });
-}
-
-// Line chart of average (solid) and max (dashed, lighter) stress over time.
-function updateDeviceStressChart() {
-  if (deviceStressChart) { deviceStressChart.destroy(); deviceStressChart = null; }
-
-  deviceStressChart = renderDeviceChart(deviceStressData, 'deviceStressChart', 'deviceStressEmpty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = [...deviceStressData]
-      .sort((a, b) => a.date_ts - b.date_ts)
-      .map(e => ({ x: e.date.split('/').slice(0, 2).join('/'), ...e }));
-
-    const hasMax = chartData.some(d => d.max_stress != null);
-    const datasets = [{
-      label: 'Avg Stress',
-      data: chartData.map(d => d.avg_stress),
-      borderColor: '#FF6B6B',
-      backgroundColor: 'rgba(255, 107, 107, 0.15)',
-      tension: 0.3,
-      fill: true
-    }];
-    if (hasMax) {
-      datasets.push({
-        label: 'Max Stress',
-        data: chartData.map(d => d.max_stress),
-        borderColor: 'rgba(255, 107, 107, 0.5)',
-        backgroundColor: 'transparent',
-        borderDash: [5, 4],
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
-        fill: false
-      });
-    }
-
-    const ctx = document.getElementById('deviceStressChart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'line',
-      data: { labels: chartData.map(d => d.x), datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: '#c4cad4' },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          }
-        }
-      }
-    });
-  });
 }
 
 // Bar chart of daily steps with a 7-day moving average overlay (same convention
@@ -2774,16 +2614,13 @@ function updateDeviceActivityChart() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEVICE VITALS (device_vitals_logs)
-// Spot-check / event-based readings (SpO2, blood pressure, ECG-derived HR, HRV,
-// EDA) plus continuous heart rate & skin temp, all in one daily rollup row.
-// Every field besides user_id/date/date_ts/source is nullable — most days will
-// be missing most columns, since only heart rate & skin temp are continuously
-// monitored; the rest are user-triggered spot checks. Null values are left as
-// null (not coerced to 0) so Chart.js draws a gap for that day instead of a
-// misleading zero.
+// This app only charts heart rate & skin temp from this table (the rest of
+// its columns -- SpO2, blood pressure, HRV, EDA -- are pushed by the sync
+// tool but not displayed here). Null values are left as null (not coerced to
+// 0) so Chart.js draws a gap for that day instead of a misleading zero.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Shared x-axis mapper used by all six vitals charts below.
+// Shared x-axis mapper used by the HR and skin temp charts below.
 function deviceVitalsChartData() {
   return [...deviceVitalsData]
     .sort((a, b) => a.date_ts - b.date_ts)
@@ -2904,65 +2741,6 @@ async function updateDeviceHrChart() {
   });
 }
 
-// Line chart of avg SpO2 (solid) with min SpO2 as a lighter dashed line — same
-// avg/max treatment as the Device Stress chart above, mirrored for the min side.
-function updateDeviceSpo2Chart() {
-  if (deviceSpo2Chart) { deviceSpo2Chart.destroy(); deviceSpo2Chart = null; }
-
-  deviceSpo2Chart = renderDeviceChart(deviceVitalsData, 'deviceSpo2Chart', 'deviceSpo2Empty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
-
-    const hasMin = chartData.some(d => d.spo2_min != null);
-    const datasets = [{
-      label: 'Avg SpO2',
-      data: chartData.map(d => d.spo2_avg),
-      borderColor: '#64D2FF',
-      backgroundColor: 'rgba(100, 210, 255, 0.15)',
-      tension: 0.3,
-      fill: true,
-      pointRadius: 3
-    }];
-    if (hasMin) {
-      datasets.push({
-        label: 'Min SpO2',
-        data: chartData.map(d => d.spo2_min),
-        borderColor: 'rgba(100, 210, 255, 0.5)',
-        backgroundColor: 'transparent',
-        borderDash: [5, 4],
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.3,
-        fill: false
-      });
-    }
-
-    const ctx = document.getElementById('deviceSpo2Chart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'line',
-      data: { labels: chartData.map(d => d.x), datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y: {
-            ticks: { color: '#c4cad4' },
-            grid: { color: 'rgba(250,250,250,0.4)' },
-            title: { display: !isMobile, text: '%', color: '#c4cad4' }
-          }
-        }
-      }
-    });
-  });
-}
-
 // Line chart of avg skin temp with a shaded min–max band, same treatment as
 // the Heart Rate chart above. 'week' plots deviceVitalsData's daily rollup
 // (min/max band included); the finer ranges plot intraday
@@ -3038,200 +2816,6 @@ async function updateDeviceSkinTempChart() {
             ticks: { color: '#c4cad4' },
             grid: { color: 'rgba(250,250,250,0.4)' },
             title: { display: !isMobile, text: '°', color: '#c4cad4' }
-          }
-        }
-      }
-    });
-  });
-}
-
-// Dual-axis line chart: LF/HF ratio (small, ~0.5-3.0) on the left axis and
-// mean RR interval in ms (~600-1200) on the right — same y1/y2 dual-axis
-// pattern as the Device Sleep chart's stage-minutes/score overlay, needed
-// here because the two series are on wildly different scales.
-function updateDeviceHrvChart() {
-  if (deviceHrvChart) { deviceHrvChart.destroy(); deviceHrvChart = null; }
-
-  deviceHrvChart = renderDeviceChart(deviceVitalsData, 'deviceHrvChart', 'deviceHrvEmpty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
-
-    const ctx = document.getElementById('deviceHrvChart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: chartData.map(d => d.x),
-        datasets: [
-          {
-            label: 'LF/HF',
-            data: chartData.map(d => d.hrv_lfhf_avg),
-            borderColor: '#BF5AF2',
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            fill: false,
-            pointRadius: 3,
-            borderWidth: 2,
-            yAxisID: 'y1'
-          },
-          {
-            label: 'Mean RR (ms)',
-            data: chartData.map(d => d.hrv_mean_rr_avg),
-            borderColor: '#30B0C7',
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            fill: false,
-            pointRadius: 3,
-            borderWidth: 2,
-            yAxisID: 'y2'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y1: {
-            type: 'linear',
-            position: 'left',
-            ticks: { color: '#BF5AF2', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' },
-            title: { display: !isMobile, text: 'LF/HF', color: '#BF5AF2' }
-          },
-          y2: {
-            type: 'linear',
-            position: 'right',
-            ticks: { color: '#30B0C7', display: !isMobile },
-            grid: { display: false },
-            title: { display: !isMobile, text: 'Mean RR (ms)', color: '#30B0C7' }
-          }
-        }
-      }
-    });
-  });
-}
-
-// Dual-axis line chart: skin conductance level (left) and SCR rate (right) —
-// same dual-axis approach as the HRV chart above, since SCL (µS) and SCR
-// rate (events/min) aren't on comparable scales either.
-function updateDeviceEdaChart() {
-  if (deviceEdaChart) { deviceEdaChart.destroy(); deviceEdaChart = null; }
-
-  deviceEdaChart = renderDeviceChart(deviceVitalsData, 'deviceEdaChart', 'deviceEdaEmpty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
-
-    const ctx = document.getElementById('deviceEdaChart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: chartData.map(d => d.x),
-        datasets: [
-          {
-            label: 'SCL',
-            data: chartData.map(d => d.eda_scl_avg),
-            borderColor: '#0088FF',
-            backgroundColor: 'rgba(0, 136, 255, 0.15)',
-            tension: 0.3,
-            fill: true,
-            pointRadius: 3,
-            yAxisID: 'y1'
-          },
-          {
-            label: 'SCR Rate',
-            data: chartData.map(d => d.eda_scr_rate_avg),
-            borderColor: '#34C759',
-            backgroundColor: 'transparent',
-            tension: 0.3,
-            fill: false,
-            pointRadius: 3,
-            borderWidth: 2,
-            yAxisID: 'y2'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y1: {
-            type: 'linear',
-            position: 'left',
-            ticks: { color: '#0088FF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' },
-            title: { display: !isMobile, text: 'SCL (µS)', color: '#0088FF' }
-          },
-          y2: {
-            type: 'linear',
-            position: 'right',
-            ticks: { color: '#34C759', display: !isMobile },
-            grid: { display: false },
-            title: { display: !isMobile, text: 'SCR Rate (/min)', color: '#34C759' }
-          }
-        }
-      }
-    });
-  });
-}
-
-// Grouped bar chart of systolic/diastolic averages. Sparse by nature — most
-// days have no BP reading at all, since it's a manual spot check, not
-// continuous monitoring. Null values are passed straight through (not
-// coerced to 0) so Chart.js simply omits the bar for that day rather than
-// drawing a misleading zero-height reading.
-function updateDeviceBpChart() {
-  if (deviceBpChart) { deviceBpChart.destroy(); deviceBpChart = null; }
-
-  deviceBpChart = renderDeviceChart(deviceVitalsData, 'deviceBpChart', 'deviceBpEmpty', () => {
-    const isMobile = window.innerWidth <= 768;
-    const chartData = deviceVitalsChartData();
-
-    const ctx = document.getElementById('deviceBpChart').getContext('2d');
-    return new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.map(d => d.x),
-        datasets: [
-          {
-            label: 'Systolic',
-            data: chartData.map(d => d.bp_systolic_avg),
-            backgroundColor: 'rgba(255, 107, 107, 0.75)'
-          },
-          {
-            label: 'Diastolic',
-            data: chartData.map(d => d.bp_diastolic_avg),
-            backgroundColor: 'rgba(0, 136, 255, 0.75)'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
-        },
-        scales: {
-          x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
-            grid: { color: 'rgba(250,250,250,0.4)' }
-          },
-          y: {
-            ticks: { color: '#c4cad4' },
-            grid: { color: 'rgba(250,250,250,0.4)' },
-            title: { display: !isMobile, text: 'mmHg', color: '#c4cad4' }
           }
         }
       }
