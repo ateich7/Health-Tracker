@@ -2579,6 +2579,16 @@ function resizeFullscreenCharts() {
   [deviceHrChart, deviceActivityChart, deviceSkinTempChart].forEach(c => c && c.resize());
 }
 
+// Not just a burst of a few retries after opening: on a real device
+// (confirmed by testing), *something* -- almost certainly the mobile
+// browser's own address bar/toolbar hiding or reappearing, possibly more
+// than once, and not necessarily within the first second -- keeps changing
+// the actual viewport well after any fixed set of "probably settled by
+// now" checks would have given up, undoing the sizing fix each time. So
+// this re-asserts it continuously for as long as fullscreen stays open,
+// rather than trying to predict when the last external change happens.
+let fullscreenChartInterval = null;
+
 // Toggles a chart card between its normal in-page layout and a fixed,
 // viewport-filling "fullscreen" (see .chart-fullscreen-active in styles.css
 // for the rotate-to-landscape trick this relies on). Deliberately not the
@@ -2598,19 +2608,21 @@ function toggleChartFullscreen(btn) {
     window.addEventListener('resize', resizeFullscreenCharts);
     window.addEventListener('orientationchange', resizeFullscreenCharts);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeFullscreenCharts);
+    if (fullscreenChartInterval) clearInterval(fullscreenChartInterval);
+    fullscreenChartInterval = setInterval(resizeFullscreenCharts, 400);
   } else {
     window.removeEventListener('resize', resizeFullscreenCharts);
     window.removeEventListener('orientationchange', resizeFullscreenCharts);
     if (window.visualViewport) window.visualViewport.removeEventListener('resize', resizeFullscreenCharts);
+    if (fullscreenChartInterval) {
+      clearInterval(fullscreenChartInterval);
+      fullscreenChartInterval = null;
+    }
     const container = card.querySelector('.chart-container');
     if (container) { container.style.width = ''; container.style.height = ''; }
   }
 
   requestAnimationFrame(resizeFullscreenCharts);
-  // Belt-and-suspenders re-checks in case something settles without ever
-  // firing a resize event (seen in testing) -- cheap and idempotent if the
-  // size was already correct.
-  [100, 300, 600, 1000].forEach(ms => setTimeout(resizeFullscreenCharts, ms));
 }
 
 // chartjs-plugin-zoom adds resetZoom() to every chart instance it's attached
