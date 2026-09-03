@@ -466,7 +466,7 @@
         <!-- Device (read-only dashboard for data synced by the HealthyPi Move Python tool) -->
         <div id="page-device" class="page">
           <div class="card">
-            <h2>Device Heart Rate</h2>
+            <h2>Heart Rate</h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('hour', this)">Past Hour</button>
               <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('5h', this)">Past 5 Hours</button>
@@ -480,14 +480,14 @@
             </div>
           </div>
           <div class="card">
-            <h2>Device Steps</h2>
+            <h2>Steps</h2>
             <div class="chart-container">
               <canvas id="deviceActivityChart"></canvas>
               <p class="empty-state device-chart-empty" id="deviceActivityEmpty" style="display:none;">No device data synced yet.</p>
             </div>
           </div>
           <div class="card">
-            <h2>Device Skin Temperature</h2>
+            <h2>Skin Temperature</h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('hour', this)">Past Hour</button>
               <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('5h', this)">Past 5 Hours</button>

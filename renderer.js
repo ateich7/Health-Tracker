@@ -2598,7 +2598,7 @@ function updateDeviceActivityChart() {
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', display: !isMobile },
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {
@@ -2727,7 +2727,7 @@ async function updateDeviceHrChart() {
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', display: !isMobile, maxRotation: 0, autoSkip: true },
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {
@@ -2809,7 +2809,7 @@ async function updateDeviceSkinTempChart() {
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', display: !isMobile, maxRotation: 0, autoSkip: true },
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {
