@@ -189,6 +189,14 @@ a {
   min-height: 0 !important;
 }
 
+/* Without this, a touch-drag on the canvas can get claimed by the browser's
+   own native scroll (chart-fullscreen-active uses overflow:auto) before
+   Hammer.js/chartjs-plugin-zoom ever see the gesture -- which looks
+   exactly like "dragging only scrolls the page, the chart doesn't pan." */
+.chart-fullscreen-active canvas {
+  touch-action: none;
+}
+
 body.chart-fullscreen-open {
   overflow: hidden;
 }

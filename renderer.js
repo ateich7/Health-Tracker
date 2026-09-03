@@ -2522,14 +2522,52 @@ function updateSocialChart() {
 // message instead of an empty canvas when its table has no rows for this user.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// True while a chart's card is both in our manual "fullscreen" and visually
+// rotated 90 degrees by the portrait media query in styles.css. Two things
+// need to know this: the zoom plugin (a CSS rotate() only repaints pixels,
+// it doesn't rotate the coordinate system touch/mouse events report in, so
+// a physically-horizontal drag is still a *vertical* movement as far as the
+// canvas's own unrotated hit-testing is concerned) and the fullscreen sizing
+// below (flex-grow driving the container's height turned out not to be
+// reliably detected by Chart.js's ResizeObserver once that container sits
+// inside a position:fixed + transform:rotate() ancestor -- confirmed by the
+// exact symptom reported: fills one axis, not the other).
+function isChartVisuallyRotated(chart) {
+  const card = chart && chart.canvas && chart.canvas.closest('.chart-fullscreen-active');
+  return !!card && window.matchMedia('(orientation: portrait)').matches;
+}
+
+// Explicit pixel width/height on the chart-container, rather than trusting
+// flex:1 to size it -- see isChartVisuallyRotated's comment for why. When
+// rotated, the container's own LOCAL width/height are swapped relative to
+// what's visually horizontal/vertical on screen (local width -> visual
+// vertical extent, local height -> visual horizontal extent), matching the
+// same swap the CSS rotation itself applies to the card.
+function layoutFullscreenChart(card) {
+  const container = card.querySelector('.chart-container');
+  if (!container) return;
+  const rotated = window.matchMedia('(orientation: portrait)').matches;
+  const cardPadding = 40; // matches .chart-fullscreen-active's 20px each side
+  const chrome = Array.from(card.children)
+    .filter(el => el !== container)
+    .reduce((sum, el) => sum + el.offsetHeight, 0);
+
+  const visualW = rotated ? window.innerHeight : window.innerWidth;
+  const visualH = rotated ? window.innerWidth : window.innerHeight;
+  container.style.width = Math.max(0, visualW - cardPadding) + 'px';
+  container.style.height = Math.max(0, visualH - cardPadding - chrome) + 'px';
+}
+
+function resizeFullscreenCharts() {
+  document.querySelectorAll('.card.chart-fullscreen-active').forEach(layoutFullscreenChart);
+  [deviceHrChart, deviceActivityChart, deviceSkinTempChart].forEach(c => c && c.resize());
+}
+
 // Toggles a chart card between its normal in-page layout and a fixed,
 // viewport-filling "fullscreen" (see .chart-fullscreen-active in styles.css
 // for the rotate-to-landscape trick this relies on). Deliberately not the
 // native Fullscreen API -- see that CSS rule's comment for why a manual
-// overlay is the more reliable choice here. Chart.js's own ResizeObserver
-// picks up the new box size on its own, but a couple of chart.resize() calls
-// force it to happen on the same frame instead of trailing a beat behind the
-// CSS transition.
+// overlay is the more reliable choice here.
 function toggleChartFullscreen(btn) {
   const card = btn.closest('.card');
   if (!card) return;
@@ -2540,11 +2578,18 @@ function toggleChartFullscreen(btn) {
   document.body.classList.toggle('chart-fullscreen-open', enteringFullscreen);
   if (icon) icon.textContent = enteringFullscreen ? 'fullscreen_exit' : 'fullscreen';
 
-  const resizeCharts = () => {
-    [deviceHrChart, deviceActivityChart, deviceSkinTempChart].forEach(c => c && c.resize());
-  };
-  requestAnimationFrame(resizeCharts);
-  setTimeout(resizeCharts, 300); // after the orientation-driven layout settles
+  if (enteringFullscreen) {
+    window.addEventListener('resize', resizeFullscreenCharts);
+    window.addEventListener('orientationchange', resizeFullscreenCharts);
+  } else {
+    window.removeEventListener('resize', resizeFullscreenCharts);
+    window.removeEventListener('orientationchange', resizeFullscreenCharts);
+    const container = card.querySelector('.chart-container');
+    if (container) { container.style.width = ''; container.style.height = ''; }
+  }
+
+  requestAnimationFrame(resizeFullscreenCharts);
+  setTimeout(resizeFullscreenCharts, 300); // after the orientation-driven layout settles
 }
 
 // chartjs-plugin-zoom adds resetZoom() to every chart instance it's attached
@@ -2561,6 +2606,17 @@ function resetDeviceChartZoom(chart) {
 // which locks panning to that already-narrowed window and defeats the
 // point of panning (confirmed by testing: with 'original', dragging did
 // nothing once already at the initial view).
+//
+// mode stays 'x' even while visually rotated 90 degrees: chartjs-plugin-zoom
+// hard-codes horizontal-scale panning to raw (unrotated) pointer deltaX and
+// vertical-scale panning to raw deltaY, with no option to cross-wire that --
+// switching mode to 'y' doesn't make a horizontal drag pan the date axis, it
+// makes a *vertical* drag start zooming the value (BPM/steps/etc) axis
+// instead, which is worse. Properly fixing drag direction for a CSS-rotated
+// canvas means intercepting and correcting raw touch/pointer coordinates
+// before Hammer.js sees them (touch events carry their own per-Touch
+// clientX/clientY too, so it's not a one-line change) -- not attempted here
+// since it can't be verified without a real touchscreen.
 function deviceChartZoomPlugin(chartData) {
   return {
     pan: { enabled: true, mode: 'x' },
