@@ -183,9 +183,17 @@ a {
   border-radius: 0;
 }
 
+/* flex:1 (flex-basis:0%, flex-grow:1) sounds like it should just let this
+   grow to fill the remaining column-flex height, but flex-basis:0% means
+   the flexbox algorithm computes the item's main size *itself* and ignores
+   its own height property entirely as the starting point -- which was
+   silently overriding renderer.js's explicit, JS-computed pixel height the
+   whole time (regardless of !important on either side; this isn't a
+   specificity fight, the flex algorithm just never consults `height` once
+   flex-basis is non-auto). flex:none opts out of that so the explicit
+   height from layoutFullscreenChart() actually takes effect. */
 .chart-fullscreen-active .chart-container {
-  flex: 1 !important;
-  height: auto !important;
+  flex: none !important;
   min-height: 0 !important;
 }
 

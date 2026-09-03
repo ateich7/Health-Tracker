@@ -2659,7 +2659,12 @@ function installRotatedPanHandler(canvas, getChart) {
     const delta = coord - lastCoord;
     lastCoord = coord;
     if (delta !== 0) {
-      chart.pan({ x: delta, y: 0 }, undefined, 'none');
+      // Negated: chart.pan()'s sign convention (a drag revealing what's
+      // ahead of it, matching how the unrotated/normal pan already feels)
+      // came out backwards once fed a screen-Y-derived delta instead of
+      // the screen-X one chart.pan() normally expects -- confirmed
+      // reversed against a real device.
+      chart.pan({ x: -delta, y: 0 }, undefined, 'none');
       e.preventDefault();
     }
   }
