@@ -2558,9 +2558,20 @@ function currentViewportSize() {
   return vv ? { w: vv.width, h: vv.height } : { w: window.innerWidth, h: window.innerHeight };
 }
 
+// Returns true if it actually changed the container's size, false if the
+// newly computed size matched what's already applied (within a couple
+// pixels) and nothing was written. That return value matters: Chart.js's
+// own responsive:true ResizeObserver reacts to *any* style write on the
+// container, even a "redundant" one setting the same value, and its
+// resulting redraw can nudge layout by a hair -- which feeds back into
+// this function's own measurements on the next interval tick. Writing
+// unconditionally on every tick (the first version of this fix) turned
+// that into a self-sustaining oscillation ("glitching") on a real device,
+// confirmed by testing -- not just the original one-time external resize
+// this was meant to correct for.
 function layoutFullscreenChart(card) {
   const container = card.querySelector('.chart-container');
-  if (!container) return;
+  if (!container) return false;
   const rotated = window.matchMedia('(orientation: portrait)').matches;
   const cardPadding = 40; // matches .chart-fullscreen-active's 20px each side
   const chrome = Array.from(card.children)
@@ -2570,12 +2581,27 @@ function layoutFullscreenChart(card) {
   const { w, h } = currentViewportSize();
   const visualW = rotated ? h : w;
   const visualH = rotated ? w : h;
-  container.style.width = Math.max(0, visualW - cardPadding) + 'px';
-  container.style.height = Math.max(0, visualH - cardPadding - chrome) + 'px';
+  const newWidth = Math.max(0, Math.round(visualW - cardPadding));
+  const newHeight = Math.max(0, Math.round(visualH - cardPadding - chrome));
+
+  const prevWidth = parseInt(container.dataset.fsWidth || '-1', 10);
+  const prevHeight = parseInt(container.dataset.fsHeight || '-1', 10);
+  if (Math.abs(newWidth - prevWidth) < 2 && Math.abs(newHeight - prevHeight) < 2) {
+    return false;
+  }
+  container.dataset.fsWidth = String(newWidth);
+  container.dataset.fsHeight = String(newHeight);
+  container.style.width = newWidth + 'px';
+  container.style.height = newHeight + 'px';
+  return true;
 }
 
 function resizeFullscreenCharts() {
-  document.querySelectorAll('.card.chart-fullscreen-active').forEach(layoutFullscreenChart);
+  let changed = false;
+  document.querySelectorAll('.card.chart-fullscreen-active').forEach(card => {
+    if (layoutFullscreenChart(card)) changed = true;
+  });
+  if (!changed) return;
   [deviceHrChart, deviceActivityChart, deviceSkinTempChart].forEach(c => c && c.resize());
 }
 
@@ -2619,7 +2645,12 @@ function toggleChartFullscreen(btn) {
       fullscreenChartInterval = null;
     }
     const container = card.querySelector('.chart-container');
-    if (container) { container.style.width = ''; container.style.height = ''; }
+    if (container) {
+      container.style.width = '';
+      container.style.height = '';
+      delete container.dataset.fsWidth;
+      delete container.dataset.fsHeight;
+    }
   }
 
   requestAnimationFrame(resizeFullscreenCharts);
