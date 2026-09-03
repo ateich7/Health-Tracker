@@ -107,6 +107,105 @@ a {
   font-size: 1.5em;
 }
 
+/* Chart card header: title + reset-zoom/fullscreen toolbar, used by the
+   Device page's charts (see chart-fullscreen-active below for what
+   fullscreen mode actually does). */
+.chart-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-card-header h2 {
+  margin-bottom: 20px;
+}
+
+.chart-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chart-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: var(--br);
+  background: var(--objbg);
+  color: var(--b);
+  cursor: pointer;
+}
+
+.chart-toolbar-btn:hover {
+  background: var(--objbghov);
+}
+
+.chart-toolbar-btn .material-icons {
+  font-size: 20px;
+}
+
+/* Manual "fullscreen" for a Device chart card (toggled by toggleChartFullscreen()
+   in renderer.js) rather than the native Fullscreen API -- iOS Safari's support
+   for that API on non-video elements is recent and inconsistent, and it can't
+   lock screen orientation at all, which is the whole point here (a big
+   landscape-shaped chart on a phone you're holding upright). Filling the
+   viewport with fixed positioning works everywhere; the @media block below
+   layers on the rotate-90-degrees trick when the phone itself is still
+   physically portrait, so you get a landscape view without having to
+   physically rotate the phone (and it steps out of the way on its own if you
+   do rotate, since the media query stops matching). */
+.chart-fullscreen-active {
+  position: fixed !important;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  margin: 0;
+  z-index: 10001;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 0;
+}
+
+.chart-fullscreen-active .chart-container {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+body.chart-fullscreen-open {
+  overflow: hidden;
+}
+
+@media (orientation: portrait) {
+  .chart-fullscreen-active {
+    top: 0;
+    left: 0;
+    inset: auto;
+    width: 100vh;
+    height: 100vw;
+    width: 100dvh;
+    height: 100dvw;
+    /* Anchored + rotated around the top-left corner, then shifted back
+       down by its own (pre-rotation) height -- rotating around the
+       center instead (translate(-50%,-50%) rotate(90deg)) sounds
+       equivalent but isn't: the translate and rotate compose in the
+       element's own (already-swapped w/h) local space, which pulls the
+       box wildly off-center rather than centering it. This is the
+       standard, verified-working recipe for this trick. */
+    transform-origin: top left;
+    transform: rotate(90deg) translateY(-100%);
+  }
+}
+
 .input-group {
   display: flex;
   align-items: center;

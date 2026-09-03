@@ -2522,6 +2522,70 @@ function updateSocialChart() {
 // message instead of an empty canvas when its table has no rows for this user.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Toggles a chart card between its normal in-page layout and a fixed,
+// viewport-filling "fullscreen" (see .chart-fullscreen-active in styles.css
+// for the rotate-to-landscape trick this relies on). Deliberately not the
+// native Fullscreen API -- see that CSS rule's comment for why a manual
+// overlay is the more reliable choice here. Chart.js's own ResizeObserver
+// picks up the new box size on its own, but a couple of chart.resize() calls
+// force it to happen on the same frame instead of trailing a beat behind the
+// CSS transition.
+function toggleChartFullscreen(btn) {
+  const card = btn.closest('.card');
+  if (!card) return;
+  const icon = btn.querySelector('.material-icons');
+  const enteringFullscreen = !card.classList.contains('chart-fullscreen-active');
+
+  card.classList.toggle('chart-fullscreen-active', enteringFullscreen);
+  document.body.classList.toggle('chart-fullscreen-open', enteringFullscreen);
+  if (icon) icon.textContent = enteringFullscreen ? 'fullscreen_exit' : 'fullscreen';
+
+  const resizeCharts = () => {
+    [deviceHrChart, deviceActivityChart, deviceSkinTempChart].forEach(c => c && c.resize());
+  };
+  requestAnimationFrame(resizeCharts);
+  setTimeout(resizeCharts, 300); // after the orientation-driven layout settles
+}
+
+// chartjs-plugin-zoom adds resetZoom() to every chart instance it's attached
+// to; guarded since a chart can be null (e.g. no data synced yet, or mid-reload).
+function resetDeviceChartZoom(chart) {
+  if (chart && chart.resetZoom) chart.resetZoom();
+}
+
+// Zoom/pan config for the three Device charts: drag (or one-finger
+// touch-drag) to pan along the x-axis, wheel/pinch to zoom. `limits` needs
+// the *actual* first/last category label, not the string 'original' --
+// chartjs-plugin-zoom would otherwise treat whatever recentWindowScale()
+// set as the chart's initial x.min/x.max as the full pannable range,
+// which locks panning to that already-narrowed window and defeats the
+// point of panning (confirmed by testing: with 'original', dragging did
+// nothing once already at the initial view).
+function deviceChartZoomPlugin(chartData) {
+  return {
+    pan: { enabled: true, mode: 'x' },
+    zoom: {
+      wheel: { enabled: true },
+      pinch: { enabled: true },
+      mode: 'x'
+    },
+    limits: { x: { min: chartData[0]?.x, max: chartData[chartData.length - 1]?.x } }
+  };
+}
+
+// Sets an initial x-axis min/max on the most recent `count` category labels
+// so a chart with months of daily rollups opens on a legible, unsquished
+// window instead of cramming everything in at once -- pan (drag) or zoom
+// (wheel/pinch) reach the rest. Returns {} (no-op) when there's nothing to
+// window down to.
+function recentWindowScale(chartData, count = 14) {
+  if (!chartData || chartData.length <= count) return {};
+  return {
+    min: chartData[chartData.length - count].x,
+    max: chartData[chartData.length - 1].x
+  };
+}
+
 // Shared helper: toggles the canvas/empty-state pair for a Device chart, then
 // (if there's data) hands off to buildFn to actually construct the Chart.js instance.
 function renderDeviceChart(dataArr, canvasId, emptyId, buildFn) {
@@ -2594,11 +2658,13 @@ function updateDeviceActivityChart() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } },
+          zoom: deviceChartZoomPlugin(chartData)
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
+            ...recentWindowScale(chartData),
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {
@@ -2677,7 +2743,7 @@ async function updateDeviceHrChart() {
     chartData = [...rows]
       .sort((a, b) => a.ts - b.ts)
       .map(e => ({
-        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         hr_avg: e.hr, hr_min: e.hr_min, hr_max: e.hr_max
       }));
     if (emptyEl) {
@@ -2723,11 +2789,16 @@ async function updateDeviceHrChart() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } },
+          zoom: deviceChartZoomPlugin(chartData)
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
+            // Daily rollup ('week') gets an initial recent-days window like
+            // Steps/Skin Temp; intraday ranges are already a bounded window
+            // the user picked, so leave those showing in full by default.
+            ...(isIntraday ? {} : recentWindowScale(chartData)),
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {
@@ -2759,7 +2830,7 @@ async function updateDeviceSkinTempChart() {
     chartData = [...rows]
       .sort((a, b) => a.ts - b.ts)
       .map(e => ({
-        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        x: new Date(e.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         skin_temp_avg: e.skin_temp
       }));
     if (emptyEl) {
@@ -2805,11 +2876,13 @@ async function updateDeviceSkinTempChart() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: !isMobile, labels: { color: '#c4cad4' } }
+          legend: { display: !isMobile, labels: { color: '#c4cad4' } },
+          zoom: deviceChartZoomPlugin(chartData)
         },
         scales: {
           x: {
-            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true },
+            ...(isIntraday ? {} : recentWindowScale(chartData)),
+            ticks: { color: '#FFFFFF', maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
             grid: { color: 'rgba(250,250,250,0.4)' }
           },
           y: {

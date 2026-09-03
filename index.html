@@ -466,7 +466,17 @@
         <!-- Device (read-only dashboard for data synced by the HealthyPi Move Python tool) -->
         <div id="page-device" class="page">
           <div class="card">
-            <h2>Heart Rate</h2>
+            <div class="chart-card-header">
+              <h2>Heart Rate</h2>
+              <div class="chart-toolbar">
+                <button class="chart-toolbar-btn" onclick="resetDeviceChartZoom(deviceHrChart)" title="Reset zoom">
+                  <span class="material-icons">restart_alt</span>
+                </button>
+                <button class="chart-toolbar-btn chart-fullscreen-btn" onclick="toggleChartFullscreen(this)" title="Fullscreen">
+                  <span class="material-icons">fullscreen</span>
+                </button>
+              </div>
+            </div>
             <div class="weight-filter-row">
               <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('hour', this)">Past Hour</button>
               <button class="weight-filter-btn hr-filter-btn" onclick="setDeviceHrRange('5h', this)">Past 5 Hours</button>
@@ -480,14 +490,34 @@
             </div>
           </div>
           <div class="card">
-            <h2>Steps</h2>
+            <div class="chart-card-header">
+              <h2>Steps</h2>
+              <div class="chart-toolbar">
+                <button class="chart-toolbar-btn" onclick="resetDeviceChartZoom(deviceActivityChart)" title="Reset zoom">
+                  <span class="material-icons">restart_alt</span>
+                </button>
+                <button class="chart-toolbar-btn chart-fullscreen-btn" onclick="toggleChartFullscreen(this)" title="Fullscreen">
+                  <span class="material-icons">fullscreen</span>
+                </button>
+              </div>
+            </div>
             <div class="chart-container">
               <canvas id="deviceActivityChart"></canvas>
               <p class="empty-state device-chart-empty" id="deviceActivityEmpty" style="display:none;">No device data synced yet.</p>
             </div>
           </div>
           <div class="card">
-            <h2>Skin Temperature</h2>
+            <div class="chart-card-header">
+              <h2>Skin Temperature</h2>
+              <div class="chart-toolbar">
+                <button class="chart-toolbar-btn" onclick="resetDeviceChartZoom(deviceSkinTempChart)" title="Reset zoom">
+                  <span class="material-icons">restart_alt</span>
+                </button>
+                <button class="chart-toolbar-btn chart-fullscreen-btn" onclick="toggleChartFullscreen(this)" title="Fullscreen">
+                  <span class="material-icons">fullscreen</span>
+                </button>
+              </div>
+            </div>
             <div class="weight-filter-row">
               <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('hour', this)">Past Hour</button>
               <button class="weight-filter-btn skin-temp-filter-btn" onclick="setDeviceSkinTempRange('5h', this)">Past 5 Hours</button>
@@ -541,6 +571,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <!-- hammer.js must load before chartjs-plugin-zoom -- the zoom plugin uses it
+       for touch gestures (one-finger pan, pinch-to-zoom) on mobile. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.min.js"></script>
   <script src="renderer.js"></script>
 </body>
 
