@@ -197,6 +197,23 @@ a {
   min-height: 0 !important;
 }
 
+/* Making chart-container immune to flex-shrink (above) without also making
+   its siblings immune left them exposed to it: if layoutFullscreenChart()'s
+   computed height even slightly overshoots the space actually available,
+   flexbox's normal response is to shrink the *other* (still default
+   flex-shrink:1) items rather than let anything overflow -- which shrank
+   the filter row to 0 (confirmed: computed height 0px despite containing
+   normal-height buttons) rather than the chart overflowing. And because
+   that measurement feeds back into layoutFullscreenChart()'s own "how much
+   room is left" calculation, it's a feedback loop that converges on that
+   wrong-but-self-consistent state rather than correcting itself. Exempting
+   these from shrinking too means they always report their true natural
+   size, which is what that calculation actually needs. */
+.chart-fullscreen-active .chart-card-header,
+.chart-fullscreen-active .weight-filter-row {
+  flex-shrink: 0;
+}
+
 /* Without this, a touch-drag on the canvas can get claimed by the browser's
    own native scroll (chart-fullscreen-active uses overflow:auto) before
    Hammer.js/chartjs-plugin-zoom ever see the gesture -- which looks
