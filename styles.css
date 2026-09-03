@@ -158,27 +158,35 @@ a {
    layers on the rotate-90-degrees trick when the phone itself is still
    physically portrait, so you get a landscape view without having to
    physically rotate the phone (and it steps out of the way on its own if you
-   do rotate, since the media query stops matching). */
+   do rotate, since the media query stops matching).
+
+   Every sizing property below is !important: .page .card and
+   .page .chart-container get a fixed mobile height further down this file
+   (same 2-class specificity, later in the file, so it would otherwise win
+   the cascade and clamp the "fullscreen" card to its normal small mobile
+   size -- which is exactly the "rotates correctly but doesn't fill the
+   screen" bug this fixes). */
 .chart-fullscreen-active {
   position: fixed !important;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  width: 100dvw;
-  height: 100dvh;
-  margin: 0;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 20px !important;
   z-index: 10001;
   background: var(--bg);
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   overflow: auto;
   border-radius: 0;
 }
 
 .chart-fullscreen-active .chart-container {
-  flex: 1;
-  height: auto;
-  min-height: 0;
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 body.chart-fullscreen-open {
@@ -187,13 +195,27 @@ body.chart-fullscreen-open {
 
 @media (orientation: portrait) {
   .chart-fullscreen-active {
-    top: 0;
-    left: 0;
-    inset: auto;
-    width: 100vh;
-    height: 100vw;
-    width: 100dvh;
-    height: 100dvw;
+    /* !important throughout: the base (non-media) rule above is also
+       !important (see its comment), and a non-important declaration --
+       even in a more specific or later rule -- can never beat an
+       !important one. Without matching !important here, these
+       swapped-for-rotation dimensions would lose to the base rule's
+       100dvw/100dvh instead of overriding them.
+
+       inset (a shorthand for top/right/bottom/left together) MUST come
+       before the individual top/left overrides below, not after --
+       inset is a shorthand, so writing it later re-resets top/left back
+       to auto regardless of their own !important (confirmed by testing:
+       this exact ordering mistake was why the box measured 20px off
+       from the corner -- "auto" resolved to the fixed element's static
+       flow position instead of the intended (0,0)). */
+    inset: auto !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vh !important;
+    height: 100vw !important;
+    width: 100dvh !important;
+    height: 100dvw !important;
     /* Anchored + rotated around the top-left corner, then shifted back
        down by its own (pre-rotation) height -- rotating around the
        center instead (translate(-50%,-50%) rotate(90deg)) sounds
@@ -201,8 +223,8 @@ body.chart-fullscreen-open {
        element's own (already-swapped w/h) local space, which pulls the
        box wildly off-center rather than centering it. This is the
        standard, verified-working recipe for this trick. */
-    transform-origin: top left;
-    transform: rotate(90deg) translateY(-100%);
+    transform-origin: top left !important;
+    transform: rotate(90deg) translateY(-100%) !important;
   }
 }
 
