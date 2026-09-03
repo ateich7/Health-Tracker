@@ -2543,6 +2543,21 @@ function isChartVisuallyRotated(chart) {
 // what's visually horizontal/vertical on screen (local width -> visual
 // vertical extent, local height -> visual horizontal extent), matching the
 // same swap the CSS rotation itself applies to the card.
+//
+// window.visualViewport (falling back to innerWidth/innerHeight where it's
+// missing) rather than window.innerWidth/innerHeight directly: mobile
+// Safari's address bar/toolbar can auto-hide a moment after the page goes
+// fixed-position + overflow:hidden, which changes the *actual* visible
+// viewport after our first layout pass already ran -- matching the exact
+// symptom reported (correct for an instant, then wrong). visualViewport
+// fires its own resize event when that happens (wired up below), so
+// recomputing from it converges on the real, final size instead of a
+// guessed "probably settled by now" timeout.
+function currentViewportSize() {
+  const vv = window.visualViewport;
+  return vv ? { w: vv.width, h: vv.height } : { w: window.innerWidth, h: window.innerHeight };
+}
+
 function layoutFullscreenChart(card) {
   const container = card.querySelector('.chart-container');
   if (!container) return;
@@ -2552,8 +2567,9 @@ function layoutFullscreenChart(card) {
     .filter(el => el !== container)
     .reduce((sum, el) => sum + el.offsetHeight, 0);
 
-  const visualW = rotated ? window.innerHeight : window.innerWidth;
-  const visualH = rotated ? window.innerWidth : window.innerHeight;
+  const { w, h } = currentViewportSize();
+  const visualW = rotated ? h : w;
+  const visualH = rotated ? w : h;
   container.style.width = Math.max(0, visualW - cardPadding) + 'px';
   container.style.height = Math.max(0, visualH - cardPadding - chrome) + 'px';
 }
@@ -2581,21 +2597,84 @@ function toggleChartFullscreen(btn) {
   if (enteringFullscreen) {
     window.addEventListener('resize', resizeFullscreenCharts);
     window.addEventListener('orientationchange', resizeFullscreenCharts);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeFullscreenCharts);
   } else {
     window.removeEventListener('resize', resizeFullscreenCharts);
     window.removeEventListener('orientationchange', resizeFullscreenCharts);
+    if (window.visualViewport) window.visualViewport.removeEventListener('resize', resizeFullscreenCharts);
     const container = card.querySelector('.chart-container');
     if (container) { container.style.width = ''; container.style.height = ''; }
   }
 
   requestAnimationFrame(resizeFullscreenCharts);
-  setTimeout(resizeFullscreenCharts, 300); // after the orientation-driven layout settles
+  // Belt-and-suspenders re-checks in case something settles without ever
+  // firing a resize event (seen in testing) -- cheap and idempotent if the
+  // size was already correct.
+  [100, 300, 600, 1000].forEach(ms => setTimeout(resizeFullscreenCharts, ms));
 }
 
 // chartjs-plugin-zoom adds resetZoom() to every chart instance it's attached
 // to; guarded since a chart can be null (e.g. no data synced yet, or mid-reload).
 function resetDeviceChartZoom(chart) {
   if (chart && chart.resetZoom) chart.resetZoom();
+}
+
+// Manual pan handling for the rotated case: chartjs-plugin-zoom's Hammer.js-
+// driven pan always reacts to the RAW (unrotated) screen deltaX for a
+// horizontal (date) scale -- CSS rotate() never touches touch/mouse
+// coordinates, it only repaints pixels. Empirically verified (dropped
+// markers at known pre-rotation corners and read back their post-rotation
+// getBoundingClientRect): the date axis's own drawing direction (local +x)
+// maps to real screen +y once rotated 90 degrees, so a physically-vertical
+// drag is what should pan it, not deltaX. Rather than fighting Hammer.js by
+// feeding it corrected synthetic touch events (fragile, especially for
+// multi-touch/pinch), track the drag with plain listeners and call the
+// plugin's own public chart.pan() -- the same, already-correct panning math
+// the normal (unrotated) case uses -- with a delta computed from the right
+// raw axis.
+function installRotatedPanHandler(canvas, getChart) {
+  if (!canvas) return;
+  let dragging = false;
+  let lastCoord = null;
+
+  function coordFor(e) {
+    const t = e.touches && e.touches.length ? e.touches[0] : e;
+    return t.clientY; // local +x <- screen +y while rotated, see comment above
+  }
+
+  function onStart(e) {
+    const chart = getChart();
+    if (!chart || !isChartVisuallyRotated(chart)) return;
+    dragging = true;
+    lastCoord = coordFor(e);
+  }
+  function onMove(e) {
+    if (!dragging) return;
+    const chart = getChart();
+    if (!chart || !isChartVisuallyRotated(chart)) {
+      dragging = false;
+      return;
+    }
+    const coord = coordFor(e);
+    const delta = coord - lastCoord;
+    lastCoord = coord;
+    if (delta !== 0) {
+      chart.pan({ x: delta, y: 0 }, undefined, 'none');
+      e.preventDefault();
+    }
+  }
+  function onEnd() {
+    dragging = false;
+    lastCoord = null;
+  }
+
+  canvas.addEventListener('mousedown', onStart);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onEnd);
+  canvas.addEventListener('touchstart', onStart, { passive: true });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onEnd);
+  canvas.addEventListener('touchcancel', onEnd);
 }
 
 // Zoom/pan config for the three Device charts: drag (or one-finger
@@ -2665,6 +2744,14 @@ function updateDeviceCharts() {
   updateDeviceHrChart();
   updateDeviceSkinTempChart();
 }
+
+// The canvases themselves are static markup (only the Chart.js instance
+// bound to each gets destroyed/recreated on every update), so these are
+// installed once -- each reads the *current* chart instance via its getter
+// rather than closing over one that might since have been replaced.
+installRotatedPanHandler(document.getElementById('deviceHrChart'), () => deviceHrChart);
+installRotatedPanHandler(document.getElementById('deviceActivityChart'), () => deviceActivityChart);
+installRotatedPanHandler(document.getElementById('deviceSkinTempChart'), () => deviceSkinTempChart);
 
 // Bar chart of daily steps with a 7-day moving average overlay (same convention
 // used for weight/sleep/signals elsewhere in the app).
