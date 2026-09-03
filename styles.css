@@ -226,6 +226,19 @@ body.chart-fullscreen-open {
   overflow: hidden;
 }
 
+/* The app's own header/bottom-nav are normal (non-fixed, non-positioned)
+   chrome, painted as part of the underlying page -- .chart-fullscreen-active
+   sits above them via position:fixed + a high z-index, but "on top of"
+   still means they're there, and once the chart is rotated 90 degrees
+   their real top-of-screen/bottom-of-screen positions land on what's now
+   the chart's *left and right* visual edges. Simplest fix that doesn't
+   depend on getting the overlay's own edge-to-edge sizing pixel-perfect on
+   every device: just don't render them while a chart is fullscreen. */
+body.chart-fullscreen-open .app-header,
+body.chart-fullscreen-open .bottom-nav {
+  display: none !important;
+}
+
 @media (orientation: portrait) {
   .chart-fullscreen-active {
     /* !important throughout: the base (non-media) rule above is also
