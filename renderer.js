@@ -211,10 +211,11 @@ async function loadData() {
     const chip = document.getElementById('weightChip');
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
-  if (sleepData.some(e => e.date === today)) {
-    const chip = document.getElementById('sleepChip');
-    if (!chip.classList.contains('completed')) toggleTask(chip);
-  }
+  // Sleep tracking removed from Home tab (kept for possible re-add)
+  // if (sleepData.some(e => e.date === today)) {
+  //   const chip = document.getElementById('sleepChip');
+  //   if (!chip.classList.contains('completed')) toggleTask(chip);
+  // }
   // Codes is stored only in localStorage (no Supabase table)
   checkChipState('codesChip', 'codesLoggedDate');
 
@@ -284,34 +285,35 @@ async function logWeight() {
   updateUI();
 }
 
-async function logSleep() {
-  const hoursInput      = document.getElementById('sleepHoursInput');
-  const timeInBedInput  = document.getElementById('sleepTimeInBedInput');
-  const restedInput     = document.getElementById('sleepRestedInput');
-  const hours      = parseFloat(hoursInput.value);
-  const timeInBed  = parseFloat(timeInBedInput.value);
-  const rested     = parseFloat(restedInput.value);
-  if (!hours || hours < 0 || hours > 24) return;
-
-  const today = getToday();
-  const entry = { date: today, hours, time_in_bed: timeInBed || null, rested, timestamp: Date.now() };
-
-  await db.from('sleep_logs').upsert(
-    { user_id: currentUser.id, ...entry },
-    { onConflict: 'user_id,date' }
-  );
-
-  sleepData = sleepData.filter(e => e.date !== today);
-  sleepData.push(entry);
-  sleepData.sort((a, b) => a.timestamp - b.timestamp);
-
-  hoursInput.value     = '';
-  timeInBedInput.value = '';
-  restedInput.value    = '';
-  const chip = document.getElementById('sleepChip');
-  if (!chip.classList.contains('completed')) toggleTask(chip);
-  updateUI();
-}
+// Sleep tracking removed from Home tab (kept for possible re-add)
+// async function logSleep() {
+//   const hoursInput      = document.getElementById('sleepHoursInput');
+//   const timeInBedInput  = document.getElementById('sleepTimeInBedInput');
+//   const restedInput     = document.getElementById('sleepRestedInput');
+//   const hours      = parseFloat(hoursInput.value);
+//   const timeInBed  = parseFloat(timeInBedInput.value);
+//   const rested     = parseFloat(restedInput.value);
+//   if (!hours || hours < 0 || hours > 24) return;
+//
+//   const today = getToday();
+//   const entry = { date: today, hours, time_in_bed: timeInBed || null, rested, timestamp: Date.now() };
+//
+//   await db.from('sleep_logs').upsert(
+//     { user_id: currentUser.id, ...entry },
+//     { onConflict: 'user_id,date' }
+//   );
+//
+//   sleepData = sleepData.filter(e => e.date !== today);
+//   sleepData.push(entry);
+//   sleepData.sort((a, b) => a.timestamp - b.timestamp);
+//
+//   hoursInput.value     = '';
+//   timeInBedInput.value = '';
+//   restedInput.value    = '';
+//   const chip = document.getElementById('sleepChip');
+//   if (!chip.classList.contains('completed')) toggleTask(chip);
+//   updateUI();
+// }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHIP / TASK STATE
@@ -2218,14 +2220,15 @@ function updateStreaks() {
   if (!container) return;
 
   const meditationDates    = getMeditationDates();
-  const sleepEfficiencyAvg = calcSleepEfficiencyAvg(sleepData);
+  // Sleep efficiency tracker removed from Home tab top bar (kept for possible re-add)
+  // const sleepEfficiencyAvg = calcSleepEfficiencyAvg(sleepData);
   const releaseDates       = psychData.filter(e => !e.released).map(e => e.date);
   const allPsychDates      = psychData.map(e => e.date);
   const socialDates        = socialData.map(e => e.date);
 
   const streaks = [
     { label: 'meditation',       count: calcDailyStreak(meditationDates), icon: 'self_improvement',      unit: ['day', 'days'] },
-    { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'], inlineUnit: true },
+    // { label: 'sleep efficiency', count: sleepEfficiencyAvg,               icon: 'bedtime',                unit: ['%', '%'], inlineUnit: true },
     { label: 'no release',       count: calcStreak(releaseDates, false, allPsychDates), icon: 'local_fire_department',  unit: ['day', 'days'] },
     { label: 'any interaction',  count: calcDailyStreak(socialDates),     icon: 'people',                 unit: ['day', 'days'] },
   ];
