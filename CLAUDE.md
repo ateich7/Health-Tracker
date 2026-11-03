@@ -1,7 +1,7 @@
 # Health Tracker — CLAUDE.md
 
 ## What this app is
-A personal health tracking desktop + web app. Centered on three KPIs shown at the top of Home — total interview prep hours, girls asked out (`real_stakes` social logs), and days/week with restedness ≥ 8 — each measured against the next milestone (`MILESTONES` / `MAIN_GOALS` in `renderer.js`). Also tracks weight and workouts. Signals (confidence/stress/low), Codes, Meditation, streaks and the quote card are hidden (commented out, not deleted). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
+A personal health tracking desktop + web app. Centered on three KPIs shown at the top of Home — total interview prep hours, girls asked out (`real_stakes` social logs), and days/week with restedness ≥ 8 — each measured against the next milestone (`MILESTONES` / `MAIN_GOALS` in `renderer.js`). Also tracks weight and workouts. Only three tabs are visible — Home (KPIs, goals, and the weight / restedness / prep / social inputs), Workout, and Data (weight, restedness, interview prep, and Real Stakes "asked out" charts). Signals (confidence/stress/low), Codes, Meditation, streaks, the quote card, the Social and Device tabs, and the exercise chart are hidden (commented out, not deleted). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
 
 ## Tech stack
 - **Electron** (`main.js`) — macOS desktop wrapper, no Node APIs exposed to renderer

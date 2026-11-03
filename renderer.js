@@ -25,6 +25,8 @@ let deviceHrRange = 'week';
 let deviceSkinTempRange = 'week';
 
 const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes', 'extreme_stakes', 'real_stakes'];
+// Data page "Asked Out" chart only plots the goal tier; set to SOCIAL_CATEGORIES to show every tier again
+const SOCIAL_CHART_CATEGORIES = ['real_stakes'];
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
@@ -39,6 +41,7 @@ const sleepLineToggles = {
 let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
+let prepPeriodDays = 30; // how many days the interview prep chart shows; 0 = since KPI_START_DATE
 let exercisePeriodDays = 30; // how many logged entries the exercise chart shows; 0 = all time
 // value1/value2 are generic since their meaning depends on exercise type (see
 // updateExerciseChart): reps/weight for lifts, distance/time for runs
@@ -49,6 +52,7 @@ let exerciseChart       = null;
 let sleepChart          = null;
 let signalsChart        = null;
 let socialChart         = null;
+let prepChart           = null;
 let deviceActivityChart = null;
 let deviceHrChart       = null;
 let deviceSkinTempChart = null;
@@ -136,7 +140,7 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'data') { updateWeightChart(); updateSleepChart(); /* updateSignalsChart(); */ updateExerciseChart(); updateSocialChart(); }
+  if (name === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
   else if (name === 'device') updateDeviceCharts();
   // #workoutHistory is 0-height while the page is hidden, so the fit-to-height
   // pass renderWorkoutHistory() ran while loading data (before any page was
@@ -446,7 +450,7 @@ function updateUI() {
   // updateStreaks(); // streaks replaced by KPIs on Home (kept for possible re-add)
   updateKpis();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); /* updateSignalsChart(); */ updateExerciseChart(); }
+  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
   else if (activePage === 'social') updateSocialChart();
   else if (activePage === 'device') updateDeviceCharts();
 }
@@ -671,6 +675,7 @@ function updateWeightChart() {
 //   lift     → dual-axis: total reps (left) + avg weight (right)
 //   bodyweight → single axis: total reps
 function updateExerciseChart() {
+  if (!document.getElementById('exerciseChart')) return; // Exercise chart hidden (kept for possible re-add)
   if (exerciseChart) exerciseChart.destroy();
 
   const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
@@ -2637,7 +2642,7 @@ const socialIconPlugin = {
         ctx.fillStyle = 'rgba(255,255,255,0.88)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(glyphs[i], props.x, props.y + segH / 2);
+        ctx.fillText(glyphs[dataset.glyphIndex ?? i], props.x, props.y + segH / 2);
         ctx.restore();
       });
     });
@@ -2685,9 +2690,10 @@ function updateSocialChart() {
     type: 'bar',
     data: {
       labels,
+      // glyphIndex keeps socialIconPlugin's icon lookup aligned after filtering
       datasets: SOCIAL_DATASET_META.map((meta, i) => ({
-        label: meta.label, data: series[i], backgroundColor: meta.color, stack: 'a'
-      }))
+        label: meta.label, data: series[i], backgroundColor: meta.color, stack: 'a', glyphIndex: i
+      })).filter((_, i) => SOCIAL_CHART_CATEGORIES.includes(SOCIAL_CATEGORIES[i]))
     },
     options: {
       responsive: true,
@@ -2701,6 +2707,84 @@ function updateSocialChart() {
       }
     },
     plugins: [socialIconPlugin]
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERVIEW PREP CHART (Data page)
+// Daily hours as bars (left axis) + running total since KPI_START_DATE as a
+// line (right axis), with the next milestone's hours target as a dashed line.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function setPrepPeriod(days, btn) {
+  prepPeriodDays = days;
+  document.querySelectorAll('.prep-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updatePrepChart();
+}
+
+function updatePrepChart() {
+  if (prepChart) prepChart.destroy();
+  const canvas = document.getElementById('prepChart');
+  if (!canvas) return;
+
+  document.getElementById('prepTotalStat').textContent = `${calcPrepHoursTotal()} hr`;
+
+  // Same locale-independent day keying as updateSocialChart
+  const byDay = new Map();
+  prepData.forEach(row => {
+    const d = new Date(row.date);
+    if (isNaN(d)) return;
+    byDay.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, parseFloat(row.hours) || 0);
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sinceStart = Math.round((today - KPI_START_DATE) / 86400000) + 1;
+  const days = prepPeriodDays || sinceStart;
+
+  // Running total starts from everything logged since KPI_START_DATE before the window
+  const windowStart = new Date(today);
+  windowStart.setDate(windowStart.getDate() - (days - 1));
+  let running = prepData
+    .filter(e => onOrAfterKpiStart(e.date) && new Date(e.date) < windowStart)
+    .reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+
+  const labels = [], daily = [], cumulative = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const hrs = byDay.get(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`) || 0;
+    if (d >= KPI_START_DATE) running += hrs;
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    daily.push(hrs);
+    cumulative.push(Math.round(running * 10) / 10);
+  }
+
+  const target = getNextMilestone().prep;
+  const tick = { color: 'rgba(255,255,255,0.45)', font: { size: 10 } };
+  const grid = { color: 'rgba(255,255,255,0.06)' };
+
+  prepChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { type: 'line', label: 'Total', data: cumulative, yAxisID: 'y1', borderColor: '#34C759', backgroundColor: '#34C759', tension: 0.3, pointRadius: 0, borderWidth: 2 },
+        { type: 'line', label: `${getNextMilestone().label} target`, data: labels.map(() => target), yAxisID: 'y1', borderColor: 'rgba(255,255,255,0.35)', borderDash: [6, 4], pointRadius: 0, borderWidth: 1 },
+        { label: 'Hours', data: daily, yAxisID: 'y', backgroundColor: 'rgba(0, 136, 255, 0.7)' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x:  { ticks: { ...tick, maxRotation: 45 }, grid },
+        y:  { beginAtZero: true, position: 'left',  ticks: tick, grid, title: { display: true, text: 'hr / day', color: 'rgba(255,255,255,0.45)' } },
+        y1: { beginAtZero: true, position: 'right', ticks: tick, grid: { drawOnChartArea: false }, suggestedMax: target, title: { display: true, text: 'total hr', color: 'rgba(255,255,255,0.45)' } }
+      }
+    }
   });
 }
 

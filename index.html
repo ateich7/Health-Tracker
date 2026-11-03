@@ -107,6 +107,7 @@
           </div>
           <span>Workout</span>
         </div>
+        <!-- Social (input moved to Home) and Device tabs hidden (kept for possible re-add)
         <div class="nav-item" id="socialChip" data-page="social" onclick="showPage('social')">
           <div class="icon-wrap">
             <span class="material-icons">people</span>
@@ -118,6 +119,7 @@
           <span class="material-icons">watch</span>
           <span>Device</span>
         </div>
+        -->
       </nav>
 
       <!-- Pages -->
@@ -182,6 +184,81 @@
                 <input type="number" id="prepInput" step="0.25" min="0" max="24" placeholder="Interview prep hours today"
                        onkeydown="if(event.key==='Enter')logPrep()">
                 <button class="btn-primary" onclick="logPrep()">Log</button>
+              </div>
+            </div>
+
+            <div class="card social-entry-card">
+              <div class="social-card-header">
+                <h2>Social</h2>
+                <p class="social-date-label">Tap to log interaction you started</p>
+              </div>
+              <div class="social-categories">
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
+                      <span class="social-cat-icon material-icons">chat</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">No Stakes</span>
+                        <span class="social-cat-desc">Cashier, old guy, etc.</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_no_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="no_stakes" onclick="unlogSocial('no_stakes')">−</button>
+                  </div>
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="low_stakes" onclick="logSocial('low_stakes')">
+                      <span class="social-cat-icon material-icons">mood</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">Low Stakes</span>
+                        <span class="social-cat-desc">Girl you're not into romantically</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_low_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="low_stakes" onclick="unlogSocial('low_stakes')">−</button>
+                  </div>
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
+                      <span class="social-cat-icon material-icons">bolt</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">Moderate Stakes</span>
+                        <span class="social-cat-desc">Attracted to her, not dating her</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_med_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="med_stakes" onclick="unlogSocial('med_stakes')">−</button>
+                  </div>
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="high_stakes" onclick="logSocial('high_stakes')">
+                      <span class="social-cat-icon material-icons">whatshot</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">High Stakes</span>
+                        <span class="social-cat-desc">Asking her for a number or date</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_high_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="high_stakes" onclick="unlogSocial('high_stakes')">−</button>
+                  </div>
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="extreme_stakes" onclick="logSocial('extreme_stakes')">
+                      <span class="social-cat-icon material-icons">favorite</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">Extreme Stakes</span>
+                        <span class="social-cat-desc">A real romantic prospect</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_extreme_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="extreme_stakes" onclick="unlogSocial('extreme_stakes')">−</button>
+                  </div>
+                  <div class="social-cat-row">
+                    <div class="social-cat-btn" data-cat="real_stakes" onclick="logSocial('real_stakes')">
+                      <span class="social-cat-icon material-icons">send</span>
+                      <div class="social-cat-info">
+                        <span class="social-cat-name">Real Stakes</span>
+                        <span class="social-cat-desc">Asking a real prospect out</span>
+                      </div>
+                      <span class="social-cat-count" id="socialCount_real_stakes">0</span>
+                    </div>
+                    <button class="social-minus" data-cat="real_stakes" onclick="unlogSocial('real_stakes')">−</button>
+                  </div>
               </div>
             </div>
 
@@ -299,7 +376,7 @@
           <div class="card">
             <h2>
               <span class="material-icons data-card-icon" title="Sleep">bedtime</span>
-              <span class="data-card-label">Sleep</span>
+              <span class="data-card-label">Restedness</span>
               <button class="chart-filter-btn" onclick="toggleChartFilterPanel('sleepToggleRow')" title="Choose lines shown" aria-label="Choose lines shown">
                 <span class="material-icons">tune</span>
               </button>
@@ -380,6 +457,7 @@
           </div>
           -->
 
+          <!-- Exercise progress chart hidden: Data only shows goal KPIs + weight (kept for possible re-add)
           <div class="card">
             <h2>
               <span class="material-icons data-card-icon" title="Exercise Progress">fitness_center</span>
@@ -400,11 +478,34 @@
               <canvas id="exerciseChart"></canvas>
             </div>
           </div>
+          -->
 
           <div class="card">
             <h2>
-              <span class="material-icons data-card-icon" title="Social">people</span>
-              <span class="data-card-label">Social</span>
+              <span class="material-icons data-card-icon" title="Interview Prep">work</span>
+              <span class="data-card-label">Interview Prep</span>
+              <div class="data-card-stats">
+                <span class="data-card-stat">
+                  <span class="data-card-stat-label">Total</span>
+                  <span class="data-card-stat-value" id="prepTotalStat">--</span>
+                </span>
+              </div>
+            </h2>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn prep-filter-btn" onclick="setPrepPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn prep-filter-btn" onclick="setPrepPeriod(14, this)">2 Weeks</button>
+              <button class="weight-filter-btn prep-filter-btn active" onclick="setPrepPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn prep-filter-btn" onclick="setPrepPeriod(0, this)">All Time</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="prepChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>
+              <span class="material-icons data-card-icon" title="Asked Out">favorite</span>
+              <span class="data-card-label">Asked Out</span>
             </h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn social-filter-btn active" onclick="setSocialPeriod(7,this)">Week</button>
@@ -419,80 +520,7 @@
 
         <!-- Social -->
         <div id="page-social" class="page">
-          <div class="card social-entry-card">
-            <div class="social-card-header">
-              <h2>Social</h2>
-              <p class="social-date-label">Tap to log interaction you started</p>
-            </div>
-            <div class="social-categories">
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="no_stakes" onclick="logSocial('no_stakes')">
-                    <span class="social-cat-icon material-icons">chat</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">No Stakes</span>
-                      <span class="social-cat-desc">Cashier, old guy, etc.</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_no_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="no_stakes" onclick="unlogSocial('no_stakes')">−</button>
-                </div>
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="low_stakes" onclick="logSocial('low_stakes')">
-                    <span class="social-cat-icon material-icons">mood</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">Low Stakes</span>
-                      <span class="social-cat-desc">Girl you're not into romantically</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_low_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="low_stakes" onclick="unlogSocial('low_stakes')">−</button>
-                </div>
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="med_stakes" onclick="logSocial('med_stakes')">
-                    <span class="social-cat-icon material-icons">bolt</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">Moderate Stakes</span>
-                      <span class="social-cat-desc">Attracted to her, not dating her</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_med_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="med_stakes" onclick="unlogSocial('med_stakes')">−</button>
-                </div>
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="high_stakes" onclick="logSocial('high_stakes')">
-                    <span class="social-cat-icon material-icons">whatshot</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">High Stakes</span>
-                      <span class="social-cat-desc">Asking her for a number or date</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_high_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="high_stakes" onclick="unlogSocial('high_stakes')">−</button>
-                </div>
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="extreme_stakes" onclick="logSocial('extreme_stakes')">
-                    <span class="social-cat-icon material-icons">favorite</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">Extreme Stakes</span>
-                      <span class="social-cat-desc">A real romantic prospect</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_extreme_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="extreme_stakes" onclick="unlogSocial('extreme_stakes')">−</button>
-                </div>
-                <div class="social-cat-row">
-                  <div class="social-cat-btn" data-cat="real_stakes" onclick="logSocial('real_stakes')">
-                    <span class="social-cat-icon material-icons">send</span>
-                    <div class="social-cat-info">
-                      <span class="social-cat-name">Real Stakes</span>
-                      <span class="social-cat-desc">Asking a real prospect out</span>
-                    </div>
-                    <span class="social-cat-count" id="socialCount_real_stakes">0</span>
-                  </div>
-                  <button class="social-minus" data-cat="real_stakes" onclick="unlogSocial('real_stakes')">−</button>
-                </div>
-            </div>
-          </div>
+          <!-- Social entry card moved to Home -->
         </div>
 
         <!-- Workout -->
@@ -596,6 +624,7 @@
         </div>
         <span>Workout</span>
       </div>
+      <!-- Social (input moved to Home) and Device tabs hidden (kept for possible re-add)
       <div class="bottom-nav-item" data-page="social" onclick="showPage('social')">
         <div class="icon-wrap">
           <span class="material-icons">people</span>
@@ -607,6 +636,7 @@
         <span class="material-icons">watch</span>
         <span>Device</span>
       </div>
+      -->
     </nav>
   </div>
 
