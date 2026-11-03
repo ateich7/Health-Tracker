@@ -1,7 +1,7 @@
 # Health Tracker — CLAUDE.md
 
 ## What this app is
-A personal health tracking desktop + web app. Tracks weight, sleep, workouts, and psychological signals (confidence, stress, low mood, release days). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
+A personal health tracking desktop + web app. Centered on three KPIs shown at the top of Home — total interview prep hours, girls asked out (`real_stakes` social logs), and days/week with restedness ≥ 8 — each measured against the next milestone (`MILESTONES` / `MAIN_GOALS` in `renderer.js`). Also tracks weight and workouts. Signals (confidence/stress/low), Codes, Meditation, streaks and the quote card are hidden (commented out, not deleted). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
 
 ## Tech stack
 - **Electron** (`main.js`) — macOS desktop wrapper, no Node APIs exposed to renderer
@@ -21,11 +21,12 @@ package.json        — scripts for building and deploying
 assets/             — app icons
 ```
 
-## Supabase schema (12 tables, all with RLS — users see only their own rows)
+## Supabase schema (13 tables, all with RLS — users see only their own rows)
 | Table | Key columns |
 |---|---|
 | `weight_logs` | `user_id, date, weight, timestamp` — unique on `(user_id, date)` |
-| `sleep_logs` | `user_id, date, hours, rested, timestamp` — unique on `(user_id, date)` |
+| `sleep_logs` | `user_id, date, hours, rested, timestamp` — unique on `(user_id, date)`; `hours` is nullable (Home logs restedness only) |
+| `prep_logs` | `user_id, date, hours, timestamp` — interview prep hours; unique on `(user_id, date)` |
 | `workout_logs` | `user_id, date, exercises` (JSONB array) — unique on `(user_id, date)` |
 | `custom_exercises` | `user_id, name, is_lift, is_run` — unique on `(user_id, name)` |
 | `psych_logs` | `user_id, date, confidence, stress, low, released, sick` — unique on `(user_id, date)` |
@@ -48,7 +49,7 @@ The `device_*` tables are **read-only from this app's perspective** — they're 
 
 ### Data flow
 1. `initApp()` is called once (guarded by `appInitialized` flag) when Supabase auth state confirms a session
-2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `workoutData`, `psychData`, `customExercises`, `deviceSleepData`, `deviceStressData`, `deviceActivityData`)
+2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `prepData`, `workoutData`, `psychData`, `customExercises`, `deviceSleepData`, `deviceStressData`, `deviceActivityData`)
 3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
 
 ### Device page

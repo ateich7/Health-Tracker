@@ -34,7 +34,8 @@
       "Bash(cp -r '/Users/Ari/repos/personal/health/health-tracker/dist/mac/Health Tracker.app' '/Applications/Health Tracker.app')",
       "Skill(run)",
       "Bash(git -C /Users/Ari/repos/personal/health/health-tracker diff CLAUDE.md)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(ls -la ../healthypi-track 2>/dev/null && echo \"---FOUND---\" || echo \"NOT FOUND\")"
     ]
   }
 }

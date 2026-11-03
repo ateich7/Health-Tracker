@@ -13,7 +13,7 @@ create table if not exists sleep_logs (
   id           uuid    default gen_random_uuid() primary key,
   user_id      uuid    references auth.users not null,
   date         text    not null,
-  hours        numeric not null,
+  hours        numeric,          -- nullable: Home sleep card logs restedness only
   rested       numeric,
   time_in_bed  numeric,
   timestamp    bigint  not null,
@@ -65,6 +65,18 @@ create table if not exists social_logs (
 
 alter table social_logs enable row level security;
 create policy "Own social logs" on social_logs for all using (auth.uid() = user_id);
+
+create table if not exists prep_logs (
+  id         uuid    default gen_random_uuid() primary key,
+  user_id    uuid    references auth.users not null,
+  date       text    not null,
+  hours      numeric not null,
+  timestamp  bigint  not null,
+  unique (user_id, date)
+);
+
+alter table prep_logs enable row level security;
+create policy "Own prep logs" on prep_logs for all using (auth.uid() = user_id);
 
 -- Migrations for existing workout_logs tables
 -- alter table workout_logs add column if not exists duration_minutes integer;

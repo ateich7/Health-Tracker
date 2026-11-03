@@ -9,6 +9,7 @@ let sleepData   = [];   // rows from sleep_logs
 let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 let socialData  = [];   // rows from social_logs
+let prepData    = [];   // rows from prep_logs (interview prep hours per day)
 
 // Read-only: written by the separate HealthyPi Move Python sync tool, never by this app
 let deviceActivityData = []; // rows from device_activity_logs (steps)
@@ -27,11 +28,13 @@ const SOCIAL_CATEGORIES = ['no_stakes', 'low_stakes', 'med_stakes', 'high_stakes
 
 let weightPeriodDays = 30; // how many days the weight chart shows; 0 = all time
 let sleepPeriodDays  = window.innerWidth <= 768 ? 7 : 14;
+// Hours / in-bed / efficiency lines off: Sleep now only tracks restedness
+// (their toggle buttons are commented out in index.html, kept for possible re-add)
 const sleepLineToggles = {
-  hours: true, hoursAvg: true,
-  timeInBed: true, timeInBedAvg: true,
+  hours: false, hoursAvg: false,
+  timeInBed: false, timeInBedAvg: false,
   rested: true, restedAvg: true,
-  efficiency: true, efficiencyAvg: true
+  efficiency: false, efficiencyAvg: false
 };
 let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
@@ -133,7 +136,7 @@ function showPage(name) {
   localStorage.setItem('activePage', name);
 
   // Refresh the chart(s) that just became visible
-  if (name === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); updateSocialChart(); }
+  if (name === 'data') { updateWeightChart(); updateSleepChart(); /* updateSignalsChart(); */ updateExerciseChart(); updateSocialChart(); }
   else if (name === 'device') updateDeviceCharts();
   // #workoutHistory is 0-height while the page is hidden, so the fit-to-height
   // pass renderWorkoutHistory() ran while loading data (before any page was
@@ -169,7 +172,7 @@ async function deleteWorkoutEntry(date) {
 // Fetches all data from Supabase, rebuilds the localStorage workout cache,
 // marks today's chips complete, and triggers the initial UI render
 async function loadData() {
-  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes,
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes,
          deviceActivityRes, deviceVitalsRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
@@ -177,6 +180,7 @@ async function loadData() {
     db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
     db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     db.from('social_logs').select('*').eq('user_id', currentUser.id),
+    db.from('prep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
     // Read-only: populated by the separate HealthyPi Move sync tool, not by this app
     db.from('device_activity_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
     db.from('device_vitals_logs').select('*').eq('user_id', currentUser.id).order('date_ts')
@@ -186,6 +190,7 @@ async function loadData() {
   sleepData  = sleepsRes.data  || [];
   psychData  = psychRes.data   || [];
   socialData = socialRes.data  || [];
+  prepData   = prepRes.data    || [];
 
   deviceActivityData = deviceActivityRes.data || [];
   deviceVitalsData   = deviceVitalsRes.data   || [];
@@ -216,11 +221,18 @@ async function loadData() {
   //   const chip = document.getElementById('sleepChip');
   //   if (!chip.classList.contains('completed')) toggleTask(chip);
   // }
-  // Codes is stored only in localStorage (no Supabase table)
-  checkChipState('codesChip', 'codesLoggedDate');
+  if (sleepData.some(e => e.date === today && e.rested != null)) {
+    const chip = document.getElementById('restedChip');
+    if (!chip.classList.contains('completed')) toggleTask(chip);
+  }
+  updatePrepCard();
 
-  updateMeditationCard();
-  updateSignalsChipState();
+  // Codes, Meditation and Signals hidden from Home (kept for possible re-add)
+  // // Codes is stored only in localStorage (no Supabase table)
+  // checkChipState('codesChip', 'codesLoggedDate');
+  //
+  // updateMeditationCard();
+  // updateSignalsChipState();
 
   const todaySocial = socialData.find(e => e.date === today);
   if (todaySocial && SOCIAL_CATEGORIES.some(cat => todaySocial[cat] > 0)) {
@@ -245,7 +257,7 @@ async function loadData() {
   else             localStorage.removeItem('workoutLoggedDate');
   populateExerciseSelect();
   renderWorkoutHistory();
-  getQuote();
+  // getQuote(); // Quote card hidden from Home (kept for possible re-add)
   updateSocialUI();
   updateUI();
 
@@ -315,6 +327,71 @@ async function logWeight() {
 //   updateUI();
 // }
 
+// Sleep: logs only restedness on waking (0-10). Upserts today's sleep_logs row,
+// keeping any hours/time-in-bed already stored for today.
+async function logRested() {
+  const input  = document.getElementById('restedInput');
+  const rested = parseFloat(input.value);
+  if (isNaN(rested) || rested < 0 || rested > 10) return;
+
+  const today    = getToday();
+  const existing = sleepData.find(e => e.date === today) || {};
+  const entry = {
+    date: today,
+    hours: existing.hours ?? null,
+    time_in_bed: existing.time_in_bed ?? null,
+    rested,
+    timestamp: existing.timestamp || Date.now()
+  };
+
+  await db.from('sleep_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+
+  sleepData = sleepData.filter(e => e.date !== today);
+  sleepData.push(entry);
+  sleepData.sort((a, b) => a.timestamp - b.timestamp);
+
+  input.value = '';
+  const chip = document.getElementById('restedChip');
+  if (!chip.classList.contains('completed')) toggleTask(chip);
+  updateUI();
+}
+
+// Interview prep: the input holds today's TOTAL hours (prefilled with what's
+// already logged), so re-logging later in the day overwrites rather than adds.
+async function logPrep() {
+  const input = document.getElementById('prepInput');
+  const hours = parseFloat(input.value);
+  if (isNaN(hours) || hours < 0 || hours > 24) return;
+
+  const today = getToday();
+  const entry = { date: today, hours, timestamp: Date.now() };
+
+  await db.from('prep_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+
+  prepData = prepData.filter(e => e.date !== today);
+  prepData.push(entry);
+  prepData.sort((a, b) => a.timestamp - b.timestamp);
+
+  updatePrepCard();
+  updateUI();
+}
+
+// Prep card stays editable all day (unlike other log cards, its inputs don't
+// collapse when completed — see styles.css), prefilled with today's total.
+function updatePrepCard() {
+  const chip  = document.getElementById('prepChip');
+  const entry = prepData.find(e => e.date === getToday());
+  document.getElementById('prepInput').value = entry ? entry.hours : '';
+  const done = !!entry && entry.hours > 0;
+  if (chip.classList.contains('completed') !== done) toggleTask(chip);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CHIP / TASK STATE
 // Nav items (Workout, Social) and home log cards (Weight, Sleep, Codes, Signals,
@@ -366,9 +443,10 @@ function getLast30Days() {
 
 function updateUI() {
   updateStats();
-  updateStreaks();
+  // updateStreaks(); // streaks replaced by KPIs on Home (kept for possible re-add)
+  updateKpis();
   const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updateSignalsChart(); updateExerciseChart(); }
+  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); /* updateSignalsChart(); */ updateExerciseChart(); }
   else if (activePage === 'social') updateSocialChart();
   else if (activePage === 'device') updateDeviceCharts();
 }
@@ -1060,6 +1138,7 @@ function togglePsychSick() {
 // Signals: a line chart for confidence/stress/low with 7-day MAs, plus a
 // left-to-right row of release-day dots (see renderReleaseDots)
 function updateSignalsChart() {
+  if (!document.getElementById('signalsChart')) return; // Signals chart hidden (kept for possible re-add)
   if (signalsChart) signalsChart.destroy();
 
   const chartData = psychData.slice(-signalsPeriodDays).map(e => ({
@@ -2214,6 +2293,111 @@ function calcStreak(loggedDateStrings, workoutMode = false, allLoggedDateStrings
   return streak;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KPIs & GOALS (Home top row)
+// The three main KPIs, each measured against the next milestone check-in.
+// Prep hours and girls asked out are cumulative since KPI_START_DATE; rested
+// days/week is a trailing 4-week average (days with restedness >= 8, divided by 4).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const KPI_START_DATE = new Date(2026, 10, 1); // Nov 1, 2026 — when KPI tracking began
+
+const MILESTONES = [
+  { date: new Date(2026, 11, 31), label: 'Dec 31', prep: 50,  askedOut: 10,  restedDays: 1 },
+  { date: new Date(2027, 1, 28),  label: 'Feb 28', prep: 100, askedOut: 30,  restedDays: 2 },
+  { date: new Date(2027, 3, 30),  label: 'Apr 30', prep: 150, askedOut: 60,  restedDays: 3 },
+  { date: new Date(2027, 5, 30),  label: 'Jun 30', prep: 200, askedOut: 100, restedDays: 4 },
+];
+
+const MAIN_GOALS = [
+  { icon: 'work',     text: 'PM Internship' },
+  { icon: 'favorite', text: "Dating someone I'm really excited about" },
+  { icon: 'bedtime',  text: 'Well rested 4 days a week' },
+];
+const MAIN_GOALS_DEADLINE = new Date(2027, 5, 1); // June 1, 2027
+
+const RESTED_THRESHOLD = 8;
+
+// First milestone whose date hasn't passed yet (falls back to the last one)
+function getNextMilestone() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return MILESTONES.find(m => m.date >= today) || MILESTONES[MILESTONES.length - 1];
+}
+
+function onOrAfterKpiStart(dateStr) {
+  return new Date(dateStr) >= KPI_START_DATE;
+}
+
+function calcPrepHoursTotal() {
+  const total = prepData.filter(e => onOrAfterKpiStart(e.date)).reduce((s, e) => s + (parseFloat(e.hours) || 0), 0);
+  return Math.round(total * 10) / 10;
+}
+
+function calcAskedOutTotal() {
+  return socialData.filter(e => onOrAfterKpiStart(e.date)).reduce((s, e) => s + (e.real_stakes || 0), 0);
+}
+
+function calcRestedDaysPerWeek() {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - 27); // last 28 days including today
+  const count = sleepData.filter(e => e.rested != null && e.rested >= RESTED_THRESHOLD && new Date(e.date) >= cutoff).length;
+  return Math.round((count / 4) * 10) / 10;
+}
+
+function daysUntil(date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((date - today) / 86400000));
+}
+
+function updateKpis() {
+  const container = document.getElementById('kpiGrid');
+  if (!container) return;
+
+  const m = getNextMilestone();
+  const kpis = [
+    { label: 'interview prep',  icon: 'work',     value: calcPrepHoursTotal(),    target: m.prep,       unit: 'hr' },
+    { label: 'asked out',       icon: 'favorite', value: calcAskedOutTotal(),     target: m.askedOut,   unit: 'girls' },
+    { label: 'rested 8+',       icon: 'bedtime',  value: calcRestedDaysPerWeek(), target: m.restedDays, unit: 'days/wk' },
+  ];
+
+  container.innerHTML = `
+    <div class="kpi-header">Next check-in: <strong>${m.label}</strong> · ${daysUntil(m.date)} days</div>
+    ${kpis.map(k => {
+      const pct = Math.min(100, k.target ? (k.value / k.target) * 100 : 0);
+      return `
+      <div class="kpi-item${k.value >= k.target ? ' met' : ''}">
+        <span class="material-icons kpi-icon">${k.icon}</span>
+        <div class="kpi-count">${k.value}<span class="kpi-target"> / ${k.target}</span></div>
+        <div class="kpi-unit">${k.unit}</div>
+        <div class="kpi-bar"><span style="width:${pct}%"></span></div>
+        <div class="kpi-label">${k.label}</div>
+      </div>`;
+    }).join('')}`;
+
+  updateGoals();
+}
+
+function updateGoals() {
+  const container = document.getElementById('goalsList');
+  if (!container) return;
+  const next = getNextMilestone();
+  container.innerHTML = `
+    <div class="kpi-header">By <strong>June 1</strong> · ${daysUntil(MAIN_GOALS_DEADLINE)} days</div>
+    <ul class="goals-list">
+      ${MAIN_GOALS.map(g => `<li><span class="material-icons">${g.icon}</span>${g.text}</li>`).join('')}
+    </ul>
+    <table class="milestone-table">
+      <tr><th></th><th>Prep</th><th>Asked</th><th>Rested</th></tr>
+      ${MILESTONES.map(m => `
+        <tr class="${m === next ? 'next' : ''}${m.date < new Date() && m !== next ? ' past' : ''}">
+          <td>${m.label}</td><td>${m.prep}hr</td><td>${m.askedOut}</td><td>${m.restedDays}/wk</td>
+        </tr>`).join('')}
+    </table>`;
+}
+
 // Rebuilds the streak grid on the home page
 function updateStreaks() {
   const container = document.getElementById('streaksGrid');
@@ -2293,6 +2477,7 @@ loadWeather(); // runs immediately on page load
 // ─────────────────────────────────────────────────────────────────────────────
 
 function getQuote() {
+  if (!document.getElementById('quote')) return; // Quote card hidden (kept for possible re-add)
   const q = quotes[Math.floor(Math.random() * quotes.length)];
   document.getElementById("quote").textContent  = q.quote;
   document.getElementById("author").textContent = "- " + q.author;
@@ -2403,6 +2588,7 @@ async function logSocial(category) {
   }
   updateSocialUI();
   updateSocialChart();
+  updateKpis();
 }
 
 async function unlogSocial(category) {
@@ -2421,6 +2607,7 @@ async function unlogSocial(category) {
   socialData.push({ user_id: currentUser.id, date: today, ...updated });
   updateSocialUI();
   updateSocialChart();
+  updateKpis();
 }
 
 function setSocialPeriod(days, btn) {

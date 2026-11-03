@@ -127,13 +127,21 @@
         <div id="page-home" class="page">
           <div class="home-top-row">
             <div class="card" id="streaksCard">
+              <div class="kpi-grid" id="kpiGrid"></div>
+              <!-- Streaks (meditation / no release / any interaction) replaced by KPIs (kept for possible re-add)
               <div class="streak-grid" id="streaksGrid"></div>
+              -->
             </div>
+            <div class="card" id="goalsCard">
+              <div id="goalsList"></div>
+            </div>
+            <!-- Quote card hidden to make room for Goals (kept for possible re-add)
             <div class="card" id="quoteCard">
               <h5 id="quote"></h5>
               <div class="spacer"></div>
               <div id="author"></div>
             </div>
+            -->
           </div>
           <div class="home-log-list">
             <div class="card home-log-card" id="weightChip">
@@ -150,6 +158,30 @@
               <div class="input-group">
                 <input type="number" id="weightInput" step="0.1" placeholder="Enter weight (lbs)">
                 <button class="btn-primary" onclick="logWeight()">Log</button>
+              </div>
+            </div>
+
+            <div class="card home-log-card" id="restedChip">
+              <h2>
+                <span class="material-icons log-card-icon" title="Sleep">bedtime</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
+              <div class="input-group">
+                <input type="number" id="restedInput" step="0.5" min="0" max="10" placeholder="Restedness on waking (0-10)"
+                       onkeydown="if(event.key==='Enter')logRested()">
+                <button class="btn-primary" onclick="logRested()">Log</button>
+              </div>
+            </div>
+
+            <div class="card home-log-card" id="prepChip">
+              <h2>
+                <span class="material-icons log-card-icon" title="Interview Prep">work</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
+              <div class="input-group">
+                <input type="number" id="prepInput" step="0.25" min="0" max="24" placeholder="Interview prep hours today"
+                       onkeydown="if(event.key==='Enter')logPrep()">
+                <button class="btn-primary" onclick="logPrep()">Log</button>
               </div>
             </div>
 
@@ -177,6 +209,7 @@
             </div>
             -->
 
+            <!-- Codes + Meditation buttons and Signals log card hidden (kept for possible re-add)
             <div class="home-log-icons" id="homeIconsRow">
               <button class="codes-btn" id="codesChip" onclick="openTaskLink(this)" title="Codes" aria-label="Codes">
                 <span class="material-icons">notes</span>
@@ -223,6 +256,7 @@
                 <button class="btn-primary inline-log-btn" onclick="logPsych()">Log</button>
               </div>
             </div>
+            -->
           </div>
         </div>
 
@@ -251,6 +285,8 @@
             </h2>
             <div class="weight-filter-row">
               <button class="weight-filter-btn" onclick="setWeightPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(14, this)">2 Weeks</button>
+              <button class="weight-filter-btn" onclick="setWeightPeriod(21, this)">3 Weeks</button>
               <button class="weight-filter-btn active" onclick="setWeightPeriod(30, this)">Month</button>
               <button class="weight-filter-btn" onclick="setWeightPeriod(90, this)">3 Months</button>
               <button class="weight-filter-btn" onclick="setWeightPeriod(0, this)">All Time</button>
@@ -276,6 +312,7 @@
               <button class="weight-filter-btn sleep-filter-btn" data-days="0" onclick="setSleepPeriod(0, this)">All Time</button>
             </div>
             <div class="sleep-toggle-row" id="sleepToggleRow">
+              <!-- Hours / In Bed lines hidden: Sleep tracks restedness only (kept for possible re-add)
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('hours', this)">
                 <span class="sleep-toggle-dot" style="background:#0088FF"></span>Hours
               </button>
@@ -288,24 +325,28 @@
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('timeInBedAvg', this)">
                 <span class="sleep-toggle-dot" style="background:#BF5AF2"></span>In Bed Avg
               </button>
+              -->
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('rested', this)">
                 <span class="sleep-toggle-dot" style="background:#34C759"></span>Rested
               </button>
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('restedAvg', this)">
                 <span class="sleep-toggle-dot" style="background:#FFD60A"></span>Rest Avg
               </button>
+              <!-- Efficiency lines hidden (kept for possible re-add)
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('efficiency', this)">
                 <span class="sleep-toggle-dot" style="background:#64D2FF"></span>Efficiency
               </button>
               <button class="sleep-toggle-btn active" onclick="toggleSleepLine('efficiencyAvg', this)">
                 <span class="sleep-toggle-dot" style="background:#30B0C7"></span>Eff Avg
               </button>
+              -->
             </div>
             <div class="chart-container">
               <canvas id="sleepChart"></canvas>
             </div>
           </div>
 
+          <!-- Signals chart hidden (kept for possible re-add)
           <div class="card">
             <h2>
               <span class="material-icons data-card-icon" title="Signals">sensors</span>
@@ -337,6 +378,7 @@
               <canvas id="signalsChart"></canvas>
             </div>
           </div>
+          -->
 
           <div class="card">
             <h2>
