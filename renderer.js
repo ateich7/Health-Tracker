@@ -114,9 +114,10 @@ function formatDate() {
   document.getElementById('dateToday').textContent = `${month} ${day}${suffix}`;
 }
 
-// Called by the auth handler once a valid session exists; bootstraps the whole UI
-async function initApp() {
-  const { data: { user } } = await db.auth.getUser();
+// Called by the auth handler once a valid session exists; bootstraps the whole UI.
+// The user comes straight from the session (already in memory) instead of a
+// getUser() round trip — row-level security still checks the token server-side.
+async function initApp(user) {
   currentUser = user;
 
   formatDate();
@@ -146,15 +147,13 @@ function showPage(name) {
   activatePage(name);
   localStorage.setItem('activePage', name);
 
-  // Refresh the chart(s) that just became visible
-  if (name === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
-  else if (name === 'device') updateDeviceCharts();
+  renderPageCharts(name); // refresh the chart(s) that just became visible
   // #workoutHistory is 0-height while the page is hidden, so the fit-to-height
   // pass renderWorkoutHistory() ran while loading data (before any page was
   // switched to) measured nothing — ResizeObserver doesn't reliably catch an
   // ancestor's display:none→flex transition, so re-run it explicitly now that
   // activatePage() above has made the page's real height measurable.
-  else if (name === 'workout') fitWorkoutHistoryRows();
+  if (name === 'workout') fitWorkoutHistoryRows();
 }
 
 // Pure DOM page-switch: shows the right .page div and highlights the nav item.
@@ -177,28 +176,27 @@ function activatePage(name) {
 async function loadData() {
   OBSOLETE_STORAGE_KEYS.forEach(k => localStorage.removeItem(k));
 
-  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes,
-         deviceActivityRes, deviceVitalsRes] = await Promise.all([
-    db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
-    db.from('sleep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
-    db.from('workout_logs').select('*').eq('user_id', currentUser.id),
-    db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
-    db.from('psych_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
-    db.from('social_logs').select('*').eq('user_id', currentUser.id),
-    db.from('prep_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
-    // Read-only: populated by the separate HealthyPi Move sync tool, not by this app
-    db.from('device_activity_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
-    db.from('device_vitals_logs').select('*').eq('user_id', currentUser.id).order('date_ts')
+  // Fetches one table's rows for this user, logging how long it took
+  const fetchTable = (table, orderBy) => {
+    const query = db.from(table).select('*').eq('user_id', currentUser.id);
+    return timed(table, orderBy ? query.order(orderBy) : query);
+  };
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes] = await Promise.all([
+    fetchTable('weight_logs', 'timestamp'),
+    fetchTable('sleep_logs', 'timestamp'),
+    fetchTable('workout_logs'),
+    fetchTable('custom_exercises'),
+    fetchTable('psych_logs', 'timestamp'),
+    fetchTable('social_logs'),
+    fetchTable('prep_logs', 'timestamp'),
   ]);
+  logLoadTime('data fetched');
 
   weightData = weightsRes.data || [];
   sleepData  = sleepsRes.data  || [];
   psychData  = psychRes.data   || [];
   socialData = socialRes.data  || [];
   prepData   = prepRes.data    || [];
-
-  deviceActivityData = deviceActivityRes.data || [];
-  deviceVitalsData   = deviceVitalsRes.data   || [];
 
   workoutLogs = workoutsRes.data || [];
 
@@ -255,10 +253,37 @@ async function loadData() {
   updateSocialUI();
   updateUI();
 
-  setTimeout(() => {
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('mainContent').classList.add('loaded');
-  }, 100);
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('mainContent').classList.add('loaded');
+  logLoadTime('rendered');
+}
+
+// Device tables are only shown on the (currently hidden) Device tab, so they're
+// fetched on its first visit instead of delaying every app load. Read-only:
+// populated by the separate HealthyPi Move sync tool, not by this app.
+let deviceDataLoaded = null;
+function loadDeviceData() {
+  deviceDataLoaded ??= Promise.all([
+    db.from('device_activity_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
+    db.from('device_vitals_logs').select('*').eq('user_id', currentUser.id).order('date_ts'),
+  ]).then(([activityRes, vitalsRes]) => {
+    deviceActivityData = activityRes.data || [];
+    deviceVitalsData   = vitalsRes.data   || [];
+  });
+  return deviceDataLoaded;
+}
+
+// Startup timing, visible in the browser console as "[load] …" lines.
+// Times are ms since the page started loading.
+function logLoadTime(step) {
+  console.info(`[load] ${step}: ${Math.round(performance.now())}ms`);
+}
+function timed(label, promise) {
+  const start = performance.now();
+  return Promise.resolve(promise).then(res => {
+    console.info(`[load]   ${label}: ${Math.round(performance.now() - start)}ms, ${res?.data?.length ?? 0} rows`);
+    return res;
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -439,10 +464,22 @@ function updateUI() {
   updateStats();
   // updateStreaks(); // streaks replaced by KPIs on Home (kept for possible re-add)
   updateKpis();
-  const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
-  if (activePage === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
-  else if (activePage === 'social') updateSocialChart();
-  else if (activePage === 'device') updateDeviceCharts();
+  renderPageCharts(document.querySelector('.page.active')?.id?.replace('page-', ''));
+}
+
+// Chart.js + zoom plugins load with `defer` so they don't hold up sign-in and
+// data loading (Home has no charts). Deferred scripts have always run by
+// DOMContentLoaded, so chart rendering waits for that if it hasn't fired yet.
+const chartLibsReady = document.readyState === 'loading'
+  ? new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }))
+  : Promise.resolve();
+
+async function renderPageCharts(page) {
+  if (!['data', 'social', 'device'].includes(page)) return;
+  await chartLibsReady;
+  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
+  else if (page === 'social') updateSocialChart();
+  else if (page === 'device') updateDeviceCharts();
 }
 
 // Updates the two weight stat boxes. Uses the same period slice as the chart so
@@ -1345,42 +1382,43 @@ function closeHeaderMenu() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BOOTSTRAP — runs after DOM is ready
+// BOOTSTRAP
+// This script sits at the end of <body>, so the DOM is already parsed: start
+// auth right away rather than on DOMContentLoaded, which would also wait for
+// the deferred chart libraries to download and run.
 // ─────────────────────────────────────────────────────────────────────────────
 
 let appInitialized = false; // guard against double-init from onAuthStateChange + getSession
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Listen for sign-in / sign-out events that happen after initial page load
-  db.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && !appInitialized) {
-      appInitialized = true;
-      document.getElementById('authScreen').style.display = 'none';
-      initApp();
-    } else if (event === 'SIGNED_OUT') {
-      window.location.reload(); // simplest way to reset all state
-    }
-  });
+function startApp(session) {
+  if (appInitialized) return;
+  appInitialized = true;
+  document.getElementById('authScreen').style.display = 'none';
+  logLoadTime('session ready');
+  initApp(session.user);
+}
 
-  // If there's already a session (e.g. returning user), skip the auth screen immediately
-  const { data: { session } } = await db.auth.getSession();
-  if (session && !appInitialized) {
-    appInitialized = true;
-    initApp();
-  } else if (!session) {
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('authScreen').style.display = 'flex';
-  }
-
-  // Close the header menu on any click outside of it
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('headerMenuDropdown');
-    if (menu.classList.contains('open') && !e.target.closest('.header-menu')) {
-      menu.classList.remove('open');
-    }
-  });
+// Sign-in / sign-out events that happen after the initial page load
+db.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) startApp(session);
+  else if (event === 'SIGNED_OUT') window.location.reload(); // simplest way to reset all state
 });
 
+// Returning user: skip the auth screen as soon as the stored session is read
+logLoadTime('scripts ready');
+db.auth.getSession().then(({ data: { session } }) => {
+  if (session) return startApp(session);
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('authScreen').style.display = 'flex';
+});
+
+// Close the header menu on any click outside of it
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('headerMenuDropdown');
+  if (menu.classList.contains('open') && !e.target.closest('.header-menu')) {
+    menu.classList.remove('open');
+  }
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WORKOUT FORM
@@ -2905,7 +2943,8 @@ function renderDeviceChart(dataArr, canvasId, emptyId, buildFn) {
   return buildFn();
 }
 
-function updateDeviceCharts() {
+async function updateDeviceCharts() {
+  await loadDeviceData();
   updateDeviceActivityChart();
   updateDeviceHrChart();
   updateDeviceSkinTempChart();
