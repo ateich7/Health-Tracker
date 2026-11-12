@@ -8,12 +8,14 @@ A personal health tracking desktop + web app. Centered on three KPIs shown at th
 - **Vanilla JS / HTML / CSS** — no frontend framework; `renderer.js` is the entire app logic
 - **Supabase** — PostgreSQL database + auth (email/password). `supabase-client.js` initializes the client and exposes `signIn`, `signUp`, `signOut`, `migrateLocalData`
 - **Chart.js 3.9.1** — all charts (weight trend, sleep, signals scores, exercise progress)
-- **localStorage** — used as a write-through cache and offline draft store for workout sessions
+- **localStorage** — small per-device UI state only (active page, custom-exercise list, in-progress workout draft); never a copy of logged data
 
 ## File structure
 ```
 index.html          — app shell; all pages are in the DOM, shown/hidden via CSS classes
-renderer.js         — all app logic (~1700 lines); organized into labeled sections
+renderer.js         — all app logic (~3300 lines); organized into labeled sections
+workout-history.js  — pure "last session" lookups over workout_logs rows (no DOM/storage)
+tests/              — node:test regression tests (`npm test`; runs before every build)
 styles.css          — all styles; organized into labeled sections
 supabase-client.js  — Supabase initialization and auth functions
 main.js             — Electron main process (window creation, geolocation permission)
@@ -49,8 +51,8 @@ The `device_*` tables are **read-only from this app's perspective** — they're 
 
 ### Data flow
 1. `initApp()` is called once (guarded by `appInitialized` flag) when Supabase auth state confirms a session
-2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `prepData`, `workoutData`, `psychData`, `customExercises`, `deviceSleepData`, `deviceStressData`, `deviceActivityData`)
-3. `refreshUI()` re-renders all charts and chips from those cached arrays — called after every log operation
+2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `prepData`, `workoutLogs`, `psychData`, `socialData`, `deviceActivityData`, `deviceVitalsData`). These arrays are the **only** source of truth — never mirror them into localStorage (a stale `workouts` cache + `planWorkoutDates` tag repeatedly pinned the workout form to months-old sessions; those keys are now purged on load via `OBSOLETE_STORAGE_KEYS`)
+3. `updateUI()` re-renders all charts and chips from those cached arrays — called after every log operation
 
 ### Device page
 Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `renderer.js`) for the `device_*` tables — no logging UI, since an external tool writes them. Each chart goes through a shared `renderDeviceChart()` helper that shows a "no device data synced yet" message instead of an empty canvas when its table has no rows. Heart Rate and Skin Temperature are the two exceptions with range filters (Past Hour / Past 5 Hours / Today / Last 24 Hours / This Week, `setDeviceHrRange()` / `setDeviceSkinTempRange()`): "This Week" plots the eagerly-loaded `deviceVitalsData` daily rollup like every other chart, but the four intraday ranges `await fetchDeviceIntradaySamples(table, cutoffTs)` (shared helper, table name + `deviceIntradayRangeCutoff()` passed in) against `device_hr_samples` / `device_skin_temp_samples` on click instead, since a day only has one rollup point to plot. SpO2/BP/ECG/HRV/EDA/stress don't get this treatment — they're manual spot-checks or (for HRV/stress) currently produce zero samples, so there's no continuous stream to filter into sub-day ranges.
@@ -59,16 +61,20 @@ Read-only dashboard (`updateDeviceCharts()` and friends, near the end of `render
 Each tab (sleep, signals, workout, social — both sidebar `.nav-item` and mobile `.bottom-nav-item`) has a `.task-dot` on its icon that signals the task is *not yet* done today; it disappears once `toggleTask()` adds `.completed` to the chip. Workout is only needed Mon/Wed/Fri, so `loadData()` adds `.no-task-today` to the workout chip/tab on other days to hide its dot regardless of completion. The standalone Codes button (Signals page) is unrelated to tabs and still uses the old `.chip-check` checkmark, shown when logged.
 
 ### Workout drafts
-The active workout form auto-saves to `localStorage` on every input (`saveWorkoutDraft()`). On load, `restoreWorkoutDraft()` repopulates the form. Draft is cleared on successful save.
+The active workout form saves to `localStorage` (`saveWorkoutDraft()`) on every input and is cleared on successful save. It is intentionally **not** auto-restored — the Workout page always opens to the plain Mon/Wed/Fri picker.
 
 ### Session timer
-Starts on the first input event in a workout session (one-shot listener). Adds 15 minutes to the elapsed time to account for warm-up before the timer started.
+Starts on the first input event in a workout session. Adds 15 minutes to the elapsed time to account for warm-up before the timer started.
 
 ### Exercise type inference
 Exercise type is determined by the number of sets in the data array: 3 items = run (distance/pace/time), 2 items = lift (weight/reps), 1 item = bodyweight (reps only).
 
-### Workout plan tracking (`planWorkoutDates`)
-`logWorkout()` tags each saved workout with a `planDate` (the date the plan was assigned, not necessarily logged). `getLastWorkoutForPlan()` first looks for a workout with a matching `planDate` tag, then falls back to >50% exercise overlap.
+### Previous-session lookups (`workout-history.js`)
+All "what did I do last time" logic lives in `WorkoutHistory`, which takes `workoutLogs` as an argument — never add another ad hoc lookup in `renderer.js`.
+- `startWorkout()` → `lastWorkoutForPlan()`: newest row with the matching `plan_key` (set by `logWorkout()` from `activePlanKey`); untagged legacy rows match by ≥50% exercise overlap. That session's exercise list becomes the form.
+- "Last: …" per exercise → `lastSetsByExercise()`: each exercise's own most recent session where it was actually performed (all-zero = skipped), so it never depends on a single "previous workout".
+- `date` is `M/D/YYYY` text — always sort with the parsed date (`newestFirst()`), never as a string. Today's date is excluded so the session being logged isn't its own "last".
+- Changing any of this? Add a case to `tests/workout-history.test.js`; `npm run build` refuses to deploy if tests fail.
 
 ### Moving averages
 7-day trailing moving averages are computed and overlaid on the weight, sleep hours, restedness, and all signals charts.
@@ -84,6 +90,7 @@ npm run build
 npm run build
 ```
 This single command does everything:
+0. `npm test` — aborts the deploy if any regression test fails
 1. `git add -A && git commit -m 'Deploy' && git push` — commits and pushes to GitHub
 2. `npx vercel --prod` — deploys to Vercel (static web)
 3. `npm run install-app` — builds the Electron `.app`, kills any running instance, copies to `/Applications`, and reopens

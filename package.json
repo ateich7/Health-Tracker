@@ -7,7 +7,8 @@
     "start": "electron .",
     "electron-build": "electron-builder --mac",
     "install-app": "npm run electron-build && pkill -x 'Health Tracker' || true && rm -rf '/Applications/Health Tracker.app' && cp -r 'dist/mac/Health Tracker.app' /Applications/'Health Tracker.app'",
-    "build": "git add -A && git commit -m 'Deploy' && git push && npx vercel --prod && npm run install-app"
+    "test": "node --test tests/*.test.js",
+    "build": "npm test && git add -A && git commit -m 'Deploy' && git push && npx vercel --prod && npm run install-app"
   },
   "build": {
     "appId": "com.yourname.myapp",

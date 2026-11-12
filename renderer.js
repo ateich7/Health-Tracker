@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GLOBAL STATE
 // All data arrays are loaded once on sign-in and kept in sync with Supabase.
-// localStorage is used as a lightweight cache so chart functions can read
-// workout data without re-fetching on every render.
+// They are the only source of truth for logged data — never mirror them into
+// localStorage, since a mirror that one code path forgets to update goes stale.
 // ─────────────────────────────────────────────────────────────────────────────
 let weightData  = [];   // rows from weight_logs
 let sleepData   = [];   // rows from sleep_logs
@@ -57,9 +57,9 @@ let deviceActivityChart = null;
 let deviceHrChart       = null;
 let deviceSkinTempChart = null;
 
-let currentUser        = null; // Supabase user object, set after sign-in
-let editingWorkoutDate = null; // non-null while editing a past workout; logWorkout() saves to this date
-let workoutTimerStart  = null; // ms timestamp of first input during a workout session
+let currentUser       = null; // Supabase user object, set after sign-in
+let workoutTimerStart = null; // ms timestamp of first input during a workout session
+let activePlanKey     = null; // plan (mon/wed/fri) the open workout form was started from
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WORKOUT PLANS
@@ -93,6 +93,13 @@ const friWorkout = [
   { name: "Dead Bug & Starfish", sets: 4, isLift: false, isRun: false },
   { name: "Rowing Machine", sets: 1, isLift: false, isRun: true },
 ];
+
+const WORKOUT_PLANS = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
+
+// localStorage keys from older versions that cached workout data. Nothing reads
+// them anymore, but a leftover `planWorkoutDates` once pinned the workout form to
+// a months-old session, so they're purged on every load.
+const OBSOLETE_STORAGE_KEYS = ['workouts', 'planWorkoutDates', 'workoutLoggedDate', 'activePlanKey'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // APP INIT
@@ -165,17 +172,11 @@ function activatePage(name) {
 // All five tables are fetched in parallel on init and cached locally.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Deletes a workout entry from Supabase and the localStorage cache
-async function deleteWorkoutEntry(date) {
-  await db.from('workout_logs').delete().eq('user_id', currentUser.id).eq('date', date);
-  const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  delete allWorkouts[date];
-  localStorage.setItem('workouts', JSON.stringify(allWorkouts));
-}
-
-// Fetches all data from Supabase, rebuilds the localStorage workout cache,
-// marks today's chips complete, and triggers the initial UI render
+// Fetches all data from Supabase, marks today's chips complete, and triggers
+// the initial UI render
 async function loadData() {
+  OBSOLETE_STORAGE_KEYS.forEach(k => localStorage.removeItem(k));
+
   const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes,
          deviceActivityRes, deviceVitalsRes] = await Promise.all([
     db.from('weight_logs').select('*').eq('user_id', currentUser.id).order('timestamp'),
@@ -200,12 +201,6 @@ async function loadData() {
   deviceVitalsData   = deviceVitalsRes.data   || [];
 
   workoutLogs = workoutsRes.data || [];
-
-  // Rebuild the workout localStorage cache so chart functions can read it
-  // without making additional Supabase calls
-  const workoutsObj = {};
-  workoutLogs.forEach(row => { workoutsObj[row.date] = row.exercises; });
-  localStorage.setItem('workouts', JSON.stringify(workoutsObj));
 
   // Cache custom exercise definitions locally (used by the add-exercise form)
   const customList = (customExRes.data || []).map(e => ({
@@ -254,11 +249,6 @@ async function loadData() {
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
 
-  // Remember the most recent workout date so the edit button knows what to reload
-  const sortedDates = Object.keys(workoutsObj).sort();
-  const lastWorkout = sortedDates[sortedDates.length - 1];
-  if (lastWorkout) localStorage.setItem('workoutLoggedDate', lastWorkout);
-  else             localStorage.removeItem('workoutLoggedDate');
   populateExerciseSelect();
   renderWorkoutHistory();
   // getQuote(); // Quote card hidden from Home (kept for possible re-add)
@@ -678,15 +668,14 @@ function updateExerciseChart() {
   if (!document.getElementById('exerciseChart')) return; // Exercise chart hidden (kept for possible re-add)
   if (exerciseChart) exerciseChart.destroy();
 
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
   const selectedExercise = document.getElementById('exerciseSelect')?.value || 'pushups';
 
   // Find the exercise type
   const allExercises = getAllExercises();
   const exerciseInfo = allExercises.find(ex => ex.name.toLowerCase() === selectedExercise.toLowerCase());
 
-  const chartData = Object.entries(workouts)
-    .map(([date, workout]) => {
+  const chartData = workoutLogs
+    .map(({ date, exercises: workout }) => {
       const exercise = workout.find(
         ex => ex.name.toLowerCase() === selectedExercise.toLowerCase()
       );
@@ -1448,39 +1437,10 @@ function formatPrevSets(sets, isLift, isRun) {
   return sets.map(s => s[0] || 0).join(', ');
 }
 
-// Finds the most recent past workout that shares exercises with the given list
-// (used to show "Last: …" reference values for each set)
-function getPreviousWorkout(exercises) {
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const today = getToday();
-  const nameSet = new Set(exercises.map(e => e.name.toLowerCase()));
-  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort((a, b) => new Date(b) - new Date(a));
-  for (const date of sorted) {
-    if (workouts[date].some(ex => nameSet.has(ex.name.toLowerCase()))) {
-      return { date, exercises: workouts[date] };
-    }
-  }
-  return null;
-}
-
-// Returns the set data for a named exercise from the most recent workout that included it
-function getPrevSetsForExercise(name) {
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const today = getToday();
-  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
-  const sorted = Object.keys(workouts).filter(d => d !== today).sort((a, b) => new Date(b) - new Date(a));
-  for (const date of sorted) {
-    const found = workouts[date].find(e => e.name.toLowerCase() === name.toLowerCase());
-    if (found) return found.sets;
-  }
-  return null;
-}
-
 // Builds the HTML for one exercise block (header + collapsible set inputs)
+// prevSets: sets from the last session that included this exercise (or undefined)
 function createExercise(exercise, prevSets) {
-  const prev = prevSets ?? null;
-  const prevText = prev ? formatPrevSets(prev, exercise.isLift, exercise.isRun) : '';
+  const prevText = prevSets ? formatPrevSets(prevSets, exercise.isLift, exercise.isRun) : '';
   const prevHtml = prevText
     ? `<span class="ex-prev">Last: ${prevText}</span>`
     : '';
@@ -1663,75 +1623,35 @@ function getWorkoutDraft() {
   return null;
 }
 
-// Saves the workout to Supabase; uses editingWorkoutDate if editing a past entry
+// Saves today's workout to Supabase, then refreshes everything that reads workoutLogs
 async function logWorkout() {
-  const isEditing = !!editingWorkoutDate;
-  const date      = editingWorkoutDate || getToday();
-  editingWorkoutDate = null;
-
-  // Collect all exercise names and set values from the DOM
-  const workoutData = [...document.querySelectorAll('.exercise')].map(ex => ({
+  const date = getToday();
+  const exercises = [...document.querySelectorAll('#workout .exercise')].map(ex => ({
     name: ex.querySelector('p').textContent,
-    sets: [...ex.querySelectorAll('.set')].map(setDiv =>
-      [...setDiv.querySelectorAll('input')].map(input => parseFloat(input.value) || 0)
-    )
+    sets: getExerciseSetValues(ex).map(set => set.map(v => parseFloat(v) || 0))
   }));
 
   // Add 15 minutes to account for warm-up time before the first logged input
   const durationMinutes = workoutTimerStart
     ? Math.round((Date.now() - workoutTimerStart) / 60000) + 15 : 15;
+
+  const row = { user_id: currentUser.id, date, exercises, duration_minutes: durationMinutes, plan_key: activePlanKey };
+  const { error } = await db.from('workout_logs').upsert(row, { onConflict: 'user_id,date' });
+  // Never fail silently: the form (and its draft) stay intact so nothing is lost
+  if (error) { alert(`Workout not saved: ${error.message}`); return; }
+
+  workoutLogs = [...workoutLogs.filter(r => r.date !== date), row];
   workoutTimerStart = null;
-
-  const activePlanKey = !isEditing ? (localStorage.getItem('activePlanKey') || null) : null;
-
-  await db.from('workout_logs').upsert(
-    { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes, plan_key: activePlanKey },
-    { onConflict: 'user_id,date' }
-  );
-
-  // Keep localStorage cache and in-memory workoutLogs in sync
-  const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  allWorkouts[date] = workoutData;
-  localStorage.setItem('workouts', JSON.stringify(allWorkouts));
-  localStorage.setItem('workoutLoggedDate', date);
+  activePlanKey = null;
   localStorage.removeItem('workoutDraft');
-  localStorage.removeItem('activePlanKey');
-
-  // Keep workoutLogs in memory in sync
-  const logIdx = workoutLogs.findIndex(r => r.date === date);
-  const newRow = { user_id: currentUser.id, date, exercises: workoutData, duration_minutes: durationMinutes, plan_key: activePlanKey };
-  if (logIdx >= 0) workoutLogs[logIdx] = newRow;
-  else workoutLogs.push(newRow);
-  renderWorkoutHistory();
 
   const chip = document.getElementById('workoutChip');
   if (!chip.classList.contains('completed')) toggleTask(chip);
 
+  renderWorkoutHistory();
   renderWorkoutSelector();
   populateExerciseSelect();
   updateUI();
-}
-
-// Re-opens the most recently logged workout pre-filled for editing
-function editWorkout() {
-  const allWorkouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const loggedDate = localStorage.getItem('workoutLoggedDate');
-  const savedWorkout = loggedDate ? allWorkouts[loggedDate] : null;
-
-  if (savedWorkout) {
-    editingWorkoutDate = loggedDate;
-    const allEx = getAllExercises();
-    const exercises = savedWorkout.map(saved => {
-      const info = allEx.find(e => e.name.toLowerCase() === saved.name.toLowerCase());
-      return {
-        name: saved.name,
-        sets: saved.sets.length,
-        isLift: info?.isLift || false,
-        isRun: info?.isRun || false
-      };
-    });
-    renderWorkoutForm(exercises, savedWorkout);
-  }
 }
 
 // Wires up drag-to-reorder on .exercise elements (desktop drag events + touch fallback)
@@ -1809,43 +1729,36 @@ function setupExerciseDragDrop(container) {
   });
 }
 
-// Builds and injects the exercise input form into #workout
-// exercises: array of { name, sets (count), isLift, isRun }
-// savedData: optional array to pre-fill inputs (used when editing a past workout)
-function renderWorkoutForm(exercises, savedData) {
-  document.getElementById('page-workout').classList.remove('workout-logged');
-  document.getElementById('page-workout').classList.remove('workout-selecting');
-  const container = document.getElementById('workout');
-  container.innerHTML = '';
-  container.removeEventListener('input', saveWorkoutDraft);
-  container.addEventListener('input', saveWorkoutDraft);
-  container.removeEventListener('input', handleExerciseInput);
-  container.addEventListener('input', handleExerciseInput);
-  container.removeEventListener('focusout', handleExerciseFieldBlur);
+// Attaches the form's delegated listeners once; #workout's children are
+// replaced on every render but the container (and its listeners) persists.
+function bindWorkoutFormListeners(container) {
+  if (container.dataset.listenersBound) return;
+  container.dataset.listenersBound = 'true';
+  container.addEventListener('input', e => {
+    if (!e.target.closest('.exercise')) return;
+    if (workoutTimerStart === null) workoutTimerStart = Date.now();
+    handleExerciseInput(e);
+    saveWorkoutDraft();
+  });
   container.addEventListener('focusout', handleExerciseFieldBlur);
   setupExerciseDragDrop(container);
-  // Start the session timer when the user first touches an input
-  workoutTimerStart = null;
-  container.addEventListener('input', function startTimer(e) {
-    if (workoutTimerStart === null && e.target.closest('.exercise')) {
-      workoutTimerStart = Date.now();
-      container.removeEventListener('input', startTimer); // one-shot
-    }
-  });
+}
 
-  // Find the most recent past workout that shares exercises with this list
-  // (used to show "Last: …" reference values in each exercise header)
-  const prevWorkout = getPreviousWorkout(exercises);
-  exercises.forEach(exercise => {
-    const prevSets = prevWorkout?.exercises.find(
-      e => e.name.toLowerCase() === exercise.name.toLowerCase()
-    )?.sets ?? null;
-    container.innerHTML += createExercise(exercise, prevSets);
-  });
+// Builds and injects the exercise input form into #workout
+// exercises: array of { name, sets (count), isLift, isRun }
+function renderWorkoutForm(exercises) {
+  const page = document.getElementById('page-workout');
+  page.classList.remove('workout-logged', 'workout-selecting');
+  const container = document.getElementById('workout');
+  bindWorkoutFormListeners(container);
+  workoutTimerStart = null; // starts on the session's first input (see bindWorkoutFormListeners)
 
-  const allExNames = getAllExercises().map(e => e.name);
-  const exListOptions = allExNames.map(n => `<option value="${n}">`).join('');
-  container.innerHTML += `
+  // "Last: …" per exercise comes from the latest session that included it
+  const lastSets = WorkoutHistory.lastSetsByExercise(workoutLogs, getToday());
+  const exListOptions = getAllExercises().map(e => `<option value="${e.name}">`).join('');
+  container.innerHTML = exercises
+    .map(ex => createExercise(ex, lastSets.get(WorkoutHistory.exerciseKey(ex.name))))
+    .join('') + `
     <datalist id="exerciseOptions">${exListOptions}</datalist>
     <div class="input-group" id="addExerciseForm" style="margin-top: 4px;">
       <input type="text" id="newExName" placeholder="Choose or type exercise" list="exerciseOptions" autocomplete="off" oninput="onExerciseNameInput()">
@@ -1857,37 +1770,16 @@ function renderWorkoutForm(exercises, savedData) {
       <input type="number" id="newExSets" placeholder="Sets" min="1" max="20" value="4" style="flex: 0.3; min-width: 60px;">
       <button class="btn-primary" onclick="addExercise()">Add</button>
     </div>
+    <button class="btn-primary" id="logWorkoutBtn" onclick="logWorkout()">Log Workout</button>
   `;
-  container.innerHTML += `<button class="btn-primary" id="logWorkoutBtn" onclick="logWorkout()">Log Workout</button>`;
 
-  if (savedData) {
-    prefillWorkout(savedData);
-  }
-
-  // Collapse any exercise that's already fully filled in (e.g. editing a past
-  // workout) and expand only the first one still needing input.
+  // Expand only the first exercise still needing input.
   initExerciseCollapseState(container);
 
   // #workoutCard just grew from the compact picker to a (often much taller)
   // form, resizing #workoutHistory's flex-allocated space — see the same
   // note in renderWorkoutSelector().
   fitWorkoutHistoryRows();
-}
-
-// Pre-fills all set inputs from saved exercise data (used by editWorkout)
-function prefillWorkout(savedExercises) {
-  const exerciseEls = document.querySelectorAll('.exercise');
-  savedExercises.forEach((savedEx, i) => {
-    if (i >= exerciseEls.length) return;
-    const sets = exerciseEls[i].querySelectorAll('.set');
-    savedEx.sets.forEach((setData, j) => {
-      if (j >= sets.length) return;
-      const inputs = sets[j].querySelectorAll('input');
-      setData.forEach((val, k) => {
-        if (inputs[k] && val) inputs[k].value = val;
-      });
-    });
-  });
 }
 
 // When the user picks an existing exercise from the datalist, auto-fill its type and set count
@@ -1922,7 +1814,7 @@ async function addExercise() {
     localStorage.setItem('customExercises', JSON.stringify(custom));
   }
 
-  const prevSets = getPrevSetsForExercise(name);
+  const prevSets = WorkoutHistory.lastSetsByExercise(workoutLogs, getToday()).get(WorkoutHistory.exerciseKey(name));
   document.getElementById('addExerciseForm').insertAdjacentHTML('beforebegin', createExercise(exercise, prevSets));
   nameInput.value = '';
   saveWorkoutDraft();
@@ -1958,7 +1850,7 @@ function renderWorkoutHistory() {
   const container = document.getElementById('workoutHistory');
   if (!container) return;
 
-  const sorted = [...workoutLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = WorkoutHistory.newestFirst(workoutLogs);
 
   if (!sorted.length) {
     container.innerHTML = '<p class="empty-state">No workouts logged yet.</p>';
@@ -2054,19 +1946,14 @@ function fitWorkoutHistoryRows() {
 async function deleteWorkoutRow(date) {
   if (!confirm(`Delete the workout logged on ${date}?`)) return;
 
-  await deleteWorkoutEntry(date);
+  const { error } = await db.from('workout_logs').delete().eq('user_id', currentUser.id).eq('date', date);
+  if (error) { alert(`Workout not deleted: ${error.message}`); return; }
   workoutLogs = workoutLogs.filter(r => r.date !== date);
 
   if (date === getToday()) {
     const chip = document.getElementById('workoutChip');
     if (chip.classList.contains('completed')) toggleTask(chip);
   }
-
-  // Point the edit button at whatever workout is now most recent (if any)
-  const remainingDates = workoutLogs.map(r => r.date).sort((a, b) => new Date(a) - new Date(b));
-  const lastWorkout = remainingDates[remainingDates.length - 1];
-  if (lastWorkout) localStorage.setItem('workoutLoggedDate', lastWorkout);
-  else             localStorage.removeItem('workoutLoggedDate');
 
   renderWorkoutHistory();
   populateExerciseSelect();
@@ -2118,55 +2005,16 @@ function selectWorkoutPlan(key) {
   }
 }
 
-// Loads the form for the selected plan, pre-populated from the last time that plan was done
+// Loads the form for the selected plan, using the exercises from the last time
+// that plan was done (falls back to the hardcoded plan the first time)
 function startWorkout() {
-  const selected = document.querySelector('input[name="workoutPlan"]:checked');
-  if (!selected) return;
-  const planKey = selected.value;
+  const planKey = document.querySelector('input[name="workoutPlan"]:checked')?.value;
+  if (!planKey) return;
+  activePlanKey = planKey; // logWorkout() tags the saved row with it
 
-  // Track which plan this workout session belongs to so logWorkout can tag it
-  localStorage.setItem('activePlanKey', planKey);
-
-  const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
-  const lastWorkout = getLastWorkoutForPlan(planKey);
-
-  if (lastWorkout) {
-    renderWorkoutForm(exerciseDefsFromHistory(lastWorkout));
-  } else {
-    renderWorkoutForm(planMap[planKey]);
-  }
-}
-
-// Finds the most recent logged workout matching a given plan key (mon/wed/fri).
-// Prefers an exact tagged date; falls back to >50% exercise overlap.
-function getLastWorkoutForPlan(planKey) {
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const today = getToday();
-
-  // Prefer the exact date tagged when a workout was previously logged via this plan
-  const planWorkoutDates = JSON.parse(localStorage.getItem('planWorkoutDates') || '{}');
-  const taggedDate = planWorkoutDates[planKey];
-  if (taggedDate && taggedDate !== today && workouts[taggedDate]) {
-    return workouts[taggedDate];
-  }
-
-  // Fallback: overlap matching against the hardcoded plan (for workouts logged before tagging)
-  const planMap = { mon: monWorkout, wed: wedWorkout, fri: friWorkout };
-  const plan = planMap[planKey];
-  if (!plan) return null;
-  const planNames = new Set(plan.map(e => e.name.toLowerCase()));
-  // Sort by actual date value (not locale string) so single- vs double-digit months sort correctly
-  const sorted = Object.keys(workouts)
-    .filter(d => d !== today)
-    .sort((a, b) => new Date(a) - new Date(b))
-    .reverse();
-  for (const date of sorted) {
-    const w = workouts[date];
-    if (!Array.isArray(w) || w.length === 0) continue;
-    const matches = w.filter(e => planNames.has(e.name.toLowerCase())).length;
-    if (matches >= Math.ceil(planNames.size / 2)) return w;
-  }
-  return null;
+  const plan = WORKOUT_PLANS[planKey];
+  const last = WorkoutHistory.lastWorkoutForPlan(workoutLogs, planKey, plan, getToday());
+  renderWorkoutForm(last ? exerciseDefsFromHistory(last.exercises) : plan);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2176,7 +2024,7 @@ function getLastWorkoutForPlan(planKey) {
 // Returns all known exercises (three fixed plans + user-added custom ones)
 function getAllExercises() {
   const custom = JSON.parse(localStorage.getItem('customExercises') || '[]');
-  return [...monWorkout, ...wedWorkout, ...friWorkout, ...custom];
+  return [...Object.values(WORKOUT_PLANS).flat(), ...custom];
 }
 
 // Populates the exercise chart dropdown with every exercise ever logged
@@ -2185,12 +2033,8 @@ function populateExerciseSelect() {
   if (!select) return;
 
   const currentValue = select.value;
-  const workouts = JSON.parse(localStorage.getItem('workouts') || '{}');
-  const nameSet = new Set();
-
-  Object.values(workouts).forEach(workout => workout.forEach(ex => nameSet.add(ex.name)));
-
-  const names = [...nameSet].sort((a, b) => a.localeCompare(b));
+  const names = [...new Set(workoutLogs.flatMap(row => (row.exercises || []).map(ex => ex.name)))]
+    .sort((a, b) => a.localeCompare(b));
   select.innerHTML = names.map(name =>
     `<option value="${name.toLowerCase()}">${name}</option>`
   ).join('');
