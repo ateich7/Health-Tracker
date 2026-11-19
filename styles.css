@@ -1670,6 +1670,19 @@ div {
   display: flex;
 }
 
+/* Release card: same stay-editable behavior, so the answer can be changed */
+#page-home #releaseChip.completed .input-group {
+  display: flex;
+}
+
+#page-home #releaseChip .input-group {
+  align-items: center;
+}
+
+#page-home #releaseChip .release-label {
+  margin-right: auto;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    MOBILE  (≤ 768px)
    Sidebar hidden, bottom nav shown. Cards stack vertically, charts have fixed heights.

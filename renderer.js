@@ -223,6 +223,7 @@ async function loadData() {
     if (!chip.classList.contains('completed')) toggleTask(chip);
   }
   updatePrepCard();
+  updateReleaseCard();
 
   // Codes, Meditation and Signals hidden from Home (kept for possible re-add)
   // // Codes is stored only in localStorage (no Supabase table)
@@ -401,6 +402,48 @@ async function logPrep() {
   updateUI();
 }
 
+// Release: a standalone Home card (split out of the hidden Signals card) that
+// logs only psych_logs.released for today. The upsert sends just that column,
+// so any confidence/stress/low already logged today is left untouched. The
+// card stays editable all day (like Prep), prefilled with today's answer.
+function toggleReleaseSwitch() {
+  const btn = document.getElementById('releaseSwitch');
+  const nowActive = !btn.classList.contains('active');
+  btn.classList.toggle('active', nowActive);
+  btn.classList.toggle('inactive', !nowActive);
+}
+
+async function logRelease() {
+  const released = document.getElementById('releaseSwitch').classList.contains('active');
+  const today = getToday();
+  const timestamp = Date.now();
+
+  const { error } = await db.from('psych_logs').upsert(
+    { user_id: currentUser.id, date: today, released, timestamp },
+    { onConflict: 'user_id,date' }
+  );
+  if (error) { console.error('logRelease failed', error); alert('Could not log release: ' + error.message); return; }
+
+  const existing = psychData.find(e => e.date === today) || {};
+  psychData = psychData.filter(e => e.date !== today);
+  psychData.push({ ...existing, date: today, released, timestamp });
+  psychData.sort((a, b) => a.timestamp - b.timestamp);
+
+  updateReleaseCard();
+  updateUI();
+}
+
+function updateReleaseCard() {
+  const chip  = document.getElementById('releaseChip');
+  const entry = psychData.find(e => e.date === getToday());
+  const on    = !!entry && !!entry.released;
+  const sw    = document.getElementById('releaseSwitch');
+  sw.classList.toggle('active', on);
+  sw.classList.toggle('inactive', !on);
+  const done = !!entry && entry.released != null;
+  if (chip.classList.contains('completed') !== done) toggleTask(chip);
+}
+
 // Prep card stays editable all day (unlike other log cards, its inputs don't
 // collapse when completed — see styles.css), prefilled with today's total.
 function updatePrepCard() {
@@ -477,7 +520,7 @@ const chartLibsReady = document.readyState === 'loading'
 async function renderPageCharts(page) {
   if (!['data', 'social', 'device'].includes(page)) return;
   await chartLibsReady;
-  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
+  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); renderReleaseDots(); /* updateSignalsChart(); updateExerciseChart(); */ }
   else if (page === 'social') updateSocialChart();
   else if (page === 'device') updateDeviceCharts();
 }
@@ -1290,22 +1333,29 @@ function updateSignalsChart() {
 const RELEASE_DOT_SPACING = 18; // .release-dot width (12px) + .release-dot-row gap (6px)
 let releaseDotsResizeObserver = null;
 
+// Renders into every dot row present: the Data page Release card
+// (#releaseDotRowData) and the hidden Signals card's row (#releaseDotRow).
+// Days with a psych log but no release answer (released == null) are skipped.
 function renderReleaseDots() {
-  const row = document.getElementById('releaseDotRow');
-  if (!row) return;
+  const rows = ['releaseDotRowData', 'releaseDotRow']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if (!rows.length) return;
 
   if (!releaseDotsResizeObserver) {
     releaseDotsResizeObserver = new ResizeObserver(() => renderReleaseDots());
-    releaseDotsResizeObserver.observe(row);
+    rows.forEach(row => releaseDotsResizeObserver.observe(row));
   }
 
-  const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
-  const entries = psychData.slice(-maxDots);
-  row.innerHTML = entries.map(e => {
-    const x = e.date.split('/').slice(0, 2).join('/');
-    const status = e.released ? 'Released' : 'No release';
-    return `<span class="release-dot${e.released ? ' released' : ''}" title="${x}: ${status}"></span>`;
-  }).join('');
+  const logged = psychData.filter(e => e.released != null);
+  rows.forEach(row => {
+    const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
+    const entries = logged.slice(-maxDots);
+    row.innerHTML = entries.length ? entries.map(e => {
+      const x = e.date.split('/').slice(0, 2).join('/');
+      const status = e.released ? 'Released' : 'No release';
+      return `<span class="release-dot${e.released ? ' released' : ''}" title="${x}: ${status}"></span>`;
+    }).join('') : '<span class="signal-label">No releases logged yet</span>';
+  });
 }
 
 // Marks a chip element (nav-item or home log card) as completed (or toggles it back)

@@ -187,6 +187,21 @@
               </div>
             </div>
 
+            <div class="card home-log-card" id="releaseChip">
+              <h2>
+                <span class="material-icons log-card-icon" title="Release">local_fire_department</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
+              <div class="input-group">
+                <span class="signal-label release-label">Released</span>
+                <div class="signal-switch inactive" id="releaseSwitch" onclick="toggleReleaseSwitch()">
+                  <span class="switch-opt switch-no">No</span>
+                  <span class="switch-opt switch-yes">Yes</span>
+                </div>
+                <button class="btn-primary" onclick="logRelease()">Log</button>
+              </div>
+            </div>
+
             <div class="card social-entry-card">
               <div class="social-card-header">
                 <h2>Social</h2>
@@ -515,6 +530,14 @@
             <div class="chart-container">
               <canvas id="socialChart"></canvas>
             </div>
+          </div>
+
+          <div class="card">
+            <h2>
+              <span class="material-icons data-card-icon" title="Release">local_fire_department</span>
+              <span class="data-card-label">Release</span>
+            </h2>
+            <div class="release-dot-row" id="releaseDotRowData"></div>
           </div>
         </div>
 
