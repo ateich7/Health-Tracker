@@ -202,6 +202,18 @@
               </div>
             </div>
 
+            <div class="card home-log-card" id="dietChip">
+              <h2>
+                <span class="material-icons log-card-icon" title="Diet">restaurant</span>
+                <span class="chip-check material-icons" style="display:none;">check_circle</span>
+              </h2>
+              <div class="input-group diet-options">
+                <button class="diet-opt diet-losing" data-cat="losing" onclick="logDiet('losing')">Losing</button>
+                <button class="diet-opt diet-maintaining" data-cat="maintaining" onclick="logDiet('maintaining')">Maintaining</button>
+                <button class="diet-opt diet-gaining" data-cat="gaining" onclick="logDiet('gaining')">Gaining</button>
+              </div>
+            </div>
+
             <div class="card social-entry-card">
               <div class="social-card-header">
                 <h2>Social</h2>
@@ -538,6 +550,33 @@
               <span class="data-card-label">Release</span>
             </h2>
             <div class="release-dot-row" id="releaseDotRowData"></div>
+          </div>
+
+          <div class="card">
+            <h2>
+              <span class="material-icons data-card-icon" title="Diet">restaurant</span>
+              <span class="data-card-label">Diet</span>
+              <div class="data-card-stats">
+                <span class="data-card-stat" title="Days in the last 30 logged">
+                  <span class="data-card-stat-label">Losing</span>
+                  <span class="data-card-stat-value diet-stat-losing" id="dietLosingStat">--</span>
+                </span>
+                <span class="data-card-stat" title="Days in the last 30 logged">
+                  <span class="data-card-stat-label">Maint</span>
+                  <span class="data-card-stat-value diet-stat-maintaining" id="dietMaintainingStat">--</span>
+                </span>
+                <span class="data-card-stat" title="Days in the last 30 logged">
+                  <span class="data-card-stat-label">Gaining</span>
+                  <span class="data-card-stat-value diet-stat-gaining" id="dietGainingStat">--</span>
+                </span>
+              </div>
+            </h2>
+            <div class="release-dot-row" id="dietDotRow"></div>
+            <div class="diet-legend">
+              <span><span class="diet-dot losing"></span>Losing</span>
+              <span><span class="diet-dot maintaining"></span>Maintaining</span>
+              <span><span class="diet-dot gaining"></span>Gaining</span>
+            </div>
           </div>
         </div>
 

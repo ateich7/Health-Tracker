@@ -10,6 +10,7 @@ let psychData   = [];   // rows from psych_logs
 let workoutLogs = [];   // rows from workout_logs (includes duration_minutes)
 let socialData  = [];   // rows from social_logs
 let prepData    = [];   // rows from prep_logs (interview prep hours per day)
+let dietData    = [];   // rows from diet_logs (losing / maintaining / gaining per day)
 
 // Read-only: written by the separate HealthyPi Move Python sync tool, never by this app
 let deviceActivityData = []; // rows from device_activity_logs (steps)
@@ -181,7 +182,7 @@ async function loadData() {
     const query = db.from(table).select('*').eq('user_id', currentUser.id);
     return timed(table, orderBy ? query.order(orderBy) : query);
   };
-  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes] = await Promise.all([
+  const [weightsRes, sleepsRes, workoutsRes, customExRes, psychRes, socialRes, prepRes, dietRes] = await Promise.all([
     fetchTable('weight_logs', 'timestamp'),
     fetchTable('sleep_logs', 'timestamp'),
     fetchTable('workout_logs'),
@@ -189,6 +190,7 @@ async function loadData() {
     fetchTable('psych_logs', 'timestamp'),
     fetchTable('social_logs'),
     fetchTable('prep_logs', 'timestamp'),
+    fetchTable('diet_logs', 'timestamp'),
   ]);
   logLoadTime('data fetched');
 
@@ -197,6 +199,7 @@ async function loadData() {
   psychData  = psychRes.data   || [];
   socialData = socialRes.data  || [];
   prepData   = prepRes.data    || [];
+  dietData   = dietRes.data    || [];
 
   workoutLogs = workoutsRes.data || [];
 
@@ -224,6 +227,7 @@ async function loadData() {
   }
   updatePrepCard();
   updateReleaseCard();
+  updateDietCard();
 
   // Codes, Meditation and Signals hidden from Home (kept for possible re-add)
   // // Codes is stored only in localStorage (no Supabase table)
@@ -433,6 +437,68 @@ async function logRelease() {
   updateUI();
 }
 
+// Diet: which calorie category today fell into — under budget (losing),
+// between budget and maintenance (maintaining), or over maintenance (gaining).
+// Tapping a category logs it immediately; the card stays editable all day so
+// the answer can be changed, with today's choice highlighted.
+const DIET_CATEGORIES = ['losing', 'maintaining', 'gaining'];
+const DIET_LABELS = { losing: 'Losing', maintaining: 'Maintaining', gaining: 'Gaining' };
+
+async function logDiet(category) {
+  if (!DIET_CATEGORIES.includes(category)) return;
+  const today = getToday();
+  const entry = { date: today, category, timestamp: Date.now() };
+
+  const { error } = await db.from('diet_logs').upsert(
+    { user_id: currentUser.id, ...entry },
+    { onConflict: 'user_id,date' }
+  );
+  if (error) { console.error('logDiet failed', error); alert('Could not log diet: ' + error.message); return; }
+
+  dietData = dietData.filter(e => e.date !== today);
+  dietData.push(entry);
+  dietData.sort((a, b) => a.timestamp - b.timestamp);
+
+  updateDietCard();
+  updateUI();
+}
+
+function updateDietCard() {
+  const chip  = document.getElementById('dietChip');
+  if (!chip) return;
+  const entry = dietData.find(e => e.date === getToday());
+  chip.querySelectorAll('.diet-opt').forEach(btn =>
+    btn.classList.toggle('selected', !!entry && btn.dataset.cat === entry.category));
+  if (chip.classList.contains('completed') !== !!entry) toggleTask(chip);
+}
+
+// Data page Diet card: one colored dot per logged day (oldest→newest, as many
+// as fit the card width, same approach as renderReleaseDots), plus counts of
+// each category over the last 30 logged days.
+let dietDotsResizeObserver = null;
+
+function renderDietDots() {
+  const row = document.getElementById('dietDotRow');
+  if (!row) return;
+  if (!dietDotsResizeObserver) {
+    dietDotsResizeObserver = new ResizeObserver(() => renderDietDots());
+    dietDotsResizeObserver.observe(row);
+  }
+
+  const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
+  const entries = dietData.slice(-maxDots);
+  row.innerHTML = entries.length ? entries.map(e => {
+    const x = e.date.split('/').slice(0, 2).join('/');
+    return `<span class="diet-dot ${e.category}" title="${x}: ${DIET_LABELS[e.category] || e.category}"></span>`;
+  }).join('') : '<span class="signal-label">No diet days logged yet</span>';
+
+  const recent = dietData.slice(-30);
+  DIET_CATEGORIES.forEach(cat => {
+    const el = document.getElementById('diet' + DIET_LABELS[cat] + 'Stat');
+    if (el) el.textContent = recent.length ? recent.filter(e => e.category === cat).length : '--';
+  });
+}
+
 function updateReleaseCard() {
   const chip  = document.getElementById('releaseChip');
   const entry = psychData.find(e => e.date === getToday());
@@ -520,7 +586,7 @@ const chartLibsReady = document.readyState === 'loading'
 async function renderPageCharts(page) {
   if (!['data', 'social', 'device'].includes(page)) return;
   await chartLibsReady;
-  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); renderReleaseDots(); /* updateSignalsChart(); updateExerciseChart(); */ }
+  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); renderReleaseDots(); renderDietDots(); /* updateSignalsChart(); updateExerciseChart(); */ }
   else if (page === 'social') updateSocialChart();
   else if (page === 'device') updateDeviceCharts();
 }

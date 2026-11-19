@@ -2419,3 +2419,71 @@ div {
 .social-cat-btn[data-cat="extreme_stakes"] .social-cat-count { color: rgba(244, 63,  94,  0.90); }
 .social-cat-btn[data-cat="real_stakes"]    .social-cat-count { color: rgba(225, 29,  72,  1.00); }
 
+
+/* ─── Diet (Home log card + Data page dots) ─────────────────────────────────── */
+:root {
+  --diet-losing: #34C759;
+  --diet-maintaining: #FFD60A;
+  --diet-gaining: #FF6B6B;
+}
+
+/* Stays editable after logging so the day's category can be changed */
+#page-home #dietChip.completed .input-group {
+  display: flex;
+}
+
+#page-home #dietChip .diet-options {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.diet-opt {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: var(--br);
+  border: 1px solid var(--border);
+  background: var(--objbg);
+  color: var(--bb);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.diet-opt.diet-losing.selected      { border-color: var(--diet-losing);      color: var(--diet-losing);      background: rgba(52, 199, 89, 0.15); }
+.diet-opt.diet-maintaining.selected { border-color: var(--diet-maintaining); color: var(--diet-maintaining); background: rgba(255, 214, 10, 0.15); }
+.diet-opt.diet-gaining.selected     { border-color: var(--diet-gaining);     color: var(--diet-gaining);     background: rgba(255, 107, 107, 0.15); }
+
+.diet-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.diet-dot.losing      { background: var(--diet-losing); }
+.diet-dot.maintaining { background: var(--diet-maintaining); }
+.diet-dot.gaining     { background: var(--diet-gaining); }
+
+.diet-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--h);
+}
+
+.diet-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diet-legend .diet-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.diet-stat-losing      { color: var(--diet-losing); }
+.diet-stat-maintaining { color: var(--diet-maintaining); }
+.diet-stat-gaining     { color: var(--diet-gaining); }

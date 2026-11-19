@@ -1,7 +1,7 @@
 # Health Tracker — CLAUDE.md
 
 ## What this app is
-A personal health tracking desktop + web app. Centered on three KPIs shown at the top of Home — total interview prep hours, girls asked out (`real_stakes` social logs), and days/week with restedness ≥ 8 — each measured against the next milestone (`MILESTONES` / `MAIN_GOALS` in `renderer.js`). Also tracks weight and workouts. Only three tabs are visible — Home (KPIs, goals, and the weight / restedness / prep / release / social inputs), Workout, and Data (weight, restedness, interview prep, Real Stakes "asked out" charts, and release-day dots). Signals (confidence/stress/low), Codes, Meditation, streaks, the quote card, the Social and Device tabs, and the exercise chart are hidden (commented out, not deleted). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
+A personal health tracking desktop + web app. Centered on three KPIs shown at the top of Home — total interview prep hours, girls asked out (`real_stakes` social logs), and days/week with restedness ≥ 8 — each measured against the next milestone (`MILESTONES` / `MAIN_GOALS` in `renderer.js`). Also tracks weight and workouts. Only three tabs are visible — Home (KPIs, goals, and the weight / restedness / prep / release / diet / social inputs), Workout, and Data (weight, restedness, interview prep, Real Stakes "asked out" charts, release-day dots, and diet-category dots). Signals (confidence/stress/low), Codes, Meditation, streaks, the quote card, the Social and Device tabs, and the exercise chart are hidden (commented out, not deleted). Built as an Electron desktop app (macOS) and deployed to Vercel as a static web app from the same codebase.
 
 ## Tech stack
 - **Electron** (`main.js`) — macOS desktop wrapper, no Node APIs exposed to renderer
@@ -23,12 +23,13 @@ package.json        — scripts for building and deploying
 assets/             — app icons
 ```
 
-## Supabase schema (13 tables, all with RLS — users see only their own rows)
+## Supabase schema (14 tables, all with RLS — users see only their own rows)
 | Table | Key columns |
 |---|---|
 | `weight_logs` | `user_id, date, weight, timestamp` — unique on `(user_id, date)` |
 | `sleep_logs` | `user_id, date, hours, rested, timestamp` — unique on `(user_id, date)`; `hours` is nullable (Home logs restedness only) |
 | `prep_logs` | `user_id, date, hours, timestamp` — interview prep hours; unique on `(user_id, date)` |
+| `diet_logs` | `user_id, date, category` (`losing` / `maintaining` / `gaining`), `timestamp` — unique on `(user_id, date)` |
 | `workout_logs` | `user_id, date, exercises` (JSONB array) — unique on `(user_id, date)` |
 | `custom_exercises` | `user_id, name, is_lift, is_run` — unique on `(user_id, name)` |
 | `psych_logs` | `user_id, date, confidence, stress, low, released, sick` — unique on `(user_id, date)` |
@@ -51,7 +52,7 @@ The `device_*` tables are **read-only from this app's perspective** — they're 
 
 ### Data flow
 1. The bootstrap at the end of `renderer.js` starts auth immediately (not on `DOMContentLoaded`) and calls `initApp(session.user)` once (guarded by `appInitialized`) — no `getUser()` round trip
-2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `prepData`, `workoutLogs`, `psychData`, `socialData`). Device tables are **not** loaded at startup — `updateDeviceCharts()` awaits `loadDeviceData()` on the Device tab's first visit. These arrays are the **only** source of truth — never mirror them into localStorage (a stale `workouts` cache + `planWorkoutDates` tag repeatedly pinned the workout form to months-old sessions; those keys are now purged on load via `OBSOLETE_STORAGE_KEYS`)
+2. `loadData()` fetches all tables from Supabase and stores results in module-level arrays (`weightData`, `sleepData`, `prepData`, `dietData`, `workoutLogs`, `psychData`, `socialData`). Device tables are **not** loaded at startup — `updateDeviceCharts()` awaits `loadDeviceData()` on the Device tab's first visit. These arrays are the **only** source of truth — never mirror them into localStorage (a stale `workouts` cache + `planWorkoutDates` tag repeatedly pinned the workout form to months-old sessions; those keys are now purged on load via `OBSOLETE_STORAGE_KEYS`)
 3. Chart.js, hammer.js and the zoom plugin load with `defer` (Home has no charts); all chart rendering goes through `renderPageCharts()`, which awaits `chartLibsReady`. Never call `new Chart` on a startup path that bypasses it.
 4. Startup timing is logged to the console as `[load] …` lines (per-table ms + row counts).
 5. `updateUI()` re-renders all charts and chips from those cached arrays — called after every log operation
