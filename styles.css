@@ -1665,13 +1665,19 @@ div {
   opacity: 0.5;
 }
 
-/* Prep card stays editable after logging so the day's total can be updated */
-#page-home #prepChip.completed .input-group {
-  display: flex;
+/* Completed cards collapse like every other log card; tapping one adds
+   .editing (see expandHomeLogCard in JS) to reopen it, e.g. to update the
+   day's prep total or change today's release/diet answer. Logging (any
+   updateUI) collapses it again. */
+#page-home .home-log-card.completed {
+  cursor: pointer;
 }
 
-/* Release card: same stay-editable behavior, so the answer can be changed */
-#page-home #releaseChip.completed .input-group {
+#page-home .home-log-card.completed.editing {
+  cursor: default;
+}
+
+#page-home .home-log-card.completed.editing .input-group {
   display: flex;
 }
 
@@ -2041,6 +2047,20 @@ div {
 .release-dot.released {
   background: transparent;
   border-color: rgba(250, 80, 80, 0.8);
+}
+
+/* Current no-release streak, shown right after the dots */
+.release-streak {
+  flex-shrink: 0;
+  margin-left: 4px;
+  font-weight: 700;
+  font-size: 0.95em;
+  color: #34C759;
+}
+
+.release-streak.zero {
+  color: var(--h);
+  opacity: 0.6;
 }
 
 .page .signals-entry-card {
@@ -2425,11 +2445,6 @@ div {
   --diet-losing: #34C759;
   --diet-maintaining: #FFD60A;
   --diet-gaining: #FF6B6B;
-}
-
-/* Stays editable after logging so the day's category can be changed */
-#page-home #dietChip.completed .input-group {
-  display: flex;
 }
 
 #page-home #dietChip .diet-options {

@@ -409,7 +409,7 @@ async function logPrep() {
 // Release: a standalone Home card (split out of the hidden Signals card) that
 // logs only psych_logs.released for today. The upsert sends just that column,
 // so any confidence/stress/low already logged today is left untouched. The
-// card stays editable all day (like Prep), prefilled with today's answer.
+// card collapses once logged; tap it to reopen and change today's answer.
 function toggleReleaseSwitch() {
   const btn = document.getElementById('releaseSwitch');
   const nowActive = !btn.classList.contains('active');
@@ -439,8 +439,8 @@ async function logRelease() {
 
 // Diet: which calorie category today fell into — under budget (losing),
 // between budget and maintenance (maintaining), or over maintenance (gaining).
-// Tapping a category logs it immediately; the card stays editable all day so
-// the answer can be changed, with today's choice highlighted.
+// Tapping a category logs it immediately; the card then collapses — tap it to
+// reopen and change the answer, with today's choice highlighted.
 const DIET_CATEGORIES = ['losing', 'maintaining', 'gaining'];
 const DIET_LABELS = { losing: 'Losing', maintaining: 'Maintaining', gaining: 'Gaining' };
 
@@ -510,8 +510,8 @@ function updateReleaseCard() {
   if (chip.classList.contains('completed') !== done) toggleTask(chip);
 }
 
-// Prep card stays editable all day (unlike other log cards, its inputs don't
-// collapse when completed — see styles.css), prefilled with today's total.
+// Prep card collapses once logged like the others; tapping it reopens the
+// input (see expandHomeLogCard), prefilled with today's total.
 function updatePrepCard() {
   const chip  = document.getElementById('prepChip');
   const entry = prepData.find(e => e.date === getToday());
@@ -570,6 +570,9 @@ function getLast30Days() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function updateUI() {
+  // Any log collapses a reopened (.editing) home card back down
+  document.querySelectorAll('#page-home .home-log-card.editing')
+    .forEach(c => c.classList.remove('editing'));
   updateStats();
   // updateStreaks(); // streaks replaced by KPIs on Home (kept for possible re-add)
   updateKpis();
@@ -1397,6 +1400,7 @@ function updateSignalsChart() {
 // — dots are cheap, so instead it fills however many fit across the card's
 // actual width, recomputing whenever that width changes (ResizeObserver).
 const RELEASE_DOT_SPACING = 18; // .release-dot width (12px) + .release-dot-row gap (6px)
+const RELEASE_STREAK_WIDTH = 40; // room kept for the .release-streak number
 let releaseDotsResizeObserver = null;
 
 // Renders into every dot row present: the Data page Release card
@@ -1413,15 +1417,36 @@ function renderReleaseDots() {
   }
 
   const logged = psychData.filter(e => e.released != null);
+  const streak = calcReleaseDotStreak(logged);
   rows.forEach(row => {
-    const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
+    // Reserve room for the streak number after the dots
+    const maxDots = Math.max(1, Math.floor((row.clientWidth - RELEASE_STREAK_WIDTH) / RELEASE_DOT_SPACING));
     const entries = logged.slice(-maxDots);
     row.innerHTML = entries.length ? entries.map(e => {
       const x = e.date.split('/').slice(0, 2).join('/');
       const status = e.released ? 'Released' : 'No release';
       return `<span class="release-dot${e.released ? ' released' : ''}" title="${x}: ${status}"></span>`;
-    }).join('') : '<span class="signal-label">No releases logged yet</span>';
+    }).join('') + `<span class="release-streak${streak ? '' : ' zero'}" title="${streak} day no-release streak">${streak}</span>`
+      : '<span class="signal-label">No releases logged yet</span>';
   });
+}
+
+// Tapping a collapsed (completed) home log card reopens its inputs so today's
+// value can be changed; tapping its header again collapses it.
+function expandHomeLogCard(event) {
+  const card = event.target.closest('#page-home .home-log-card.completed');
+  if (!card) return;
+  if (!card.classList.contains('editing')) card.classList.add('editing');
+  else if (event.target.closest('h2')) card.classList.remove('editing');
+}
+document.addEventListener('click', expandHomeLogCard);
+
+// Consecutive most-recent logged days with no release (the trailing run of
+// green dots). Unlogged days are skipped, same as the dot row.
+function calcReleaseDotStreak(logged) {
+  let n = 0;
+  for (let i = logged.length - 1; i >= 0 && !logged[i].released; i--) n++;
+  return n;
 }
 
 // Marks a chip element (nav-item or home log card) as completed (or toggles it back)
