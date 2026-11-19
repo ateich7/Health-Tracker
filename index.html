@@ -205,6 +205,7 @@
             <div class="card home-log-card" id="dietChip">
               <h2>
                 <span class="material-icons log-card-icon" title="Diet">restaurant</span>
+                <span class="signal-label diet-day-label">Yesterday</span>
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
               <div class="input-group diet-options">
@@ -557,21 +558,29 @@
               <span class="material-icons data-card-icon" title="Diet">restaurant</span>
               <span class="data-card-label">Diet</span>
               <div class="data-card-stats">
-                <span class="data-card-stat" title="Days in the last 30 logged">
+                <span class="data-card-stat" title="Days logged in the selected period">
                   <span class="data-card-stat-label">Losing</span>
                   <span class="data-card-stat-value diet-stat-losing" id="dietLosingStat">--</span>
                 </span>
-                <span class="data-card-stat" title="Days in the last 30 logged">
+                <span class="data-card-stat" title="Days logged in the selected period">
                   <span class="data-card-stat-label">Maint</span>
                   <span class="data-card-stat-value diet-stat-maintaining" id="dietMaintainingStat">--</span>
                 </span>
-                <span class="data-card-stat" title="Days in the last 30 logged">
+                <span class="data-card-stat" title="Days logged in the selected period">
                   <span class="data-card-stat-label">Gaining</span>
                   <span class="data-card-stat-value diet-stat-gaining" id="dietGainingStat">--</span>
                 </span>
               </div>
             </h2>
-            <div class="release-dot-row" id="dietDotRow"></div>
+            <div class="weight-filter-row">
+              <button class="weight-filter-btn diet-filter-btn" onclick="setDietPeriod(7, this)">Week</button>
+              <button class="weight-filter-btn diet-filter-btn" onclick="setDietPeriod(14, this)">2 Weeks</button>
+              <button class="weight-filter-btn diet-filter-btn active" onclick="setDietPeriod(30, this)">Month</button>
+              <button class="weight-filter-btn diet-filter-btn" onclick="setDietPeriod(0, this)">All Time</button>
+            </div>
+            <div class="chart-container">
+              <canvas id="dietChart"></canvas>
+            </div>
             <div class="diet-legend">
               <span><span class="diet-dot losing"></span>Losing</span>
               <span><span class="diet-dot maintaining"></span>Maintaining</span>

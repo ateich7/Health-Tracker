@@ -42,6 +42,7 @@ const sleepLineToggles = {
 let signalsPeriodDays = window.innerWidth <= 768 ? 7 : 14;
 const signalLineToggles = { confidence: true, stress: true, low: true };
 let socialDays = 7;
+let dietPeriodDays = 30; // how many days the diet chart shows; 0 = since the first diet log
 let prepPeriodDays = 30; // how many days the interview prep chart shows; 0 = since KPI_START_DATE
 let exercisePeriodDays = 30; // how many logged entries the exercise chart shows; 0 = all time
 // value1/value2 are generic since their meaning depends on exercise type (see
@@ -54,6 +55,7 @@ let sleepChart          = null;
 let signalsChart        = null;
 let socialChart         = null;
 let prepChart           = null;
+let dietChart           = null;
 let deviceActivityChart = null;
 let deviceHrChart       = null;
 let deviceSkinTempChart = null;
@@ -437,17 +439,22 @@ async function logRelease() {
   updateUI();
 }
 
-// Diet: which calorie category today fell into — under budget (losing),
+// Diet: which calorie category YESTERDAY fell into — under budget (losing),
 // between budget and maintenance (maintaining), or over maintenance (gaining).
-// Tapping a category logs it immediately; the card then collapses — tap it to
-// reopen and change the answer, with today's choice highlighted.
+// Logged for yesterday because a day's eating isn't known until it's over, so
+// the dot lands on the day it describes. Tapping a category logs it
+// immediately; the card then collapses — tap it to reopen and change the
+// answer, with the logged choice highlighted.
 const DIET_CATEGORIES = ['losing', 'maintaining', 'gaining'];
 const DIET_LABELS = { losing: 'Losing', maintaining: 'Maintaining', gaining: 'Gaining' };
 
 async function logDiet(category) {
   if (!DIET_CATEGORIES.includes(category)) return;
-  const today = getToday();
-  const entry = { date: today, category, timestamp: Date.now() };
+  const day = getYesterday();
+  // timestamp orders dietData; keep it inside the logged day so a late log
+  // doesn't sort yesterday's entry after a later day's
+  const ts = new Date(day); ts.setHours(12, 0, 0, 0);
+  const entry = { date: day, category, timestamp: ts.getTime() };
 
   const { error } = await db.from('diet_logs').upsert(
     { user_id: currentUser.id, ...entry },
@@ -455,7 +462,7 @@ async function logDiet(category) {
   );
   if (error) { console.error('logDiet failed', error); alert('Could not log diet: ' + error.message); return; }
 
-  dietData = dietData.filter(e => e.date !== today);
+  dietData = dietData.filter(e => e.date !== day);
   dietData.push(entry);
   dietData.sort((a, b) => a.timestamp - b.timestamp);
 
@@ -466,36 +473,95 @@ async function logDiet(category) {
 function updateDietCard() {
   const chip  = document.getElementById('dietChip');
   if (!chip) return;
-  const entry = dietData.find(e => e.date === getToday());
+  const entry = dietData.find(e => e.date === getYesterday());
   chip.querySelectorAll('.diet-opt').forEach(btn =>
     btn.classList.toggle('selected', !!entry && btn.dataset.cat === entry.category));
   if (chip.classList.contains('completed') !== !!entry) toggleTask(chip);
 }
 
-// Data page Diet card: one colored dot per logged day (oldest→newest, as many
-// as fit the card width, same approach as renderReleaseDots), plus counts of
-// each category over the last 30 logged days.
-let dietDotsResizeObserver = null;
+// Data page Diet card: a candlestick-style bar per calendar day — losing is a
+// green bar up from zero, gaining a red bar down from zero, maintaining a short
+// yellow bar centered on zero (like a doji). Unlogged days are left blank.
+// Header stats count each category over the selected period.
+const DIET_BARS = {
+  losing:      { range: [0, 1],        color: '#34C759' },
+  maintaining: { range: [-0.12, 0.12], color: '#FFD60A' },
+  gaining:     { range: [-1, 0],       color: '#FF6B6B' }
+};
 
-function renderDietDots() {
-  const row = document.getElementById('dietDotRow');
-  if (!row) return;
-  if (!dietDotsResizeObserver) {
-    dietDotsResizeObserver = new ResizeObserver(() => renderDietDots());
-    dietDotsResizeObserver.observe(row);
+function setDietPeriod(days, btn) {
+  dietPeriodDays = days;
+  document.querySelectorAll('.diet-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateDietChart();
+}
+
+function updateDietChart() {
+  if (dietChart) { dietChart.destroy(); dietChart = null; }
+  const canvas = document.getElementById('dietChart');
+  if (!canvas) return;
+
+  // Same locale-independent day keying as updatePrepChart
+  const dayKey = d => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const byDay = new Map();
+  let first = null;
+  dietData.forEach(row => {
+    const d = new Date(row.date);
+    if (isNaN(d) || !DIET_BARS[row.category]) return;
+    byDay.set(dayKey(d), row.category);
+    if (!first || d < first) first = d;
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sinceFirst = first ? Math.round((today - first) / 86400000) + 1 : 7;
+  const days = Math.max(1, dietPeriodDays || sinceFirst);
+
+  const labels = [], bars = [], colors = [], cats = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const cat = byDay.get(dayKey(d)) || null;
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    cats.push(cat);
+    bars.push(cat ? DIET_BARS[cat].range : null);
+    colors.push(cat ? DIET_BARS[cat].color : 'transparent');
   }
 
-  const maxDots = Math.max(1, Math.floor(row.clientWidth / RELEASE_DOT_SPACING));
-  const entries = dietData.slice(-maxDots);
-  row.innerHTML = entries.length ? entries.map(e => {
-    const x = e.date.split('/').slice(0, 2).join('/');
-    return `<span class="diet-dot ${e.category}" title="${x}: ${DIET_LABELS[e.category] || e.category}"></span>`;
-  }).join('') : '<span class="signal-label">No diet days logged yet</span>';
-
-  const recent = dietData.slice(-30);
   DIET_CATEGORIES.forEach(cat => {
     const el = document.getElementById('diet' + DIET_LABELS[cat] + 'Stat');
-    if (el) el.textContent = recent.length ? recent.filter(e => e.category === cat).length : '--';
+    if (el) el.textContent = byDay.size ? cats.filter(c => c === cat).length : '--';
+  });
+
+  const tick = { color: 'rgba(255,255,255,0.45)', font: { size: 10 } };
+  const grid = { color: 'rgba(255,255,255,0.06)' };
+
+  dietChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Diet', data: bars, backgroundColor: colors, borderRadius: 3, borderSkipped: false, barPercentage: 0.8, categoryPercentage: 0.9 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => DIET_LABELS[cats[ctx.dataIndex]] || 'Not logged' } }
+      },
+      scales: {
+        x: { ticks: { ...tick, maxRotation: 45 }, grid: { display: false } },
+        y: {
+          min: -1.1, max: 1.1,
+          grid: { color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.35)' : grid.color },
+          ticks: {
+            ...tick,
+            stepSize: 1,
+            callback: v => v === 1 ? 'Losing' : v === 0 ? 'Maint' : v === -1 ? 'Gaining' : ''
+          }
+        }
+      }
+    }
   });
 }
 
@@ -589,7 +655,7 @@ const chartLibsReady = document.readyState === 'loading'
 async function renderPageCharts(page) {
   if (!['data', 'social', 'device'].includes(page)) return;
   await chartLibsReady;
-  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); renderReleaseDots(); renderDietDots(); /* updateSignalsChart(); updateExerciseChart(); */ }
+  if (page === 'data') { updateWeightChart(); updateSleepChart(); updatePrepChart(); updateSocialChart(); renderReleaseDots(); updateDietChart(); /* updateSignalsChart(); updateExerciseChart(); */ }
   else if (page === 'social') updateSocialChart();
   else if (page === 'device') updateDeviceCharts();
 }
