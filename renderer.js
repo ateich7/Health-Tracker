@@ -479,14 +479,44 @@ function updateDietCard() {
   if (chip.classList.contains('completed') !== !!entry) toggleTask(chip);
 }
 
-// Data page Diet card: a candlestick-style bar per calendar day — losing is a
-// green bar up from zero, gaining a red bar down from zero, maintaining a short
-// yellow bar centered on zero (like a doji). Unlogged days are left blank.
-// Header stats count each category over the selected period.
+// Data page Diet card: a candlestick-style bar per calendar day, oriented like
+// the scale — gaining is a bar UP from zero, losing a bar DOWN, maintaining a
+// flat bar on zero. Readable in grayscale (the phone is set to it): gaining is
+// a solid bar with an up arrow above it, losing a hollow outlined bar with a
+// down arrow below it, maintaining a flat bar with a dash icon. Colors are only
+// a secondary cue. Unlogged days are left blank. Header stats count each
+// category over the selected period.
 const DIET_BARS = {
-  losing:      { range: [0, 1],        color: '#34C759' },
-  maintaining: { range: [-0.12, 0.12], color: '#FFD60A' },
-  gaining:     { range: [-1, 0],       color: '#FF6B6B' }
+  // glyph = Material Icons codepoint: arrow_upward / remove / arrow_downward
+  gaining:     { range: [0, 1],        fill: '#FF6B6B',     border: '#FF6B6B', glyph: '\ue5d8' },
+  maintaining: { range: [-0.08, 0.08], fill: '#BBBBBB',     border: '#BBBBBB', glyph: '\ue15b' },
+  losing:      { range: [-1, 0],       fill: 'transparent', border: '#34C759', glyph: '\ue5db' }
+};
+
+// Draws each day's arrow/dash icon just past the end of its bar (above a
+// gaining bar, below a losing bar, above the flat maintaining bar).
+const dietIconPlugin = {
+  id: 'dietIcons',
+  afterDatasetsDraw(chart) {
+    const cats = chart.options.plugins.dietIcons?.cats || [];
+    const meta = chart.getDatasetMeta(0);
+    const ctx = chart.ctx;
+    meta.data.forEach((bar, i) => {
+      const cfg = DIET_BARS[cats[i]];
+      if (!cfg) return;
+      const { x, y, base, width } = bar.getProps(['x', 'y', 'base', 'width'], true);
+      const size = Math.max(9, Math.min(16, width + 4));
+      const top = Math.min(y, base), bottom = Math.max(y, base);
+      const iy = cats[i] === 'losing' ? bottom + size / 2 + 2 : top - size / 2 - 2;
+      ctx.save();
+      ctx.font = `${size}px "Material Icons"`;
+      ctx.fillStyle = cfg.border;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cfg.glyph, x, iy);
+      ctx.restore();
+    });
+  }
 };
 
 function setDietPeriod(days, btn) {
@@ -517,7 +547,7 @@ function updateDietChart() {
   const sinceFirst = first ? Math.round((today - first) / 86400000) + 1 : 7;
   const days = Math.max(1, dietPeriodDays || sinceFirst);
 
-  const labels = [], bars = [], colors = [], cats = [];
+  const labels = [], bars = [], fills = [], borders = [], cats = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
@@ -525,7 +555,8 @@ function updateDietChart() {
     labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     cats.push(cat);
     bars.push(cat ? DIET_BARS[cat].range : null);
-    colors.push(cat ? DIET_BARS[cat].color : 'transparent');
+    fills.push(cat ? DIET_BARS[cat].fill : 'transparent');
+    borders.push(cat ? DIET_BARS[cat].border : 'transparent');
   }
 
   DIET_CATEGORIES.forEach(cat => {
@@ -540,28 +571,36 @@ function updateDietChart() {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ label: 'Diet', data: bars, backgroundColor: colors, borderRadius: 3, borderSkipped: false, barPercentage: 0.8, categoryPercentage: 0.9 }]
+      datasets: [{
+        label: 'Diet', data: bars,
+        backgroundColor: fills, borderColor: borders, borderWidth: 2,
+        borderRadius: 3, borderSkipped: false, barPercentage: 0.7, categoryPercentage: 0.9
+      }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        dietIcons: { cats },
         tooltip: { callbacks: { label: ctx => DIET_LABELS[cats[ctx.dataIndex]] || 'Not logged' } }
       },
       scales: {
         x: { ticks: { ...tick, maxRotation: 45 }, grid: { display: false } },
         y: {
-          min: -1.1, max: 1.1,
+          min: -1.5, max: 1.5,
+          // pin ticks to the three category levels (min/max leave icon room)
+          afterBuildTicks: axis => { axis.ticks = [-1, 0, 1].map(value => ({ value })); },
           grid: { color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.35)' : grid.color },
           ticks: {
             ...tick,
             stepSize: 1,
-            callback: v => v === 1 ? 'Losing' : v === 0 ? 'Maint' : v === -1 ? 'Gaining' : ''
+            callback: v => v === 1 ? 'Gain' : v === 0 ? 'Maint' : v === -1 ? 'Loss' : ''
           }
         }
       }
-    }
+    },
+    plugins: [dietIconPlugin]
   });
 }
 

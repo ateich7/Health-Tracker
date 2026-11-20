@@ -2465,24 +2465,46 @@ div {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.diet-opt.diet-losing.selected      { border-color: var(--diet-losing);      color: var(--diet-losing);      background: rgba(52, 199, 89, 0.15); }
-.diet-opt.diet-maintaining.selected { border-color: var(--diet-maintaining); color: var(--diet-maintaining); background: rgba(255, 214, 10, 0.15); }
-.diet-opt.diet-gaining.selected     { border-color: var(--diet-gaining);     color: var(--diet-gaining);     background: rgba(255, 107, 107, 0.15); }
+/* Selected = inverted (light fill, dark text) plus a heavier border, so the
+   choice is obvious in grayscale; the category color is only a tint. */
+.diet-opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
 
-.diet-dot {
+.diet-opt .material-icons {
+  font-size: 16px;
+}
+
+.diet-opt.selected {
+  background: #f2f2f2;
+  color: #111;
+  border: 2px solid #f2f2f2;
+  font-weight: 800;
+}
+
+/* Legend swatches mirror the chart bars: solid / flat / hollow */
+.diet-swatch {
   display: inline-block;
-  width: 12px;
+  width: 10px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
-.diet-dot.losing      { background: var(--diet-losing); }
-.diet-dot.maintaining { background: var(--diet-maintaining); }
-.diet-dot.gaining     { background: var(--diet-gaining); }
+.diet-swatch.gaining     { background: var(--diet-gaining); border: 2px solid var(--diet-gaining); }
+.diet-swatch.maintaining { height: 3px; background: #BBBBBB; }
+.diet-swatch.losing      { background: transparent; border: 2px solid var(--diet-losing); }
+
+.diet-legend .material-icons {
+  font-size: 14px;
+}
 
 .diet-legend {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   margin-top: 8px;
   gap: 16px;

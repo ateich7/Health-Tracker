@@ -209,9 +209,9 @@
                 <span class="chip-check material-icons" style="display:none;">check_circle</span>
               </h2>
               <div class="input-group diet-options">
-                <button class="diet-opt diet-losing" data-cat="losing" onclick="logDiet('losing')">Losing</button>
-                <button class="diet-opt diet-maintaining" data-cat="maintaining" onclick="logDiet('maintaining')">Maintaining</button>
-                <button class="diet-opt diet-gaining" data-cat="gaining" onclick="logDiet('gaining')">Gaining</button>
+                <button class="diet-opt diet-losing" data-cat="losing" onclick="logDiet('losing')"><span class="material-icons">arrow_downward</span>Losing</button>
+                <button class="diet-opt diet-maintaining" data-cat="maintaining" onclick="logDiet('maintaining')"><span class="material-icons">remove</span>Maintaining</button>
+                <button class="diet-opt diet-gaining" data-cat="gaining" onclick="logDiet('gaining')"><span class="material-icons">arrow_upward</span>Gaining</button>
               </div>
             </div>
 
@@ -582,9 +582,9 @@
               <canvas id="dietChart"></canvas>
             </div>
             <div class="diet-legend">
-              <span><span class="diet-dot losing"></span>Losing</span>
-              <span><span class="diet-dot maintaining"></span>Maintaining</span>
-              <span><span class="diet-dot gaining"></span>Gaining</span>
+              <span><span class="diet-swatch gaining"></span><span class="material-icons">arrow_upward</span>Gaining (solid, up)</span>
+              <span><span class="diet-swatch maintaining"></span><span class="material-icons">remove</span>Maintaining (flat)</span>
+              <span><span class="diet-swatch losing"></span><span class="material-icons">arrow_downward</span>Losing (hollow, down)</span>
             </div>
           </div>
         </div>
